@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 
 from ..evaluate import UnsafePattern, scan, screen_pattern
 from ..model import Lane, Lineage, PredicateKind, Rule, Surface
+from ..rights import agentharm_restriction
 
 REPOSITORIES = {
     "netzilo": "https://github.com/netzilo/aidr-sigma",
@@ -331,10 +332,12 @@ def normalize(data: Mapping, *, source: str, source_rev: str,
     url = f"{REPOSITORIES[source]}/blob/{source_rev}/{source_path}"
     author = data.get("author")
     lineage = (Lineage("author_field", author, url),) if isinstance(author, str) else ()
+    restricted_reason = agentharm_restriction(data, include_references=True)
     return Rule(
         id=f"{source}:{data['id']}", source=source, source_id=data["id"],
         source_rev=source_rev, source_path=source_path, upstream_url=url,
         lineage=lineage, license_spdx=data.get("license", license_spdx),
+        restricted=bool(restricted_reason), restricted_reason=restricted_reason,
         title=data.get("title", ""), description=data.get("description", ""),
         severity_raw=data.get("level", ""), severity_field="level" if "level" in data else "",
         maturity_raw=data.get("status", ""), tags=_strings(data.get("tags")),

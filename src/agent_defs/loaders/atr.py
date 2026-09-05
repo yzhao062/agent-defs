@@ -18,6 +18,7 @@ from typing import Any
 
 from .. import evaluate
 from ..model import Breadth, Lane, Lineage, PredicateKind, Rule, Surface
+from ..rights import EXCLUDED_SOURCE_PATHS, agentharm_restriction, excluded_source_path
 
 UPSTREAM = "https://github.com/Agent-Threat-Rule/agent-threat-rules"
 POLICY = {"name": "agent-defs.atr", "version": 1, "date": "2026-09-04"}
@@ -35,6 +36,7 @@ class Delta:
     entries_read: int = 0
     rules_emitted: int = 0
     source_rev: str = ""
+    excluded_paths: dict[str, int] = field(default_factory=dict)
     dropped_fields: dict[str, int] = field(default_factory=dict)
     extra_fields: dict[str, int] = field(default_factory=dict)
     unsupported_constructs: dict[str, int] = field(default_factory=dict)
@@ -106,13 +108,20 @@ def _git(root: Path, *args: str) -> str:
     ).stdout.strip()
 
 
-def _source_files(root: Path) -> tuple[str, list[tuple[Path, str]], str]:
+def _source_files(root: Path, source_rev: str | None = None):
+    excluded = {prefix: {p.relative_to(root).as_posix()
+                         for p in (root / prefix).rglob("*") if p.is_file()}
+                for prefix in EXCLUDED_SOURCE_PATHS["atr"]}
     manifest_path = root / "atr-source.json"
     if manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         revision = manifest["source_rev"]
         files = []
         for local, info in sorted(manifest["files"].items()):
+            prefix = excluded_source_path("atr", info["source_path"])
+            if prefix:
+                excluded[prefix].add(info["source_path"])
+                continue
             path = (root / local).resolve()
             if not path.is_relative_to(root):
                 raise ValueError(f"ATR fixture path escapes root: {local}")
@@ -120,21 +129,25 @@ def _source_files(root: Path) -> tuple[str, list[tuple[Path, str]], str]:
                 raise ValueError(f"ATR fixture checksum mismatch: {local}")
             files.append((path, info["source_path"]))
     else:
-        if not (root / ".git").exists():
+        if not (root / ".git").exists() and source_rev is None:
             raise ValueError("ATR root needs Git metadata or atr-source.json; cannot invent source_rev")
-        revision = _git(root, "rev-parse", "HEAD")
-        _git(root, "diff", "--quiet", "HEAD", "--", "rules", "LICENSE")
-        if _git(root, "ls-files", "--others", "--exclude-standard", "--", "rules"):
-            raise ValueError("ATR rules include untracked files; source_rev would be misleading")
+        revision = source_rev
+        if (root / ".git").exists():
+            revision = _git(root, "rev-parse", "HEAD")
+            _git(root, "diff", "--quiet", "HEAD", "--", "rules", "LICENSE")
+            if _git(root, "ls-files", "--others", "--exclude-standard", "--", "rules"):
+                raise ValueError("ATR rules include untracked files; source_rev would be misleading")
         if not (root / "rules").is_dir():
             raise ValueError("ATR root has no rules directory")
         files = [(p, p.relative_to(root).as_posix()) for p in sorted((root / "rules").rglob("*"))
                  if p.suffix in {".yaml", ".yml"} and p.is_file()]
     if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise ValueError("ATR source_rev must be a full 40-character Git SHA")
+    if source_rev is not None and source_rev != revision:
+        raise ValueError("ATR source_rev disagrees with source metadata")
     license_text = (root / "LICENSE").read_text(encoding="utf-8")
     license_spdx = "MIT" if license_text.startswith("MIT License") else ""
-    return revision, files, license_spdx
+    return revision, files, license_spdx, {p: len(paths) for p, paths in excluded.items()}
 
 
 def _lineage(author: str, url: str) -> tuple[tuple[Lineage, ...], dict[str, Any]]:
@@ -348,13 +361,17 @@ def _predicate(raw: dict[str, Any], rid: str, delta: Delta) -> tuple[PredicateKi
     return PredicateKind.REGEX, predicate, [], decisions
 
 
-def load(root: Path) -> LoadResult:
+def load(root: Path, *, source_rev: str | None = None) -> LoadResult:
     """Read deterministic Rule records and an enumerated normalization delta.
 
     A non-runnable entry still emits its identity, metadata, examples, full
     parsed upstream record and exact YAML text. Parse/identity errors appear in
     delta.entry_errors; nothing is silently skipped. All emitted patterns pass
     evaluate.screen_pattern, and a rejected branch disables the entire rule.
+
+    For a verified archive tree without Git metadata, pass its pinned source_rev.
+    The caller must verify the archive digest and tree bytes before using that pin.
+    Excluded paths are counted by filename and never parsed.
     """
     try:
         import yaml
@@ -369,11 +386,15 @@ def load(root: Path) -> LoadResult:
         for key, values in LiteralLoader.yaml_implicit_resolvers.items()
     }
     root = Path(root).resolve()
-    revision, files, license_spdx = _source_files(root)
-    delta = Delta(source_rev=revision)
+    revision, files, license_spdx, excluded = _source_files(root, source_rev)
+    delta = Delta(source_rev=revision, excluded_paths=excluded)
     rules: list[Rule] = []
     seen: set[str] = set()
     for path, source_path in files:
+        prefix = excluded_source_path("atr", source_path)
+        if prefix:
+            delta.excluded_paths[prefix] = delta.excluded_paths.get(prefix, 0) + 1
+            continue
         delta.entries_read += 1
         raw_text = path.read_bytes().decode("utf-8")
         try:
@@ -399,6 +420,11 @@ def load(root: Path) -> LoadResult:
         rid = f"atr:{raw['id']}"
         url = f"{UPSTREAM}/blob/{revision}/{source_path}"
         lineage, lineage_decision = _lineage(raw.get("author", ""), url)
+        provenance = raw.get("metadata_provenance")
+        if isinstance(provenance, dict) and isinstance(provenance.get("payload_source"), str):
+            lineage += (Lineage("payload_source", provenance["payload_source"],
+                                f"{url} (YAML metadata_provenance.payload_source)"),)
+        restricted_reason = agentharm_restriction(raw)
         surface, surface_decision = _surface(raw)
         kind, predicate, reasons, execution = _predicate(raw, rid, delta)
         positive, positive_origins = _examples(raw, "true_positives")
@@ -410,6 +436,7 @@ def load(root: Path) -> LoadResult:
             id=rid, source="atr", source_id=raw["id"], source_rev=revision,
             source_path=source_path, upstream_url=url, lineage=lineage,
             license_spdx=license_spdx, redistribution="unresolved",
+            restricted=bool(restricted_reason), restricted_reason=restricted_reason,
             title=raw.get("title", ""), description=raw.get("description", ""),
             severity_raw=raw.get("severity", ""), severity_field="severity" if "severity" in raw else "",
             maturity_raw=raw.get("maturity", ""),

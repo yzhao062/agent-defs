@@ -110,10 +110,26 @@ tool, so `admit()` takes `bundle_ok` and refuses an interrupting lane without it
 instructions. These corpora carry jailbreak payloads, so writing them into `AGENTS.md`, `CLAUDE.md`
 or an equivalent would be an injection channel rather than a defence.
 
-**Patterns are screened before they ship, never in the hot path.** `evaluate.screen_pattern` refuses a
-quantified group under an outer quantifier and anything that does not compile. Python's `re` offers no
-timeout, so a pattern that can backtrack catastrophically has to be kept out of the bundle; once it is
-running, nothing can interrupt it.
+**Patterns are screened before they ship and executed behind a process deadline.**
+`evaluate.screen_pattern` uses Python's parsed regex syntax to reject nested repetition, alternation
+under repetition, backreferences, and invalid patterns. This is conservative screening, not a proof
+of linear runtime. Python's `re` offers no timeout. `scan()` therefore validates, compiles, and matches
+inside a disposable standard-library subprocess that the parent kills at the scan deadline. Worker
+validation also protects against stale or unscreened bundles. Process creation and pipe I/O run in a
+bounded supervisor thread so a slow OS launch cannot hold the caller. Late launches are cancelled
+before receiving input. At most four pending supervisors are allowed. Cleanup may add up to 100 ms
+to the caller's wait; there is no claim of hard real-time OS scheduling.
+
+Rules run in deterministic cost-hint order, with substring predicates first. Findings do not stop the
+scan. Completed findings survive a later timeout. `ScanResult.complete` is false on input truncation,
+unfinished rules, rejected rules, or worker failure; an empty incomplete result is not a clean scan.
+The evaluator does not promote a timeout or a RECORD finding into an interrupting decision.
+
+Case-insensitive substring matching uses the same Unicode semantics as Python `re.IGNORECASE`, with
+offsets into the original input. Matching performs no normalization and no full multi-character case
+folding. UTF-8 byte limits preserve lone surrogates with `surrogatepass` rather than deleting them.
+Findings retain the full match span but limit `matched` to 512 characters, with `truncated_match=True`
+when the excerpt is shorter. Rejected conditions remain explicit errors, never looser predicates.
 
 ## Reporting what did not survive
 

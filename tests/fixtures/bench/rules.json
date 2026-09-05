@@ -1,0 +1,107 @@
+{
+  "rules": [
+    {
+      "id": "quiet",
+      "source": "fixture",
+      "source_id": "quiet",
+      "source_rev": "0000000000000000000000000000000000000000",
+      "source_path": "rules.json",
+      "upstream_url": "https://example.invalid/fixture",
+      "lineage": [],
+      "license_spdx": "",
+      "redistribution": "unresolved",
+      "title": "",
+      "description": "",
+      "severity_raw": "",
+      "severity_field": "",
+      "maturity_raw": "",
+      "tags": [],
+      "references": [],
+      "surface": "CFG",
+      "breadth": "NARROW",
+      "predicate_kind": "SUBSTRING_ANY",
+      "predicate": [
+        "SENTINEL_POSITIVE"
+      ],
+      "not_runnable_reason": "",
+      "case_sensitive": false,
+      "examples_positive": [
+        "SENTINEL_POSITIVE"
+      ],
+      "examples_negative": [],
+      "false_positive_notes": [],
+      "lane": "RECORD",
+      "lane_reason": "",
+      "benign": null,
+      "extra": {}
+    },
+    {
+      "id": "dead",
+      "source": "fixture",
+      "source_id": "dead",
+      "source_rev": "0000000000000000000000000000000000000000",
+      "source_path": "rules.json",
+      "upstream_url": "https://example.invalid/fixture",
+      "lineage": [],
+      "license_spdx": "",
+      "redistribution": "unresolved",
+      "title": "",
+      "description": "",
+      "severity_raw": "",
+      "severity_field": "",
+      "maturity_raw": "",
+      "tags": [],
+      "references": [],
+      "surface": "CFG",
+      "breadth": "NARROW",
+      "predicate_kind": "REGEX",
+      "predicate": "(?!)",
+      "not_runnable_reason": "",
+      "case_sensitive": false,
+      "examples_positive": [
+        "a positive example that cannot match"
+      ],
+      "examples_negative": [],
+      "false_positive_notes": [],
+      "lane": "RECORD",
+      "lane_reason": "",
+      "benign": null,
+      "extra": {}
+    },
+    {
+      "id": "loud",
+      "source": "fixture",
+      "source_id": "loud",
+      "source_rev": "0000000000000000000000000000000000000000",
+      "source_path": "rules.json",
+      "upstream_url": "https://example.invalid/fixture",
+      "lineage": [],
+      "license_spdx": "",
+      "redistribution": "unresolved",
+      "title": "",
+      "description": "",
+      "severity_raw": "",
+      "severity_field": "",
+      "maturity_raw": "",
+      "tags": [],
+      "references": [],
+      "surface": "CFG",
+      "breadth": "NARROW",
+      "predicate_kind": "SUBSTRING_ANY",
+      "predicate": [
+        "project"
+      ],
+      "not_runnable_reason": "",
+      "case_sensitive": false,
+      "examples_positive": [
+        "project"
+      ],
+      "examples_negative": [],
+      "false_positive_notes": [],
+      "lane": "RECORD",
+      "lane_reason": "",
+      "benign": null,
+      "extra": {}
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "identity": "authored-offline-fixtures",
+  "revision": "sha256:76e7a451a4ce139834752c6c2cd2bdd39919e6f797f66db588b3e06feeb3ba57",
+  "surface": "CFG",
+  "units": [
+    {
+      "path": "ordinary.txt",
+      "sha256": "d1977061956fa6cd324002f2c03ea92f86f7e68d7fb5eb0a156f4d4b7c4ee067"
+    },
+    {
+      "path": "security-settings.json",
+      "sha256": "492107d82eb6e2221374ad2ecf64a48fd58ed9bfdf85ddd1ec0edaf095018a6b"
+    },
+    {
+      "path": "security.txt",
+      "sha256": "836d2d1c0e78f092ad029fb1bebccd3b5cce433d7698741e8fb7229209b3caae"
+    },
+    {
+      "path": "settings.json",
+      "sha256": "65cbc2399d6ed79ffc07187f5fa78e575a09f741dd0639a5d59e43b8d662edc7"
+    }
+  ]
+}

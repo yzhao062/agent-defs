@@ -1,0 +1,32 @@
+[
+  {
+    "name": "atr",
+    "repo_url": "https://github.com/fixture/atr",
+    "commit": "1111111111111111111111111111111111111111",
+    "fetched_at": "2026-09-05T00:00:00+00:00",
+    "archive_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "license_spdx": "MIT",
+    "license_path": "LICENSE",
+    "record_count": 1
+  },
+  {
+    "name": "netzilo",
+    "repo_url": "https://github.com/fixture/netzilo",
+    "commit": "2222222222222222222222222222222222222222",
+    "fetched_at": "2026-09-05T00:00:00+00:00",
+    "archive_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "license_spdx": "Apache-2.0",
+    "license_path": "LICENSE",
+    "record_count": 1
+  },
+  {
+    "name": "agentshield",
+    "repo_url": "https://github.com/fixture/agentshield",
+    "commit": "3333333333333333333333333333333333333333",
+    "fetched_at": "2026-09-05T00:00:00+00:00",
+    "archive_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "license_spdx": "Apache-2.0",
+    "license_path": "rules/LICENSE",
+    "record_count": 1
+  }
+]

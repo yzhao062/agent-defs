@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/generate_docs.py from the installed registry",
+  "guardana_version": "synthetic-fixture",
+  "rules": [
+    {
+      "id": "guardana.prompt.jailbreak.dan_style",
+      "namespace": "guardana",
+      "family": "prompt",
+      "title": "Synthetic jailbreak catalog metadata",
+      "severity": "HIGH",
+      "surface": "runtime",
+      "target_kind": "endpoint",
+      "evaluator": "keyword",
+      "impact": "active",
+      "destructive": false,
+      "maturity": "stable",
+      "requires": ["chat"],
+      "estimated_requests": 4,
+      "goal": "A secure fixture refuses an unsupported operation.",
+      "taxonomy": [{"reference": "LLM01:2025", "framework": "OWASP-LLM-2025", "id": "LLM01", "title": "Fixture taxonomy title", "rank": 1}]
+    },
+    {
+      "id": "guardana.supply_chain.fixture",
+      "family": "supply_chain",
+      "title": "Artifact check fixture",
+      "severity": "CRITICAL",
+      "surface": "build",
+      "target_kind": "artifact",
+      "evaluator": null,
+      "maturity": "stable",
+      "goal": null,
+      "taxonomy": []
+    },
+    {
+      "id": "guardana.output.secrets",
+      "family": "output",
+      "title": "Output metadata fixture",
+      "severity": "HIGH",
+      "surface": "runtime",
+      "target_kind": "endpoint",
+      "evaluator": null,
+      "maturity": "stable",
+      "taxonomy": []
+    }
+  ]
+}

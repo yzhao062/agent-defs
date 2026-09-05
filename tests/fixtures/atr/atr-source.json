@@ -1,0 +1,53 @@
+{
+  "source_rev": "66c7c1573e202b83ac526b70275244c50000068a",
+  "files": {
+    "00383.yaml": {
+      "source_path": "rules/agent-manipulation/ATR-2026-00383-cynical-sarcasm-ai-persona-bypass.yaml",
+      "sha256": "551394b945925973f7de32741fd918ef18398160376ab5e8b57e9b0ab359723c"
+    },
+    "00120.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-00120-skill-instruction-injection.yaml",
+      "sha256": "123c390de23bbff5fa2fea5bfff8c8472a25f5bcd51179c397edc27eb2c57a35"
+    },
+    "00290.yaml": {
+      "source_path": "rules/context-exfiltration/ATR-2026-00290-divergence-repeat-word-training-extraction.yaml",
+      "sha256": "dba6b4bd97ffb6c0b8b128e386d5fce9eab90a077a4c69995a4a8d7f3fb31956"
+    },
+    "00040.yaml": {
+      "source_path": "rules/privilege-escalation/ATR-2026-00040-privilege-escalation.yaml",
+      "sha256": "3ed87fee327583b04ae49e06f0904aea115282fb9ba609a0736c0b19175b1db4"
+    },
+    "00070.yaml": {
+      "source_path": "rules/data-poisoning/ATR-2026-00070-data-poisoning.yaml",
+      "sha256": "fef156630208a6062e964d54f77d49a08004e66ddeee00df53460679929817ca"
+    },
+    "00552.yaml": {
+      "source_path": "rules/agent-manipulation/ATR-2026-00552-goal-drift-after-pressure-injection.yaml",
+      "sha256": "92a907054412747d1ce7f3ba2b3e918276da4998bf3daa24d7af5f9e73700580"
+    },
+    "02377.yaml": {
+      "source_path": "rules/prompt-injection/ATR-2026-02377-novel-persona-jailbreak-cosignal.yaml",
+      "sha256": "cbc7ec86e527b8e98a7ca7b50c0ac209eeba255fe39a35d803a70afff964853c"
+    },
+    "02261.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-02261-code-credential-exfil-chain.yaml",
+      "sha256": "db3f89aef17c7a4d47f651f152c2f8c8883a570b6d9054747fec6ec1199d46bc"
+    },
+    "00405.yaml": {
+      "source_path": "rules/context-exfiltration/ATR-2026-00405-markdown-image-url-exfiltration-xss.yaml",
+      "sha256": "501ee7f3fdf4a87aa014e9880d12dd9476ac88f69ad085486c06ec2d784679a7"
+    },
+    "00421.yaml": {
+      "source_path": "rules/context-exfiltration/ATR-2026-00421-nl-covert-conversation-exfiltration.yaml",
+      "sha256": "858241ca4c0a8041ee36a0c7e9223c62649014ad3d509ceab30cf0dbd891aa7f"
+    },
+    "02260.yaml": {
+      "source_path": "rules/tool-poisoning/ATR-2026-02260-agentjacking-remediation-framed-execution.yaml",
+      "sha256": "a9baca7dbe5513b39af729e13b8e016d7cb1872f7090cf1ae2a825383dd10ca2"
+    },
+    "01756.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-01756-backdoor-pot-symbol-emoticon-trigger.yaml",
+      "sha256": "0f1c98ce23c5cdcffd8326e4c8deef4f7e1149aa61c4674ef98e1138c0f2a8aa"
+    }
+  }
+}

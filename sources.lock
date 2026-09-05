@@ -1,0 +1,248 @@
+[
+  {
+    "name": "atr",
+    "repo_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules",
+    "commit": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+    "fetched_at": "2026-09-05T01:18:47.827990+00:00",
+    "archive_sha256": "5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5",
+    "license_spdx": "MIT",
+    "license_path": "LICENSE",
+    "record_count": 793,
+    "count_method": "Parse every YAML document in rules/**/*.yaml and rules/**/*.yml; require id and detection.",
+    "default_branch": "main",
+    "repository_http": {
+      "url": "https://api.github.com/repos/Agent-Threat-Rule/agent-threat-rules",
+      "final_url": "https://api.github.com/repos/Agent-Threat-Rule/agent-threat-rules",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.394444+00:00"
+    },
+    "resolve_http": {
+      "url": "https://api.github.com/repos/Agent-Threat-Rule/agent-threat-rules/commits/main",
+      "final_url": "https://api.github.com/repos/Agent-Threat-Rule/agent-threat-rules/commits/main",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.850145+00:00"
+    },
+    "commit_http": {
+      "url": "https://api.github.com/repos/Agent-Threat-Rule/agent-threat-rules/commits/faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+      "final_url": "https://api.github.com/repos/Agent-Threat-Rule/agent-threat-rules/commits/faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:42.152588+00:00"
+    },
+    "archive_http": {
+      "url": "https://codeload.github.com/Agent-Threat-Rule/agent-threat-rules/tar.gz/faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+      "final_url": "https://codeload.github.com/Agent-Threat-Rule/agent-threat-rules/tar.gz/faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:47.827990+00:00"
+    },
+    "license_http": {
+      "url": "https://raw.githubusercontent.com/Agent-Threat-Rule/agent-threat-rules/faf743fee8a5018467959ec8ea7ccdb1a1aab333/LICENSE",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:26:05.705106+00:00"
+    }
+  },
+  {
+    "name": "netzilo",
+    "repo_url": "https://github.com/netzilo/aidr-sigma",
+    "commit": "0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+    "fetched_at": "2026-09-05T01:18:42.218468+00:00",
+    "archive_sha256": "e30304ebb01a4ada70ed99623681d49aff7bcc446f5a8ce5a1b1492b83fac9a3",
+    "license_spdx": "Apache-2.0",
+    "license_path": "LICENSE",
+    "record_count": 1156,
+    "count_method": "Parse every YAML document in ai_agent/**/*.yml and ai_agent/**/*.yaml; require id and detection.",
+    "default_branch": "main",
+    "repository_http": {
+      "url": "https://api.github.com/repos/netzilo/aidr-sigma",
+      "final_url": "https://api.github.com/repos/netzilo/aidr-sigma",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.409880+00:00"
+    },
+    "resolve_http": {
+      "url": "https://api.github.com/repos/netzilo/aidr-sigma/commits/main",
+      "final_url": "https://api.github.com/repos/netzilo/aidr-sigma/commits/main",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.660666+00:00"
+    },
+    "commit_http": {
+      "url": "https://api.github.com/repos/netzilo/aidr-sigma/commits/0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+      "final_url": "https://api.github.com/repos/netzilo/aidr-sigma/commits/0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.864226+00:00"
+    },
+    "archive_http": {
+      "url": "https://codeload.github.com/netzilo/aidr-sigma/tar.gz/0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+      "final_url": "https://codeload.github.com/netzilo/aidr-sigma/tar.gz/0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:42.218468+00:00"
+    },
+    "license_http": {
+      "url": "https://raw.githubusercontent.com/netzilo/aidr-sigma/0139a6648ed3daa1094fc4f49e2b157524a0bec7/LICENSE",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:26:05.684292+00:00"
+    }
+  },
+  {
+    "name": "agentshield",
+    "repo_url": "https://github.com/agentshield-ai/agentshield",
+    "commit": "1bd56f9854426e29d59715e81c45fcfe38c7ee0e",
+    "fetched_at": "2026-09-05T01:18:42.226371+00:00",
+    "archive_sha256": "d4debb12f6d72a01bed904a5128b02dc6450db8ae2ae1edebb6956cad394f7df",
+    "license_spdx": "Apache-2.0",
+    "license_path": "rules/LICENSE",
+    "record_count": 69,
+    "count_method": "Parse every YAML document in rules/rules/**/*.yml and rules/rules/**/*.yaml; require id and detection.",
+    "default_branch": "main",
+    "repository_http": {
+      "url": "https://api.github.com/repos/agentshield-ai/agentshield",
+      "final_url": "https://api.github.com/repos/agentshield-ai/agentshield",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.398980+00:00"
+    },
+    "resolve_http": {
+      "url": "https://api.github.com/repos/agentshield-ai/agentshield/commits/main",
+      "final_url": "https://api.github.com/repos/agentshield-ai/agentshield/commits/main",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.646158+00:00"
+    },
+    "commit_http": {
+      "url": "https://api.github.com/repos/agentshield-ai/agentshield/commits/1bd56f9854426e29d59715e81c45fcfe38c7ee0e",
+      "final_url": "https://api.github.com/repos/agentshield-ai/agentshield/commits/1bd56f9854426e29d59715e81c45fcfe38c7ee0e",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.863226+00:00"
+    },
+    "archive_http": {
+      "url": "https://codeload.github.com/agentshield-ai/agentshield/tar.gz/1bd56f9854426e29d59715e81c45fcfe38c7ee0e",
+      "final_url": "https://codeload.github.com/agentshield-ai/agentshield/tar.gz/1bd56f9854426e29d59715e81c45fcfe38c7ee0e",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:42.226371+00:00"
+    },
+    "license_http": {
+      "url": "https://raw.githubusercontent.com/agentshield-ai/agentshield/1bd56f9854426e29d59715e81c45fcfe38c7ee0e/rules/LICENSE",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:26:05.704106+00:00"
+    }
+  },
+  {
+    "name": "agent_audit_kit",
+    "repo_url": "https://github.com/sattyamjjain/agent-audit-kit",
+    "commit": "75d1a155642384d8ab278f0dc6f0647f40255421",
+    "fetched_at": "2026-09-05T01:18:42.309305+00:00",
+    "archive_sha256": "fea86b50b037a05bea1bad233c99cc20b689bc0e0c283dc0af1d20ac247dfd38",
+    "license_spdx": "MIT",
+    "license_path": "LICENSE",
+    "record_count": 332,
+    "count_method": "Parse rules.json and count entries in rules; require rule_id.",
+    "default_branch": "main",
+    "repository_http": {
+      "url": "https://api.github.com/repos/sattyamjjain/agent-audit-kit",
+      "final_url": "https://api.github.com/repos/sattyamjjain/agent-audit-kit",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.377646+00:00"
+    },
+    "resolve_http": {
+      "url": "https://api.github.com/repos/sattyamjjain/agent-audit-kit/commits/main",
+      "final_url": "https://api.github.com/repos/sattyamjjain/agent-audit-kit/commits/main",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.659665+00:00"
+    },
+    "commit_http": {
+      "url": "https://api.github.com/repos/sattyamjjain/agent-audit-kit/commits/75d1a155642384d8ab278f0dc6f0647f40255421",
+      "final_url": "https://api.github.com/repos/sattyamjjain/agent-audit-kit/commits/75d1a155642384d8ab278f0dc6f0647f40255421",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.909730+00:00"
+    },
+    "archive_http": {
+      "url": "https://codeload.github.com/sattyamjjain/agent-audit-kit/tar.gz/75d1a155642384d8ab278f0dc6f0647f40255421",
+      "final_url": "https://codeload.github.com/sattyamjjain/agent-audit-kit/tar.gz/75d1a155642384d8ab278f0dc6f0647f40255421",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:42.309305+00:00"
+    },
+    "license_http": {
+      "url": "https://raw.githubusercontent.com/sattyamjjain/agent-audit-kit/75d1a155642384d8ab278f0dc6f0647f40255421/LICENSE",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:26:05.705106+00:00"
+    }
+  },
+  {
+    "name": "ave",
+    "repo_url": "https://github.com/aveproject/ave",
+    "commit": "3b9fcc001b61f92a5e0b748183261dadf230f92a",
+    "fetched_at": "2026-09-05T01:18:42.230874+00:00",
+    "archive_sha256": "73171c296757df0aeca247a5087e5612f536eedcbd5bbdfacb53ee5b633f8f71",
+    "license_spdx": "Apache-2.0",
+    "license_path": "LICENSE",
+    "record_count": 80,
+    "count_method": "Parse records/**/*.json; require ave_id. Markdown companion files and dist bundles are not records.",
+    "default_branch": "main",
+    "repository_http": {
+      "url": "https://api.github.com/repos/aveproject/ave",
+      "final_url": "https://api.github.com/repos/aveproject/ave",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.405979+00:00"
+    },
+    "resolve_http": {
+      "url": "https://api.github.com/repos/aveproject/ave/commits/main",
+      "final_url": "https://api.github.com/repos/aveproject/ave/commits/main",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.613492+00:00"
+    },
+    "commit_http": {
+      "url": "https://api.github.com/repos/aveproject/ave/commits/3b9fcc001b61f92a5e0b748183261dadf230f92a",
+      "final_url": "https://api.github.com/repos/aveproject/ave/commits/3b9fcc001b61f92a5e0b748183261dadf230f92a",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.913297+00:00"
+    },
+    "archive_http": {
+      "url": "https://codeload.github.com/aveproject/ave/tar.gz/3b9fcc001b61f92a5e0b748183261dadf230f92a",
+      "final_url": "https://codeload.github.com/aveproject/ave/tar.gz/3b9fcc001b61f92a5e0b748183261dadf230f92a",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:42.230874+00:00"
+    },
+    "license_http": {
+      "url": "https://raw.githubusercontent.com/aveproject/ave/3b9fcc001b61f92a5e0b748183261dadf230f92a/LICENSE",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:26:05.700102+00:00"
+    }
+  },
+  {
+    "name": "guardana",
+    "repo_url": "https://github.com/guardana/guardana",
+    "commit": "5d6e4174f69a1a7f945bad189c721e3c601ae4ad",
+    "fetched_at": "2026-09-05T01:18:42.371701+00:00",
+    "archive_sha256": "2c860ec12b6d0f96d6ba94f751669f0a8fca3a97adbb074391333c8b6f8f330f",
+    "license_spdx": "Apache-2.0",
+    "license_path": "LICENSE",
+    "record_count": 51,
+    "count_method": "Parse docs/generated/rules.json and count entries in rules; require id.",
+    "default_branch": "main",
+    "repository_http": {
+      "url": "https://api.github.com/repos/guardana/guardana",
+      "final_url": "https://api.github.com/repos/guardana/guardana",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.444206+00:00"
+    },
+    "resolve_http": {
+      "url": "https://api.github.com/repos/guardana/guardana/commits/main",
+      "final_url": "https://api.github.com/repos/guardana/guardana/commits/main",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.631629+00:00"
+    },
+    "commit_http": {
+      "url": "https://api.github.com/repos/guardana/guardana/commits/5d6e4174f69a1a7f945bad189c721e3c601ae4ad",
+      "final_url": "https://api.github.com/repos/guardana/guardana/commits/5d6e4174f69a1a7f945bad189c721e3c601ae4ad",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:41.812719+00:00"
+    },
+    "archive_http": {
+      "url": "https://codeload.github.com/guardana/guardana/tar.gz/5d6e4174f69a1a7f945bad189c721e3c601ae4ad",
+      "final_url": "https://codeload.github.com/guardana/guardana/tar.gz/5d6e4174f69a1a7f945bad189c721e3c601ae4ad",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:18:42.371701+00:00"
+    },
+    "license_http": {
+      "url": "https://raw.githubusercontent.com/guardana/guardana/5d6e4174f69a1a7f945bad189c721e3c601ae4ad/LICENSE",
+      "http_status": 200,
+      "checked_at": "2026-09-05T01:26:05.713669+00:00"
+    }
+  }
+]

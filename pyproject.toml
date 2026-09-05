@@ -26,6 +26,10 @@ dependencies = []
 # Guardrails, so the analogous number is zero.
 sigma = ["PyYAML>=6.0"]
 atr = ["PyYAML>=6.0"]
+agent-audit-kit = []
+ave = []
+guardana = []
+claude-code = []
 dev = ["pytest>=7.0"]
 
 [project.scripts]

@@ -1,0 +1,2 @@
+The project guide explains how to build the package.
+The project uses a small test suite. Read the project guide before editing.

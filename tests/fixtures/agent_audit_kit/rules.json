@@ -1,0 +1,41 @@
+{
+  "schema": "synthetic-registry-fixture",
+  "rules": [
+    {
+      "rule_id": "AAK-MCP-TEST",
+      "title": "Auth setting fixture",
+      "description": "Requires an authenticated server configuration.",
+      "severity": "high",
+      "category": "mcp-config",
+      "limitations": "A registry entry does not serialize the scanner.",
+      "auto_fixable": false,
+      "remediation": "Review the fixture setting.",
+      "owasp_mcp_references": ["MCP01:2025"],
+      "new_field": {"must_survive": [1, false, null]}
+    },
+    {
+      "rule_id": "AAK-COMPOSE-001",
+      "title": "Synthetic composition metadata",
+      "description": "A graph path requires context and suppression.",
+      "severity": "high",
+      "category": "composition",
+      "limitations": "Suppressed when another finding covers a component."
+    },
+    {
+      "rule_id": "AAK-RUGPULL-001",
+      "title": "Tool changed since pin",
+      "description": "Compare a definition with its previous pin.",
+      "severity": "critical",
+      "category": "tool-poisoning",
+      "limitations": ""
+    },
+    {
+      "rule_id": "AAK-INTERNAL-SCANNER-FAIL",
+      "title": "Scanner diagnostic",
+      "description": "No security predicate.",
+      "severity": "info",
+      "category": "agent-config",
+      "limitations": ""
+    }
+  ]
+}

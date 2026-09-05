@@ -1,0 +1,11 @@
+{
+  "ave_id": "AVE-2026-00002",
+  "schema_version": "1.1.0",
+  "title": "Synthetic runtime class",
+  "description": "A runtime-observed class is still not a predicate.",
+  "severity": "MEDIUM",
+  "status": "active",
+  "confidence_baseline": 0.55,
+  "detection_stage": "runtime_observed",
+  "references": []
+}

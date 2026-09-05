@@ -1,0 +1,9 @@
+{
+  "source": {"tool": "ClawScan"},
+  "target": {"standard": "AVE"},
+  "mappings": [
+    {"clawscan_module": "fixture", "rules": [
+      {"rule_id": "fixture/first", "ave_ids": ["AVE-2026-00001", "AVE-2026-00002"], "primary_ave_id": "AVE-2026-00001", "notes": "Related classes."}
+    ]}
+  ]
+}

@@ -1,0 +1,72 @@
+title: Synthetic containment alternatives
+id: fixture-any
+status: stable
+level: high
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    content|contains: [marker alpha, marker beta]
+  condition: selection
+falsepositives: [Synthetic fixture note]
+---
+title: Synthetic containment conjunction
+id: fixture-all
+status: experimental
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    content|contains|all: [marker alpha, marker beta]
+  condition: selection
+---
+title: Synthetic event guard
+id: fixture-guard
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    event_type: tool_call
+    command|contains|all: [marker alpha, marker beta]
+  condition: selection
+---
+title: Synthetic mixed boolean logic
+id: fixture-nested
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection_a:
+    content|contains: [marker alpha, marker beta]
+  selection_b:
+    content|contains: marker gamma
+  condition: selection_a and selection_b
+---
+title: Synthetic negated filter
+id: fixture-filter
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    content|contains: marker alpha
+  filter:
+    content|contains: marker beta
+  condition: selection and not filter
+---
+title: Synthetic regex alternatives
+id: fixture-regex-tree
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    content|re: [marker alpha, marker beta]
+  condition: selection
+---
+title: Synthetic unsafe regex
+id: fixture-unsafe
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    content|re: ['(a+)+', '(', safe marker]
+  condition: selection
+---
+title: Synthetic unsupported field
+id: fixture-field
+logsource: {product: ai_agent, category: agent_events}
+detection:
+  selection:
+    session.step_count|re: '^100$'
+  condition: selection

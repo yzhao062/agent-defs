@@ -6,3 +6,8 @@ dist/
 .venv/
 .pytest_cache/
 data/cache/
+
+data/avtest/
+data/cache/
+benchmarks/*.json
+*.stackdump

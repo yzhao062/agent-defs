@@ -1,0 +1,10 @@
+{
+  "source": {"tool": "cfgaudit", "commit": "1111111111111111111111111111111111111111"},
+  "target": {"standard": "AVE"},
+  "note": "Synthetic class mapping; does not assert shared rule content.",
+  "mappings": [
+    {"ave_id": "AVE-2026-00001", "cfgaudit_rules": ["CFG-TEST-1", "CFG-TEST-2"], "note": "Only the first subcase maps."},
+    {"ave_id": null, "cfgaudit_rules": ["CFG-UNMAPPED"], "gap": "No matching class."}
+  ],
+  "coverage": {"rules_mapped": 2}
+}

@@ -125,6 +125,23 @@ def test_reachability_uses_each_rules_own_examples():
     assert reach["status"] == "reachable"
 
 
+@pytest.mark.parametrize("predicate,status,checked,hits", [
+    ("marker", "reachable", 1, 1), ("(a+)+$", "not_runnable", 0, 0),
+])
+def test_shared_reachability_preserves_surrogates_and_screen_exclusions(predicate, status, checked, hits):
+    delta = new_delta("fixture", REV)
+    rule = Rule(id="fixture:one", source="fixture", source_id="one", source_rev=REV,
+                source_path="one.json", upstream_url="https://example.invalid/one",
+                predicate_kind=PredicateKind.REGEX, predicate=predicate,
+                examples_positive=("\ud800marker",))
+    result = finish_rule(rule, {}, set(), delta)
+    reach = result.extra["reachability"]
+    assert (reach["status"], reach["checked"], reach["hits"], reach["misses"]) == (status, checked, hits, 0)
+    assert result.examples_positive == rule.examples_positive
+    if status == "not_runnable":
+        assert reach["reason"]
+
+
 @pytest.mark.parametrize("module,path", [
     (agent_audit_kit, "agent_audit_kit/rules.json"),
     (ave, "ave/records/AVE-2026-00001.json"),

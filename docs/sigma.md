@@ -49,8 +49,10 @@ Boolean parsing preserves selection references, parentheses, AND, OR, NOT,
 condition lists, and `1/all of` quantifiers. A contains list remains OR unless
 its own `all` modifier requires AND. Pure, same-field containment expressions
 that flatten exactly become `SUBSTRING_ANY` or `SUBSTRING_ALL`. A single regex
-becomes `REGEX`. Regex alternatives, mixed containment groups and negated filters
-remain `NONE`: the current evaluator has no structured runtime. The loader never
+becomes `REGEX`. A flat conjunction of regexes on one field with one modifier
+case mode becomes `STRUCTURED` with `regex_all`, searched independently. Regex
+alternatives, mixed containment groups and negated filters remain `NONE`: the
+runtime does not support general Boolean trees. The loader never
 joins clauses into a regex and never drops an event guard or unavailable field.
 `content`, `response` and `command` each identify a scalar payload; they are not
 interchangeable fields. Consumers must supply that field's value when scanning.

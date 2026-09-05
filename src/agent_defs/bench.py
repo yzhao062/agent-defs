@@ -204,7 +204,7 @@ def _prepare(rules: Sequence[Rule]) -> tuple[list[Rule], dict, dict[str, str]]:
 def _hits(text: str, rules: Sequence[Rule], compiled: dict, *, isolated: bool = False,
           budget_s: float = 10.0) -> set[str]:
     # A benchmark must finish every rule and every byte, unlike a hook scan.
-    options = {"max_bytes": max(1, len(text.encode("utf-8")))}
+    options = {"max_bytes": max(1, len(text.encode("utf-8", "surrogatepass")))}
     if isolated:
         options["budget_s"] = budget_s
     result = (scan if isolated else scan_trusted)(text, rules, **options)

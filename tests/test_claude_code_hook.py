@@ -156,11 +156,8 @@ def test_subprocess_bad_arguments_and_payload_always_exit_zero(tmp_path, args, t
     result = call_cli(tmp_path, args, text)
     assert result.returncode == 0
     response = json.loads(result.stdout)
-    if text != "{}":
-        assert "incomplete" in response["systemMessage"]
-    else:
-        assert response == {}
-    assert result.stderr == ""
+    assert "incomplete" in response["systemMessage"]
+    assert "hookSpecificOutput" not in response
 
 
 @pytest.mark.parametrize("failure", [RuntimeError, SystemExit, KeyboardInterrupt, MemoryError, ImportError])
@@ -170,18 +167,35 @@ def test_outer_boundary_wraps_package_imports_and_base_exceptions(monkeypatch, c
         raise failure(2)
     monkeypatch.setattr(claude_code, "_dispatch", broken)
     assert claude_code.main(["run"]) == 0
-    assert "incomplete" in json.loads(capsys.readouterr().out)["systemMessage"]
+    captured = capsys.readouterr()
+    assert "incomplete" in json.loads(captured.out)["systemMessage"]
+    assert "accidental scanner output" not in captured.out
+    assert failure.__name__ in captured.err
 
 
-def test_log_failure_fails_open_in_subprocess(config, tmp_path):
+def test_log_failure_preserves_measured_decision_in_subprocess(config, tmp_path):
     measured(config)
     config["sources"]["builtin"] = "DENY"
     config["log_path"] = str(tmp_path)  # Directory cannot be appended to.
     path = tmp_path / "config.json"
     hook.atomic_json(path, config)
     result = call_cli(tmp_path, ["run", "--config", str(path)], json.dumps(payload(attack())))
-    assert result.returncode == 0 and result.stderr == ""
-    assert "incomplete" in json.loads(result.stdout)["systemMessage"]
+    assert result.returncode == 0
+    response = json.loads(result.stdout)
+    assert response["hookSpecificOutput"]["updatedToolOutput"] == hook.WITHHELD
+    assert "systemMessage" in response and "log could not be written" in result.stderr
+
+
+def test_log_failure_fails_open_in_subprocess(config, tmp_path):
+    config["log_path"] = str(tmp_path)
+    path = tmp_path / "config.json"
+    hook.atomic_json(path, config)
+    result = call_cli(tmp_path, ["run", "--config", str(path)], json.dumps(payload(attack())))
+    assert result.returncode == 0
+    response = json.loads(result.stdout)
+    assert "log could not be written" in response["systemMessage"]
+    assert "hookSpecificOutput" not in response
+    assert attack() not in result.stdout + result.stderr
 
 
 def test_install_idempotent_and_uninstall_preserves_guard(tmp_path):
@@ -192,14 +206,14 @@ def test_install_idempotent_and_uninstall_preserves_guard(tmp_path):
         "Stop": [{"hooks": [{"type": "command", "command": "other"}]}]}}
     hook.atomic_json(settings, original)
     for _ in range(2):
-        result = call_cli(tmp_path, ["install", "--settings", str(settings), "--config", str(config)])
+        result = call_cli(tmp_path, ["install", "--settings", str(settings), "--config", str(config), "--yes"])
         assert json.loads(result.stdout)["agent_defs"] == "installed"
     installed = json.loads(settings.read_text())
     assert installed["hooks"]["PreToolUse"][0] == original["hooks"]["PreToolUse"][0]
     assert len(installed["hooks"]["PreToolUse"]) == 2
     assert len(installed["hooks"]["PostToolUse"]) == 1
     for _ in range(2):
-        hook.install(settings, config, uninstall=True)
+        hook.install(settings, config, uninstall=True, confirm=True)
     assert json.loads(settings.read_text()) == original
     assert config.exists()
 
@@ -209,7 +223,7 @@ def test_mixed_group_preserves_unrelated_command(tmp_path):
     guard = {"type": "command", "command": "python guard.py"}
     hook.atomic_json(settings, {"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [
         hook.hook_spec(config), guard]}]}})
-    hook.install(settings, config, uninstall=True)
+    hook.install(settings, config, uninstall=True, confirm=True)
     assert json.loads(settings.read_text())["hooks"]["PostToolUse"][0]["hooks"] == [guard]
 
 
@@ -231,7 +245,8 @@ def test_invalid_settings_untouched_and_config_not_clobbered(tmp_path):
     settings.write_text('{"hooks": "invalid"}')
     config.write_text("custom configuration")
     result = call_cli(tmp_path, ["install", "--settings", str(settings), "--config", str(config)])
-    assert result.returncode == 0 and json.loads(result.stdout) == {}
+    assert result.returncode == 0 and json.loads(result.stdout)["agent_defs"] == "error"
+    assert "invalid settings" in json.loads(result.stdout)["error"]
     assert settings.read_text() == '{"hooks": "invalid"}'
     assert config.read_text() == "custom configuration"
 
@@ -275,11 +290,11 @@ def test_real_guard_settings_merge_without_touching_installed_files(tmp_path):
     assert "guard.py" in json.dumps(original["hooks"])
     settings, config_path = tmp_path / "settings.json", tmp_path / "config.json"
     settings.write_bytes(before)
-    hook.install(settings, config_path)
+    hook.install(settings, config_path, confirm=True)
     once = settings.read_bytes()
-    hook.install(settings, config_path)
+    hook.install(settings, config_path, confirm=True)
     assert settings.read_bytes() == once
-    hook.install(settings, config_path, uninstall=True)
+    hook.install(settings, config_path, uninstall=True, confirm=True)
     assert json.loads(settings.read_text()) == original
     assert reference.read_bytes() == before and guard_path.read_bytes() == guard_before
 
@@ -293,17 +308,18 @@ def test_changed_predicate_invalidates_admission(config):
 
 def test_oversize_and_budget_exhaustion_are_visible(config, monkeypatch):
     result = hook.process(payload("x" * (hook.MAX_SCAN_BYTES + 1)), config)
+    assert result == hook.degraded_response("PostToolUse")
     assert "incomplete" in result["hookSpecificOutput"]["additionalContext"]
     assert "scan_incomplete" in Path(config["log_path"]).read_text()
     monkeypatch.setattr(hook, "SCAN_BUDGET_S", 0)
-    assert "incomplete" in hook.process(payload(attack()), config)["systemMessage"]
+    assert hook.process(payload(attack()), config) == hook.degraded_response("PostToolUse")
 
 
 def test_unrelated_handler_mentioning_package_is_not_owned(tmp_path):
     config = tmp_path / "config.json"
     assert not hook.owned({"type": "command", "command": "echo agent_defs.hooks.claude_code"})
     candidate = hook.hook_spec(config)
-    candidate["args"][-1] = "someone-else"
+    candidate["command"] = candidate["command"].replace("agent-defs-claude-code-v2", "someone-else")
     assert not hook.owned(candidate)
 
 
@@ -314,6 +330,7 @@ def test_launcher_catches_missing_package(tmp_path):
     result = subprocess.run(argv, capture_output=True, text=True, cwd=tmp_path, timeout=5)
     assert result.returncode == 0 and not result.stderr
     assert "incomplete" in json.loads(result.stdout)["systemMessage"]
+    assert "package_unavailable" in (tmp_path / "config.json.launcher-errors.jsonl").read_text()
 
 
 def test_top_level_import_does_not_pull_hook_or_third_party(tmp_path):

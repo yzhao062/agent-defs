@@ -1,4 +1,4 @@
-"""Fail-open Claude Code command hook and reversible settings installer.
+"""Zero-exit Claude Code command hook and reversible settings installer.
 
 All imports that can load package code, argument handling, and protocol work
 run inside main's exception boundary. An empty object means no veto and leaves
@@ -26,8 +26,18 @@ def main(argv=None):
         with contextlib.redirect_stdout(io.StringIO()):
             result = _dispatch(args)
         response = json.dumps(result, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
-    except BaseException:
-        pass
+    except BaseException as exc:
+        # Only administrative failures can contain paths and detailed errors.
+        # Hook diagnostics are fixed text: payload bytes never become context.
+        try:
+            args = sys.argv[1:] if argv is None else argv
+            if args and args[0] in ("install", "uninstall", "calibrate"):
+                response = json.dumps({"agent_defs": "error", "kind": type(exc).__name__, "error": str(exc)})
+            else:
+                response = '{"systemMessage":"agent-defs: scan incomplete; the hook failed before completing its checks."}'
+                sys.stderr.write("agent-defs: hook failure (" + type(exc).__name__ + ").\n")
+        except BaseException:
+            response = '{"systemMessage":"agent-defs: hook unavailable."}'
     try:
         sys.stdout.write(response + "\n")
         sys.stdout.flush()

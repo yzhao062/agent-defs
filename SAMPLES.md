@@ -57,6 +57,33 @@ must record how many manifest entries were present when they ran.
 5. **Ship a self-check.** Before publishing a bundle, scan the built artifact with whatever scanner
    is available and record the result. A detection on our own release is a release blocker.
 
+## It happened again, which is why it is now a guard rather than a rule
+
+2026-09-04, later the same day. Real-time protection fired repeatedly during the second build round.
+Two paths were named in the alerts, and a sweep found the actual state: **six separate ATR checkouts
+on the Windows host**, holding roughly 4,520 files between them under
+`data/skill-benchmark/malicious/` and `data/test-corpora/`. One was a build worker's evidence cache
+left behind by the first round, still being rescanned hours after that round had been committed.
+
+Two things were wrong, and only one of them was the scanner's business.
+
+**The operator was interrupted repeatedly by their own antivirus doing its job.** Nothing here was a
+false positive.
+
+**Every count taken on that host was a count of survivors, and stayed that way silently.** A checkout
+that shrinks under a running measurement produces a number with no error bar and no warning.
+
+The instruction to keep this material off the host existed and was ignored, because it was a sentence
+in a briefing rather than something the code enforced. `sources.NEVER_EXTRACT` now holds the two
+prefixes and `fetch()` skips them, so a member under either one is never written by this package. When
+anything is skipped the cache entry carries an `EXCLUDED` file recording the count, because a silent
+omission is the failure this whole file is about. `tests/test_sources.py` pins both the blocked and the
+allowed paths.
+
+Nothing needs them on disk. Reachability is checked at build time against examples read from the
+archive in memory, and the full corpus lives on a Linux box with no scanner when a whole-corpus count
+is genuinely required.
+
 ## The open one
 
 Rule content itself carries attack strings, because a detection pattern for a dropper contains the

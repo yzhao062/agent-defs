@@ -272,3 +272,36 @@ def test_bad_head_is_unreachable_even_after_metadata_success(fixture, monkeypatc
         assert result["checks"][0]["http_status"] == 200
         assert result["checks"][1]["http_status"] == status
         assert result["upstream_commit"] is None
+
+
+def test_malicious_sample_paths_are_never_written_to_disk():
+    """The guard that stops a scanner quarantining files out of our own cache.
+
+    Six ATR checkouts across two build rounds put roughly 4,500 malware samples
+    and harmful-prompt files on a Windows host, and real-time protection deleted
+    them out from under running measurements. Nothing here needs them on disk.
+    """
+    from pathlib import Path
+
+    from agent_defs.sources import NEVER_EXTRACT, _is_excluded
+
+    assert ("data", "skill-benchmark", "malicious") in NEVER_EXTRACT
+    assert ("data", "test-corpora") in NEVER_EXTRACT
+
+    blocked = [
+        "data/skill-benchmark/malicious/snyk-005-malware-dropper-rentry.md",
+        "data/skill-benchmark/malicious/ninja-039-malware-dropper-whatsapp-mgv.md",
+        "data/test-corpora/harmbench/ATR-HARMB-anything.proposal.yaml",
+        "data/test-corpora/advbench/x.yaml",
+    ]
+    for path in blocked:
+        assert _is_excluded(Path(path).parts), path
+
+    allowed = [
+        "rules/prompt-injection/ATR-2026-00040.yaml",
+        "data/skill-benchmark/benign/ordinary-skill.md",
+        "data/skill-benchmark/manifest.json",
+        "LICENSE",
+    ]
+    for path in allowed:
+        assert not _is_excluded(Path(path).parts), path

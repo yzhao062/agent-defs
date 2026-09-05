@@ -32,6 +32,28 @@ _SHA = re.compile(r"[0-9a-f]{40}\Z")
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 _REPO = re.compile(r"https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\Z")
 
+#: Paths that are never written to disk, matched against the archive-relative path
+#: with the leading repository directory already stripped.
+#:
+#: These hold working malware samples and harmful-prompt payloads. Extracting them
+#: is what made a Windows host's antivirus quarantine files out of six separate
+#: checkouts across two build rounds, which cost a corpus, corrupted every count
+#: taken on that host, and interrupted the operator repeatedly. The samples are
+#: also the content this package must never redistribute; see SAMPLES.md.
+#:
+#: Nothing in this package needs them on disk. A rule's reachability is checked at
+#: build time against examples read from the archive in memory, and ATR's own npm
+#: artifact already excludes ``data/test-corpora`` from what it publishes.
+NEVER_EXTRACT = (
+    ("data", "skill-benchmark", "malicious"),
+    ("data", "test-corpora"),
+)
+
+
+def _is_excluded(parts):
+    """True when an archive member sits under a NEVER_EXTRACT prefix."""
+    return any(tuple(parts[:len(prefix)]) == prefix for prefix in NEVER_EXTRACT)
+
 
 class SourceError(RuntimeError):
     """A source could not be fetched or verified; no unpinned retry is made."""
@@ -273,9 +295,17 @@ def fetch(name, cache_dir=DEFAULT_CACHE, *, lock_path=None, timeout=30):
                 tree.mkdir()
                 for relative in sorted(directories):
                     (tree / relative).mkdir(parents=True, exist_ok=True)
+                skipped = 0
                 for relative, member in files.items():
+                    if _is_excluded(Path(relative).parts):
+                        skipped += 1
+                        continue
                     with archive.extractfile(member) as source, (tree / relative).open("xb") as target:
                         shutil.copyfileobj(source, target)
+                if skipped:
+                    (stage / "EXCLUDED").write_text(
+                        f"{skipped} members were not extracted; see sources.NEVER_EXTRACT" + chr(10),
+                        encoding="utf-8")
             try:
                 stage.rename(cached)
             except OSError:

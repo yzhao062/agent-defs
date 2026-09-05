@@ -106,3 +106,29 @@ and coverage decision is a product question with no measured answer.
 ATR ships only once its third-party notices exist, which they now do, and the 25 AgentHarm records are
 marked `restricted` and excluded from the default bundle. See `THIRD-PARTY-NOTICES` and the research
 repository's rights record.
+
+## What an audit of the round found, 2026-09-04
+
+Twenty agents audited the repair claims against their own evidence. Full record in the research
+repository at `research/measure-2026-09-04/wf-audit.md`. Three results belong here.
+
+**Verified against the real machine, not a stand-in.** `r3`'s installer preserves an existing
+`settings.json` byte for byte, requires explicit confirmation, backs up, and contains interpreter
+failure behind an exit-zero boundary. The auditor ran the exact command string `hook_spec()` writes,
+against a copy of the real `guard.py` wiring. These hold.
+
+**`r2`'s headline does not hold at the hook.** Content past the old 256 KiB cap is scanned within a
+bounded window, but the operative limit through the hook is 1 MiB rather than 4 MiB. Padding a hostile
+page out of the scan became four times more expensive rather than impossible. The completeness and
+containment properties, which were the other two thirds of that unit, did hold.
+
+**Nothing measured is what would run.** `hooks/_claude_code_impl.py` defaults to
+`builtin.STARTER_RULES`, four hand-written rules, and no code path loads the 306 measured `OUT` rules
+into a hook. Every number the measurement round produced describes a bundle this package cannot
+currently assemble at runtime. **This is the first thing to fix**, ahead of any further measurement,
+because until it is closed the measurement and the product are separate artifacts sharing a
+repository.
+
+Two audit findings were stale on arrival, because the audit ran while this integration was still
+going. The four unmerged branches are merged, and the claim that 36 of `r3`'s 76 regressions fail on
+the merged tree does not reproduce: the three `r3` suites report 146 passing and none failing here.

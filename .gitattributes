@@ -1,0 +1,2 @@
+tests/fixtures/atr/*.yaml text eol=lf
+tests/fixtures/bench/corpus/* text eol=lf

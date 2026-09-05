@@ -13,13 +13,14 @@ import json
 import math
 import re
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Sequence
 
-from .evaluate import compile_rule, scan_trusted
+from .evaluate import compile_rule, scan, scan_trusted
 from .lanes import ADVISE_MAX_U95, DENY_MAX_U95, admit, trials_needed, u95_zero_hits
 from .model import BenignFiring, Breadth, Lane, Lineage, PredicateKind, Rule, Surface
 
@@ -200,15 +201,22 @@ def _prepare(rules: Sequence[Rule]) -> tuple[list[Rule], dict, dict[str, str]]:
     return runnable, compiled, excluded
 
 
-def _hits(text: str, rules: Sequence[Rule], compiled: dict) -> set[str]:
+def _hits(text: str, rules: Sequence[Rule], compiled: dict, *, isolated: bool = False,
+          budget_s: float = 10.0) -> set[str]:
     # A benchmark must finish every rule and every byte, unlike a hook scan.
-    result = scan_trusted(text, rules, max_bytes=max(1, len(text.encode("utf-8"))))
-    if result.truncated_input or result.rules_skipped_budget or result.rules_evaluated != len(rules):
-        raise RuntimeError("incomplete benchmark scan; refusing a quiet measurement")
+    options = {"max_bytes": max(1, len(text.encode("utf-8")))}
+    if isolated:
+        options["budget_s"] = budget_s
+    result = (scan if isolated else scan_trusted)(text, rules, **options)
+    if not result.complete or result.rules_evaluated != len(rules):
+        raise RuntimeError("incomplete benchmark scan; refusing a quiet measurement: "
+                           f"evaluated={result.rules_evaluated}/{len(rules)}, "
+                           f"skipped={result.rules_skipped_budget}, truncated={result.truncated_input}, "
+                           f"errors={result.errors!r}, worker_error={result.worker_error!r}")
     return {f.rule_id for f in result.findings}
 
 
-def reachability(rules: Sequence[Rule]) -> dict[str, dict]:
+def reachability(rules: Sequence[Rule], *, isolated: bool = False, budget_s: float = 10.0) -> dict[str, dict]:
     """Evaluate every rule against each of its own unchanged positive examples.
 
     Missing examples are unknown, not dead. One positive witness establishes
@@ -218,7 +226,8 @@ def reachability(rules: Sequence[Rule]) -> dict[str, dict]:
     result = {rid: {"status": "not_runnable", "trials": 0, "hits": 0, "reason": reason}
               for rid, reason in excluded.items()}
     for rule in runnable:
-        matches = [i for i, example in enumerate(rule.examples_positive) if _hits(example, [rule], compiled)]
+        matches = [i for i, example in enumerate(rule.examples_positive)
+                   if _hits(example, [rule], compiled, isolated=isolated, budget_s=budget_s)]
         result[rule.id] = {"status": "reachable" if matches else "unreachable" if rule.examples_positive else "no_examples",
                            "trials": len(rule.examples_positive), "hits": len(matches), "matched_indices": matches}
     return result
@@ -288,21 +297,26 @@ def apply_report(rules: Sequence[Rule], report: dict) -> list[Rule]:
     return assigned
 
 
-def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: str | None = None) -> dict:
+def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: str | None = None,
+            isolated: bool = False, workers: int = 1, budget_s: float = 10.0) -> dict:
+    if type(workers) is not int or not 1 <= workers <= 4:
+        raise ValueError("workers must be between 1 and 4")
     if not corpora:
         raise ValueError("at least one corpus is required")
     if len({(c.identity, c.revision) for c in corpora}) != len(corpora):
         raise ValueError("duplicate corpus identity/revision")
     date = measured_at or datetime.now(timezone.utc).isoformat()
     runnable, compiled, excluded = _prepare(rules)
-    positive = reachability(rules)
+    positive = reachability(rules, isolated=isolated, budget_s=budget_s)
     report = {"schema_version": 1, "measured_at": date,
               "method": {"bound": "one-sided exact 95% Clopper-Pearson; pointwise per stratum",
                          "trial_definitions": TRIAL_DEFINITIONS,
                          "finding": "at most one hit per rule per material unit; bundle hits are the union",
                          "clean_trials_needed": {"ADVISE": trials_needed(ADVISE_MAX_U95), "DENY": trials_needed(DENY_MAX_U95)},
                          "strata_classifier": "path-keywords-v1; manifest overrides; file type, prose, and their intersection",
-                         "limitations": ["Repository files are CFG proxies, not real tool-call traffic.",
+                         "execution": {"isolated": isolated, "workers": workers,
+                                       "budget_s": budget_s if isolated else None},
+                         "limitations": ["Surface and provenance are supplied by the corpus manifest.",
                                          "Binomial limits assume independent representative trials; one repository does not establish this.",
                                          "Pointwise 95% bounds are not a simultaneous 95% guarantee across all strata or rules.",
                                          "Positive examples establish reachability, not recall or production safety."]},
@@ -325,14 +339,27 @@ def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: st
         diagnostic_bundle_hits = Counter()
         seen_content = set()
         duplicates = 0
-        for unit in corpus.units:
+        def evaluate_unit(unit):
+            try:
+                return _hits(unit.text, runnable, compiled, isolated=isolated, budget_s=budget_s)
+            except RuntimeError as exc:
+                raise RuntimeError(f"{corpus.identity}:{unit.id}: {exc}") from exc
+
+        # Keep only a bounded batch of scans/results in memory. External traffic
+        # uses scan's killable subprocess even when several units run concurrently.
+        def evaluated_units():
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                for start in range(0, len(corpus.units), workers):
+                    batch = corpus.units[start:start + workers]
+                    yield from zip(batch, pool.map(evaluate_unit, batch))
+
+        for unit, hits in evaluated_units():
             surface = unit.surface.value
             observed_surfaces.add(surface)
             content_key = (surface, unit.sha256)
             duplicates += content_key in seen_content
             seen_content.add(content_key)
             total_bytes += unit.size_bytes
-            hits = _hits(unit.text, runnable, compiled)
             native_hits = {r.id for r in runnable if r.surface is unit.surface and r.id in hits}
             all_findings.update(hits)
             material_rows.append({"corpus": corpus.identity, "id": unit.id, "surface": surface,
@@ -385,6 +412,7 @@ def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: st
     report["bundle"]["diagnostic"] = {"trials": n, "hits": touched, "u95": binomial_u95(n, touched),
                                         "note": "pooled union of all rule hits; cross-surface diagnostic only"}
     loud = sorted(rid for rid, k in all_findings.items() if k / n > 0.05)
+    over_one = sorted(rid for rid, k in all_findings.items() if k / n > 0.01)
     findings = sum(all_findings.values())
     removed = sum(all_findings[rid] for rid in loud)
     quiet = [r.id for r in runnable if all_findings[r.id] == 0]
@@ -394,6 +422,8 @@ def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: st
                          "quiet_rules": len(quiet), "quiet_reachable": sum(positive[r]["status"] == "reachable" for r in quiet),
                          "quiet_unreachable": sum(positive[r]["status"] == "unreachable" for r in quiet),
                          "quiet_no_examples": sum(positive[r]["status"] == "no_examples" for r in quiet),
+                         "rules_over_one_percent": over_one,
+                         "over_one_percent_share": sum(all_findings[r] for r in over_one) / findings if findings else 0,
                          "rules_over_five_percent": loud, "over_five_percent_share": removed / findings if findings else 0,
                          "top_rule_share": max(all_findings.values(), default=0) / findings if findings else 0,
                          "findings_without_loud_rules": findings - removed,
@@ -420,16 +450,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     noise.add_argument("--corpus", action="append", required=True, type=Path)
     noise.add_argument("--rules", required=True, type=Path)
     noise.add_argument("--out", required=True, type=Path)
+    noise.add_argument("--isolated", action="store_true", help="required for external/untrusted traffic")
+    noise.add_argument("--workers", type=int, default=1)
+    noise.add_argument("--budget-s", type=float, default=10.0)
     positive = sub.add_parser("reachability", help="run unchanged upstream positive examples")
     positive.add_argument("--rules", required=True, type=Path)
     positive.add_argument("--out", required=True, type=Path)
+    positive.add_argument("--isolated", action="store_true")
     args = parser.parse_args(argv)
     try:
         rules = load_rules(args.rules)
         if args.command == "measure":
-            report = measure(rules, [load_corpus(p) for p in args.corpus])
+            report = measure(rules, [load_corpus(p) for p in args.corpus], isolated=args.isolated,
+                             workers=args.workers, budget_s=args.budget_s)
         else:
-            report = {"schema_version": 1, "measured_at": datetime.now(timezone.utc).isoformat(), "rules": reachability(rules)}
+            report = {"schema_version": 1, "measured_at": datetime.now(timezone.utc).isoformat(),
+                      "rules": reachability(rules, isolated=args.isolated)}
         args.out.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(2, f"bench: {exc}\n")

@@ -19,6 +19,14 @@ unsupported or rejected predicate is counted separately with its reason, never
 as a clean trial. An incomplete scan aborts without publishing a success report.
 The existing Python regex screen is heuristic and supplies no per-regex timeout.
 
+Fetched traffic must use `--isolated --workers 4 --budget-s 30`. This routes
+each complete result and each positive example through `evaluate.scan` and its
+killable subprocess. The default trusted mode is only for controlled offline
+fixtures. Any evaluator error, timeout, truncation, or incomplete rule count
+aborts the report. Isolated scans retain the evaluator's 4 MiB input ceiling;
+larger complete results must be reported as unsupported, never silently clipped.
+The deadline is an offline measurement budget, not a production latency claim.
+
 ## Corpus manifest and trials
 
 Each corpus directory contains `corpus.json` and UTF-8 material files:
@@ -166,8 +174,48 @@ both fetched with HTTP 200 on 2026-09-05 UTC. Corpus and subset counts are
 VERIFIED by the two commands above. The earlier full-bundle numbers are supplied
 context, not a full reproduction by this harness.
 
-The current real corpus is entirely CFG material. No real tool-call traffic was
-measured on IN or OUT; PROMPT and PIN are also unmeasured. This matters especially
+That pinned comparison is entirely CFG material. No real tool-call traffic was
+measured on IN or OUT in that comparison; PROMPT and PIN were also unmeasured. This matters especially
 for the context's 515 OUT rules among ATR's 793. Zero CFG matches cannot establish
 their tool-output noise rate. No rule in this experiment earned an interrupting
 lane.
+
+## Real tool traffic reproduction
+
+The paragraph above describes the earlier configuration experiment. The traffic
+scripts add a separate OUT experiment without changing rule conditions:
+
+```text
+python scripts/inspect_tool_traffic.py --out /external/r1-evidence
+python scripts/prepare_tool_traffic.py --out /external/r1-evidence --local-root /authorized/.claude/projects
+PYTHONPATH=src python scripts/export_traffic_rules.py --archives /verified/archives --out /external/r1-evidence
+PYTHONPATH=src python scripts/measure_tool_traffic.py --evidence /external/r1-evidence --names trace-commons local-claude --rules /external/r1-evidence/atr-out-rules.json --workers 3 --budget-s 180
+```
+
+The exporter runs beside `sources.lock` and expects verified rule corpora beside
+the archive directory. It extracts only ATR rules and LICENSE, never malicious
+sample directories. Traffic snapshots and reports belong outside the repository;
+local transcripts must remain private. The JSONL adapter verifies the snapshot
+and each result hash before constructing the existing `bench.Corpus` objects.
+
+One trial is one recorded textual tool result joined to its invocation. All text
+blocks in the result are joined in order with newlines, as one trial. Tool
+references, images, missing results, and ambiguous repeated result IDs are
+excluded and counted. Wrapper fields, parent conversation text, and hidden
+`toolUseResult` metadata are not the returned text. No payload is split to
+increase trial counts; the original tools' truncation/summarization is retained.
+
+Exposure labels are a versioned heuristic in `prepare_tool_traffic.py`:
+WebFetch/WebSearch, local generation, unknown file origin, network commands,
+unknown external tools, and other mixed outputs are separate. A local file read
+does not establish who authored it. Errors remain real results and receive a
+separate status stratum. These are observed firing rates on unmodified traffic,
+not adjudicated false-positive rates. Session dependence and tool summaries limit
+what binomial bounds can establish. The report retains duplicate-output and
+small-stratum admission gates and now lists rules firing on more than 1% of units.
+
+The local sample contains a real 28,049-byte Gmail result on which the full
+306-rule OUT bundle failed a 30-second deadline. Rule ATR-2026-00233 alone took
+14.9 seconds with zero findings. The longer offline deadline above is needed to
+finish this measurement, not a proposed hook budget. `diagnose_tool_traffic.py`
+reproduces a named rule/result pair without printing private result text.

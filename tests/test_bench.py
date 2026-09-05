@@ -193,9 +193,32 @@ def test_incomplete_evaluation_aborts_instead_of_reporting_zero(monkeypatch):
     from agent_defs import bench
     from agent_defs.evaluate import ScanResult
 
-    monkeypatch.setattr(bench, "scan", lambda *a, **kw: ScanResult((), 0, 1, 0, False))
+    monkeypatch.setattr(bench, "scan_trusted", lambda *a, **kw: ScanResult((), 0, 1, 0, False))
     with pytest.raises(RuntimeError, match="incomplete benchmark"):
         measure([rule()], [corpus(1, 1)])
+
+
+def test_errors_abort_even_when_rule_count_is_complete(monkeypatch):
+    from agent_defs import bench
+    from agent_defs.evaluate import RuleError, ScanResult
+
+    monkeypatch.setattr(bench, "scan_trusted", lambda *a, **kw:
+                        ScanResult((), 1, 0, 0, False, (RuleError("quiet", "rejected"),)))
+    with pytest.raises(RuntimeError, match="incomplete benchmark"):
+        measure([rule()], [corpus(1, 1)])
+
+
+def test_external_measurement_never_calls_trusted_scanner(monkeypatch):
+    from agent_defs import bench
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("external text crossed the trusted boundary")
+
+    monkeypatch.setattr(bench, "scan_trusted", forbidden)
+    report = measure([rule()], [corpus(1, 1)], isolated=True, workers=2)
+    assert report["summary"]["trials"] == 2
+    assert report["summary"]["quiet_reachable"] == 1
+    assert report["method"]["execution"]["isolated"] is True
 
 
 def test_duplicate_ids_rejected():

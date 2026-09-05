@@ -577,7 +577,7 @@ def reachability(records: Iterable[Rule]) -> dict:
             counts["not_runnable"] += 1
             details[rule.id] = {"status": "not_runnable", "examples": len(rule.examples_positive)}
             continue
-        hits = sum(bool(scan(e, [rule]).findings) for e in rule.examples_positive)
+        hits = sum(bool(scan(e, [rule]).require_complete().findings) for e in rule.examples_positive)
         counts["tested_rules"] += 1
         counts["tested_examples"] += len(rule.examples_positive)
         counts["example_hits"] += hits

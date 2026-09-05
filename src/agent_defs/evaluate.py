@@ -23,27 +23,25 @@ from typing import Iterable, Sequence
 
 from .model import PredicateKind, Rule
 
-DEFAULT_MAX_BYTES = 256 * 1024
+DEFAULT_MAX_BYTES = 4 * 1024 * 1024
 DEFAULT_BUDGET_S = 0.25
 _MAX_PATTERN_LEN = 4096
 _MAX_RULES = 4096
 _MAX_NEEDLES = 64
 _MAX_BUNDLE_CHARS = 1024 * 1024
 _MAX_INPUT_BYTES = 4 * 1024 * 1024
-_MAX_MATCH_CHARS = 512
 _CLEANUP_S = 0.1
 _SUPERVISORS = threading.BoundedSemaphore(4)
 
 
 @dataclass(frozen=True)
 class Finding:
+    """Coordinates only. Recover evidence from the original input outside the model."""
+
     rule_id: str
     surface: str
     start: int
     end: int
-    matched: str
-    truncated_input: bool = False
-    truncated_match: bool = False
 
 
 @dataclass(frozen=True)
@@ -54,7 +52,7 @@ class RuleError:
 
 @dataclass(frozen=True)
 class ScanResult:
-    findings: Sequence[Finding]
+    partial_findings: Sequence[Finding]
     rules_evaluated: int
     rules_skipped_budget: int
     elapsed_s: float
@@ -65,6 +63,26 @@ class ScanResult:
     @property
     def complete(self) -> bool:
         return not (self.truncated_input or self.rules_skipped_budget or self.errors or self.worker_error)
+
+    def require_complete(self) -> ScanResult:
+        if not self.complete:
+            raise IncompleteScanError(self)
+        return self
+
+    @property
+    def findings(self) -> Sequence[Finding]:
+        """A negative result is meaningful only after every required check finished."""
+        self.require_complete()
+        return self.partial_findings
+
+    def __bool__(self):
+        raise TypeError("use result.complete and result.findings explicitly")
+
+
+class IncompleteScanError(RuntimeError):
+    def __init__(self, result: ScanResult):
+        super().__init__("incomplete scan; use partial_findings only with an explicit incomplete-scan policy")
+        self.result = result
 
 
 class UnsafePattern(ValueError):
@@ -171,7 +189,7 @@ def _search_substrings(rule: Rule, needles: Sequence[re.Pattern], hay: str) -> F
                 return None
         else:
             if first is None:
-                first = Finding(rule.id, rule.surface.value, hit.start(), hit.end(), hit.group())
+                first = Finding(rule.id, rule.surface.value, hit.start(), hit.end())
             if rule.predicate_kind is PredicateKind.SUBSTRING_ANY:
                 return first
     return first
@@ -327,6 +345,10 @@ def scan(
     Limits bound serialization: 4096 rules, 1 Mi characters of predicate data,
     64 needles per substring rule, 4096 characters per regex/needle and at most
     4 MiB of input. Oversized bundles are explicitly incomplete, never sampled.
+    The entire bounded input is searched as one string, including beyond the old
+    256 KiB cap. This preserves unbounded regexes, anchors, lookarounds and ALL
+    predicates without window overlap or duplicate findings. ``max_bytes`` is an
+    optional stricter total limit; exceeding it makes ``result.findings`` raise.
     The legacy compiled mapping is accepted but ignored: re objects cannot cross
     the isolation boundary safely and an id-only cache can substitute stale rules.
     """
@@ -397,9 +419,7 @@ def scan(
                     start, end = detail
                     if not (isinstance(start, int) and isinstance(end, int) and 0 <= start <= end <= len(payload)):
                         raise ValueError("invalid match span")
-                    findings.append(Finding(item["id"], item["surface"], start, end,
-                                            payload[start:min(end, start + _MAX_MATCH_CHARS)],
-                                            truncated, end - start > _MAX_MATCH_CHARS))
+                    findings.append(Finding(item["id"], item["surface"], start, end))
                 evaluated += 1
             else:
                 raise ValueError("invalid completion status")
@@ -407,8 +427,9 @@ def scan(
         except (ValueError, TypeError, IndexError):
             worker_error = "invalid worker response"
             break
+    skipped = len(wire) - len(completed)
     if timed_out:
-        skipped = len(wire) - len(completed)
+        worker_error = worker_error or "worker deadline exceeded"
     elif returncode != 0 or len(completed) != len(wire):
         worker_error = worker_error or f"worker failed (exit {returncode}; {len(completed)}/{len(wire)} completed)"
     return result()
@@ -435,10 +456,14 @@ def scan_trusted(
     ``compile_rule`` refuses anything the bundle should not contain, and a per-rule
     failure is recorded rather than raised so one bad rule cannot end a measurement.
 
-    The result carries no ``rules_skipped_budget``, because nothing here is skipped.
+    ``rules_skipped_budget`` is zero. Rejected rules and the explicit byte limit
+    still make ``findings`` raise IncompleteScanError. Offline callers can supply
+    a larger max_bytes than the isolated entry point allows.
     """
     if not isinstance(payload, str):
         raise TypeError("payload must be a string")
+    if not isinstance(max_bytes, int) or max_bytes < 0:
+        raise ValueError("max_bytes must be a nonnegative integer")
     payload, truncated = _cap_payload(payload, max_bytes)
     findings: list = []
     errors: list = []
@@ -461,9 +486,7 @@ def scan_trusted(
         evaluated += 1
         if span is not None:
             start, end = span
-            findings.append(Finding(rule.id, rule.surface.value, start, end,
-                                    payload[start:min(end, start + _MAX_MATCH_CHARS)],
-                                    truncated, end - start > _MAX_MATCH_CHARS))
-    return ScanResult(findings=tuple(findings), rules_evaluated=evaluated,
+            findings.append(Finding(rule.id, rule.surface.value, start, end))
+    return ScanResult(partial_findings=tuple(findings), rules_evaluated=evaluated,
                       rules_skipped_budget=0, elapsed_s=time.perf_counter() - started,
                       truncated_input=truncated, errors=tuple(errors), worker_error=None)

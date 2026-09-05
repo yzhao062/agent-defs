@@ -15,6 +15,7 @@ import platform
 import random
 import statistics
 import subprocess
+import tempfile
 import time
 
 import yaml
@@ -30,12 +31,15 @@ def percentile(values, q):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--atr", type=Path, required=True)
+    parser.add_argument("--revision", help="Pinned revision when --atr is an extracted archive")
+    parser.add_argument("--payload-bytes", type=int, help="Repeat the real file to this byte size")
+    parser.add_argument("--hook", action="store_true", help="Measure the warm hook handler with its own total budget")
     parser.add_argument("--samples", type=int, default=200)
     parser.add_argument("--sizes", type=int, nargs="+", default=[1, 8, 16, 32])
     parser.add_argument("--budget", type=float, default=5)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    rev = subprocess.check_output(["git", "-C", str(args.atr), "rev-parse", "HEAD"], text=True).strip()
+    rev = args.revision or subprocess.check_output(["git", "-C", str(args.atr), "rev-parse", "HEAD"], text=True).strip()
     root = args.atr.resolve()
     if os.name == "nt":
         root = Path("\\\\?\\" + str(root))
@@ -71,24 +75,49 @@ def main():
     sizes = sorted(set(min(size, len(rules)) for size in args.sizes))
     payload_path = Path(subprocess.__file__)
     payload = payload_path.read_text(encoding="utf-8")
+    if args.payload_bytes:
+        raw = payload.encode("utf-8")
+        payload = (raw * math.ceil(args.payload_bytes / len(raw)))[:args.payload_bytes].decode("utf-8")
     metadata = dict(python=platform.python_version(), platform=platform.platform(),
                     source_rev=rev, counts=dict(counts), samples=args.samples,
                     payload_path=str(payload_path), payload_bytes=len(payload.encode("utf-8")),
                     payload_sha256=hashlib.sha256(payload.encode("utf-8")).hexdigest(),
-                    budget_s=args.budget, measurements=[])
+                    budget_s=args.budget if not args.hook else None,
+                    mode="hook" if args.hook else "scan", measurements=[])
+    if args.hook:
+        from agent_defs.hooks import _claude_code_impl as hook
+        metadata["budget_s"] = hook.SCAN_BUDGET_S
     print(json.dumps({k: v for k, v in metadata.items() if k != "measurements"}), flush=True)
     rows = {size: [] for size in sizes}
     # Interleave sizes so changing host load affects each bundle size.
-    for sample in range(args.samples):
-        for size in sizes:
-            started = time.perf_counter()
-            result = scan(payload, rules[:size], budget_s=args.budget)
-            rows[size].append(dict(ms=(time.perf_counter() - started) * 1000,
-                                   complete=result.complete, evaluated=result.rules_evaluated,
-                                   skipped=result.rules_skipped_budget, hits=len(result.findings),
-                                   errors=len(result.errors), worker_error=result.worker_error))
-        if (sample + 1) % 25 == 0:
-            print(f"{sample + 1}/{args.samples} samples per bundle", flush=True)
+    with tempfile.TemporaryDirectory(prefix="agent-defs-bench-") as directory:
+        for sample in range(args.samples):
+            for size in sizes:
+                if args.hook:
+                    config = hook.default_config()
+                    log = Path(directory) / "findings.jsonl"
+                    config["log_path"] = str(log)
+                    log.write_text("", encoding="utf-8")
+                    event = dict(hook_event_name="PostToolUse", tool_response={"type": "text", "content": payload})
+                    started = time.perf_counter()
+                    response = hook.process(event, config, rules[:size])
+                    elapsed = (time.perf_counter() - started) * 1000
+                    records = [record for line in log.read_text().splitlines()
+                               for record in json.loads(line)["records"]]
+                    complete = not any(record.get("status") == "scan_incomplete" for record in records)
+                    row = dict(ms=elapsed, complete=complete, hits=sum("rule_id" in record for record in records),
+                               warning_visible="incomplete" in json.dumps(response))
+                else:
+                    started = time.perf_counter()
+                    result = scan(payload, rules[:size], budget_s=args.budget)
+                    row = dict(ms=(time.perf_counter() - started) * 1000,
+                               complete=result.complete, evaluated=result.rules_evaluated,
+                               skipped=result.rules_skipped_budget,
+                               hits=len(result.partial_findings if hasattr(result, "partial_findings") else result.findings),
+                               errors=len(result.errors), worker_error=result.worker_error)
+                rows[size].append(row)
+            if (sample + 1) % 25 == 0:
+                print(f"{sample + 1}/{args.samples} samples per bundle", flush=True)
     for size in sizes:
         values = [row["ms"] for row in rows[size]]
         row = dict(size=size, p50_ms=statistics.median(values), p99_ms=percentile(values, .99),

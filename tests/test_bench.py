@@ -193,7 +193,7 @@ def test_incomplete_evaluation_aborts_instead_of_reporting_zero(monkeypatch):
     from agent_defs import bench
     from agent_defs.evaluate import ScanResult
 
-    monkeypatch.setattr(bench, "scan", lambda *a, **kw: ScanResult((), 0, 1, 0, False))
+    monkeypatch.setattr(bench, "scan_trusted", lambda *a, **kw: ScanResult((), 0, 1, 0, False))
     with pytest.raises(RuntimeError, match="incomplete benchmark"):
         measure([rule()], [corpus(1, 1)])
 

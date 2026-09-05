@@ -17,7 +17,10 @@ from agent_defs.model import BenignFiring, Lane, Surface
 
 
 @pytest.fixture
-def config(tmp_path):
+def config(tmp_path, monkeypatch):
+    # Protocol assertions are independent of host process-launch latency.
+    # Deadline handling is exercised separately with zero and exhausted budgets.
+    monkeypatch.setattr(hook, "SCAN_BUDGET_S", 2)
     config = hook.default_config()
     config["log_path"] = str(tmp_path / "log.jsonl")
     return config
@@ -152,7 +155,11 @@ def test_subprocess_bad_arguments_and_payload_always_exit_zero(tmp_path, args, t
         args += ["--config", str(path)]
     result = call_cli(tmp_path, args, text)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == {}
+    response = json.loads(result.stdout)
+    if text != "{}":
+        assert "incomplete" in response["systemMessage"]
+    else:
+        assert response == {}
     assert result.stderr == ""
 
 
@@ -163,7 +170,7 @@ def test_outer_boundary_wraps_package_imports_and_base_exceptions(monkeypatch, c
         raise failure(2)
     monkeypatch.setattr(claude_code, "_dispatch", broken)
     assert claude_code.main(["run"]) == 0
-    assert capsys.readouterr().out == "{}\n"
+    assert "incomplete" in json.loads(capsys.readouterr().out)["systemMessage"]
 
 
 def test_log_failure_fails_open_in_subprocess(config, tmp_path):
@@ -173,7 +180,8 @@ def test_log_failure_fails_open_in_subprocess(config, tmp_path):
     path = tmp_path / "config.json"
     hook.atomic_json(path, config)
     result = call_cli(tmp_path, ["run", "--config", str(path)], json.dumps(payload(attack())))
-    assert result.returncode == 0 and result.stdout == "{}\n" and result.stderr == ""
+    assert result.returncode == 0 and result.stderr == ""
+    assert "incomplete" in json.loads(result.stdout)["systemMessage"]
 
 
 def test_install_idempotent_and_uninstall_preserves_guard(tmp_path):
@@ -285,10 +293,10 @@ def test_changed_predicate_invalidates_admission(config):
 
 def test_oversize_and_budget_exhaustion_are_visible(config, monkeypatch):
     result = hook.process(payload("x" * (hook.MAX_SCAN_BYTES + 1)), config)
-    assert result == {}
+    assert "incomplete" in result["hookSpecificOutput"]["additionalContext"]
     assert "scan_incomplete" in Path(config["log_path"]).read_text()
     monkeypatch.setattr(hook, "SCAN_BUDGET_S", 0)
-    assert hook.process(payload(attack()), config) == {}
+    assert "incomplete" in hook.process(payload(attack()), config)["systemMessage"]
 
 
 def test_unrelated_handler_mentioning_package_is_not_owned(tmp_path):
@@ -304,7 +312,8 @@ def test_launcher_catches_missing_package(tmp_path):
     source = Path(hook.__file__).resolve().parents[2].as_posix()
     argv[4] = argv[4].replace(repr(source), repr((tmp_path / "missing").as_posix()))
     result = subprocess.run(argv, capture_output=True, text=True, cwd=tmp_path, timeout=5)
-    assert result.returncode == 0 and result.stdout == "{}\n" and not result.stderr
+    assert result.returncode == 0 and not result.stderr
+    assert "incomplete" in json.loads(result.stdout)["systemMessage"]
 
 
 def test_top_level_import_does_not_pull_hook_or_third_party(tmp_path):

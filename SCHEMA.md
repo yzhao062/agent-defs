@@ -123,13 +123,27 @@ to the caller's wait; there is no claim of hard real-time OS scheduling.
 Rules run in deterministic cost-hint order, with substring predicates first. Findings do not stop the
 scan. Completed findings survive a later timeout. `ScanResult.complete` is false on input truncation,
 unfinished rules, rejected rules, or worker failure; an empty incomplete result is not a clean scan.
+Reading `ScanResult.findings` raises `IncompleteScanError` unless the scan is complete.
+`partial_findings` is the explicit escape hatch for callers that implement a policy for incomplete
+coverage. Offline measurements abort; the hook retains completed findings and issues fixed user and
+model warnings. A coverage failure alone never grants an interrupting lane.
+
+The isolated evaluator now searches the entire input up to 4 MiB by default, under the same 250 ms
+deadline and up to 100 ms cleanup allowance. This replaces the old 256 KiB prefix. It uses one
+contiguous string because accepted regexes can have unbounded match lengths and lookarounds; finite
+window overlap cannot preserve all of those predicates. Offsets remain original Python string
+indices and each rule returns at most one finding. Inputs beyond 4 MiB, or an explicitly smaller
+`max_bytes`, are incomplete. Preparation is bounded by this input size and the existing bundle limits.
 The evaluator does not promote a timeout or a RECORD finding into an interrupting decision.
 
 Case-insensitive substring matching uses the same Unicode semantics as Python `re.IGNORECASE`, with
 offsets into the original input. Matching performs no normalization and no full multi-character case
 folding. UTF-8 byte limits preserve lone surrogates with `surrogatepass` rather than deleting them.
-Findings retain the full match span but limit `matched` to 512 characters, with `truncated_match=True`
-when the excerpt is shorter. Rejected conditions remain explicit errors, never looser predicates.
+Findings carry only `rule_id`, `surface`, `start`, and `end`. There is no matched-text field or excerpt.
+A person can locate evidence in the original payload using the span; the hook log adds the JSON
+value path and a content hash. Model warnings contain only package-authored constants, never excerpts,
+rule prose, identifiers, paths, or exception details. Rejected conditions remain explicit errors,
+never looser predicates.
 
 ## Reporting what did not survive
 

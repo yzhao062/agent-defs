@@ -114,9 +114,9 @@ def finish_rule(rule: Rule, row: dict, promoted: set[str], delta: dict) -> Rule:
     if positives and not rule.runnable:
         reach.update(status="not_runnable", reason=rule.not_runnable_reason)
     elif positives:
-        hits = sum(bool(evaluate.scan(example, [rule],
-                        max_bytes=max(1, len(example.encode("utf-8"))),
-                        budget_s=float("inf")).findings) for example in positives)
+        hits = sum(bool(evaluate.scan_trusted(example, [rule],
+                        max_bytes=max(1, len(example.encode("utf-8", "surrogatepass")))).findings)
+                   for example in positives)
         reach.update(checked=len(positives), hits=hits, misses=len(positives) - hits,
                      status="reachable" if hits else "unreachable", reason="")
     delta["reachability"].update({reach["status"]: 1, "examples": len(positives),

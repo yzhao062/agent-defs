@@ -26,7 +26,7 @@ def test_completed_findings_survive_a_later_hang_and_worker_is_reaped(monkeypatc
         rule("slow", PredicateKind.REGEX, "a+b"),
         rule("early", PredicateKind.SUBSTRING_ANY, ["aaa"]),
     ], budget_s=1.5)
-    assert [hit.rule_id for hit in result.findings] == ["early"]
+    assert [hit.rule_id for hit in result.partial_findings] == ["early"]
     assert result.rules_evaluated == 1
     assert result.rules_skipped_budget == 1
     assert not result.complete
@@ -46,7 +46,7 @@ def test_worker_death_is_incomplete_and_next_call_recovers(monkeypatch):
         result = evaluator.scan("x", [r], budget_s=2)
     assert "exit 7" in result.worker_error
     assert not result.complete
-    assert not result.findings
+    assert not result.partial_findings
     assert evaluator.scan("x", [r], budget_s=2).complete
 
 

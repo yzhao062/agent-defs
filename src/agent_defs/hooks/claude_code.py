@@ -15,13 +15,16 @@ def _dispatch(argv):
 def main(argv=None):
     response = "{}"
     try:
+        args = sys.argv[1:] if argv is None else argv
+        if not args or args[0] == "run":
+            response = '{"systemMessage":"agent-defs: scan incomplete; the hook failed before completing its checks."}'
         import contextlib
         import io
         import json
 
         # Imports or a future scanner must not contaminate the protocol stream.
         with contextlib.redirect_stdout(io.StringIO()):
-            result = _dispatch(sys.argv[1:] if argv is None else argv)
+            result = _dispatch(args)
         response = json.dumps(result, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     except BaseException:
         pass

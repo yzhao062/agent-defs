@@ -1,4 +1,4 @@
-"""Measure fresh-process hook latency separately from precompiled scans.
+"""Measure fresh-process hook latency separately from isolated scans.
 
 Optional --atr-tree measures original ATR regex predicates as a workload, not
 as normalized rules or a shippable bundle. Requires the atr extra only for that
@@ -20,7 +20,7 @@ import tempfile
 import time
 
 from agent_defs.builtin import STARTER_RULES
-from agent_defs.evaluate import compile_rule, scan, UnsafePattern
+from agent_defs.evaluate import ScanResult, compile_rule, scan, UnsafePattern
 from agent_defs.hooks._claude_code_impl import atomic_json, default_config, hook_command, process
 from agent_defs.model import PredicateKind
 
@@ -33,11 +33,18 @@ def summary(values):
 
 def timed(function, n):
     result = []
+    scans = incomplete = 0
     for _ in range(n):
         start = time.perf_counter()
-        function()
+        outcome = function()
         result.append(time.perf_counter() - start)
-    return summary(result)
+        if isinstance(outcome, ScanResult):
+            scans += 1
+            incomplete += not outcome.complete
+        elif isinstance(outcome, dict):
+            scans += 1
+            incomplete += "incomplete" in outcome.get("systemMessage", "")
+    return {**summary(result), "observed_scans": scans, "incomplete_scans": incomplete}
 
 
 def main():
@@ -91,7 +98,7 @@ def main():
             encoded = json.dumps(payload).encode()
             cache = {r.id: compile_rule(r) for r in STARTER_RULES}
             results["starter"].append({"rules": len(STARTER_RULES), "text_bytes": len(body.encode()),
-                "precompiled_scan": timed(lambda: scan(body, STARTER_RULES, compiled=cache), args.samples),
+                "isolated_scan": timed(lambda: scan(body, STARTER_RULES, compiled=cache), args.samples),
                 "warm_full_process": timed(lambda: process(payload, config), args.samples),
                 "fresh_interpreter_hook": timed(lambda: child(command, encoded), args.samples)})
             checkpoint()
@@ -108,7 +115,7 @@ def main():
             cache = {r.id: compile_rule(r) for r in rules}
             for size in (64*1024, 256*1024):
                 results["synthetic_linear_scaling"].append({"rules": n, "text_bytes": size,
-                    "precompiled_scan": timed(lambda: scan(text[:size], rules, compiled=cache, budget_s=5), args.samples)})
+                    "isolated_scan": timed(lambda: scan(text[:size], rules, compiled=cache, budget_s=5), args.samples)})
         checkpoint()
         if args.atr_tree:
             import yaml
@@ -142,6 +149,7 @@ def main():
                     def execute():
                         result = scan(text[:size], rules, compiled=cache, budget_s=.05)
                         runs.append(result.rules_evaluated)
+                        return result
                     timing = timed(execute, args.samples)
                     results["atr_predicate_workload"]["measurements"].append({"predicates": n, "text_bytes": size,
                         "scan": timing, "min_evaluated": min(runs), "max_evaluated": max(runs)})

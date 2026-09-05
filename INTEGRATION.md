@@ -74,21 +74,35 @@ construct or the loader reports a loss, and that choice belongs to the same rule
 a condition to make it runnable. The hook case decides what a hook does when a scan comes back
 incomplete, and "fall open silently" is the answer the red team already flagged as wrong.
 
-## Not yet done at all
+## The red-team findings, and which of them this round closed
 
 The red team returned 30 findings, 9 critical, recorded in the research repository under
-`research/build-2026-09-04/wf-redteam.md`. None is fixed here. The ones that block any use by another
-person:
+`research/build-2026-09-04/wf-redteam.md`. Four of the five that blocked any use by another person are
+now closed by the repair units, and the remaining one is the product's open question rather than a
+defect.
 
-1. `admit()` returns `RECORD` for every rule under our own measurement, so no rule can reach an
-   interrupting lane. The gate is right; the measurement that would open it does not exist.
-2. The benign corpus is configuration material while 515 of ATR's rules sit on tool output. The
-   measured surface and the defended surface are disjoint.
-3. `Finding.matched` copies attacker-controlled text, and the channel that reports it reaches the
-   model. b5 capped the copy at 512 characters, which shortens the channel without closing it.
-4. The installer merges into `~/.claude/settings.json` and must be proven not to remove hooks that are
-   already there, against a settings file carrying a real one.
-5. `Rule.lane` is never bound to `admit()`, so lane discipline is currently advisory.
+| Finding | State |
+|---|---|
+| `admit()` returns `RECORD` for every rule under our own measurement | **still open, and now measured.** `r1` ran 306 runnable `OUT` rules over 8,198 real tool results and got 306 `RECORD`, 90 `DO_NOT_SHIP`, zero promotions. The gate is right; the evidence that would open it does not exist yet, because every stratum is smaller than the 598 clean trials a 0.5% claim needs |
+| The measured surface and the defended surface are disjoint | **closed by `r1`.** The measurement now runs on real tool output rather than configuration material |
+| `Finding.matched` copies attacker text into a channel that reaches the model | **closed by `r2`.** Findings are metadata only: rule id, span, and a digest that is null when the value was truncated. There is no payload-bearing field left to shorten |
+| The installer must be proven not to remove hooks already there | **closed by `r3`**, against temporary copies of the real `guard.py` settings rather than a stand-in |
+| `Rule.lane` is never bound to `admit()` | **closed by `r3`**, in the path the hook actually runs |
 
-ATR is also held out of any release until the third-party notices exist and the 25 AgentHarm rules are
-decided. See the research repository's rights record.
+Two things this round did not close, both recorded because they are easy to lose:
+
+**A release-workflow incompatibility, created by a safety guard.** `scripts/audit_distribution.py`
+requires ATR's `data/test-corpora/` members on disk, and `sources.fetch()` deliberately never extracts
+them. A safely fetched cache therefore cannot pass the release gate. The audit needs to read excluded
+members from archive memory. `m1` left this explicit rather than relaxing the exclusion, which was the
+right call: no sample directory was extracted and no exclusion was weakened to make a suite look
+complete.
+
+**The hook budget is unresolved rather than chosen.** `SCAN_BUDGET_S` is 1.0 second, taking `r3`'s
+startup allowance over `r2`'s 250 ms, and that is not evidence the bundle completes. `r1` measured 132
+of 306 rules finishing at 250 ms and 257 of 306 at 30 seconds on one 28 KB Gmail result. The latency
+and coverage decision is a product question with no measured answer.
+
+ATR ships only once its third-party notices exist, which they now do, and the 25 AgentHarm records are
+marked `restricted` and excluded from the default bundle. See `THIRD-PARTY-NOTICES` and the research
+repository's rights record.

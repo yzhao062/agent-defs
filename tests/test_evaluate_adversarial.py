@@ -56,14 +56,14 @@ def test_substrings_follow_regex_case_semantics_with_original_offsets(payload, n
     result = scan(payload, [rule("unicode", PredicateKind.SUBSTRING_ANY, [needle])], budget_s=2)
     assert len(result.findings) == 1
     hit = result.findings[0]
-    assert (hit.start, hit.end, hit.matched) == (start, end, payload[start:end])
+    assert (hit.start, hit.end) == (start, end)
 
 
 def test_truncation_does_not_delete_surrogates_and_join_text():
     result = scan("a\ud800b" + "x" * 20, [rule("surrogate", PredicateKind.REGEX, "ab")],
                   max_bytes=3, budget_s=2)
     assert result.truncated_input
-    assert not result.findings
+    assert not result.partial_findings
 
 
 def test_surrogates_count_towards_the_byte_cap():
@@ -75,7 +75,7 @@ def test_cached_rule_id_cannot_substitute_a_different_predicate():
     cache = {}
     scan("first", [rule("same", PredicateKind.REGEX, "first")], compiled=cache, budget_s=2)
     result = scan("second", [rule("same", PredicateKind.REGEX, "second")], compiled=cache, budget_s=2)
-    assert [hit.matched for hit in result.findings] == ["second"]
+    assert [(hit.start, hit.end) for hit in result.findings] == [(0, 6)]
 
 
 def test_simple_backreferences_are_explicitly_refused():
@@ -87,7 +87,7 @@ def test_simple_backreferences_are_explicitly_refused():
 def test_bad_rule_does_not_crash_or_prevent_other_findings(predicate):
     result = scan("needle", [rule("bad", PredicateKind.REGEX, predicate),
                              rule("good", PredicateKind.SUBSTRING_ANY, ["needle"])], budget_s=2)
-    assert [hit.rule_id for hit in result.findings] == ["good"]
+    assert [hit.rule_id for hit in result.partial_findings] == ["good"]
     assert [error.rule_id for error in result.errors] == ["bad"]
     assert not result.complete
 
@@ -112,8 +112,7 @@ def test_large_match_evidence_is_bounded_and_marked():
     result = scan(payload, [rule("large", PredicateKind.REGEX, ".+")], budget_s=2)
     hit = result.findings[0]
     assert (hit.start, hit.end) == (0, len(payload))
-    assert len(hit.matched) <= 512
-    assert hit.truncated_match
+    assert not hasattr(hit, "matched")
 
 
 @pytest.mark.parametrize("pattern", [r"a+b", r"^a+a+$", r"(?=a+b)a", r"^a{0,50000}a{0,50000}$"])

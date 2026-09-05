@@ -53,7 +53,8 @@ def audit(root: Path) -> dict:
         hit_count = 0
         for i, example in enumerate(rule.examples_positive):
             checked = scan(example, [rule], compiled={rule.id: runtime})
-            assert not checked.truncated_input and checked.rules_evaluated == 1
+            checked.require_complete()
+            assert checked.rules_evaluated == 1
             hit = bool(checked.findings)
             reach["strings_matched" if hit else "strings_missed"] += 1
             hit_count += hit

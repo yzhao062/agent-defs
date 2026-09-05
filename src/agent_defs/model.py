@@ -111,6 +111,8 @@ class Rule:
     lineage: Sequence[Lineage] = ()
     license_spdx: str = ""
     redistribution: str = "unresolved"  # granted | denied | unresolved
+    restricted: bool = False   # carries a narrower grant than this package's own licence
+    restricted_reason: str = ""
 
     # Content, as published
     title: str = ""
@@ -156,3 +158,26 @@ class Rule:
     @property
     def interrupting(self) -> bool:
         return self.lane in (Lane.ADVISE, Lane.DENY)
+
+    @property
+    def shippable(self) -> bool:
+        """True when this record may travel in the default bundle.
+
+        A ``restricted`` record carries a grant narrower than this package's MIT
+        licence, so shipping it would hand every downstream consumer a limit they
+        could not see. The 25 ATR rules embedding AgentHarm text are the case this
+        exists for: AgentHarm is "MIT License with an additional clause", and the
+        clause restricts the purpose rather than requiring an attribution. An
+        attribution is satisfied once by a notices file; a purpose restriction
+        travels to every recipient.
+
+        The record still exists, with its lineage intact. This project carries what
+        its sources published rather than deleting it, and a consumer who wants a
+        restricted record fetches the pinned upstream under that upstream's terms.
+        """
+        return not self.restricted
+
+
+def default_bundle(rules):
+    """The records that may ship, in order. See ``Rule.shippable``."""
+    return [r for r in rules if r.shippable]

@@ -58,3 +58,23 @@ def test_a_rule_that_cannot_run_is_never_shipped_as_a_detector():
 def test_not_runnable_without_a_reason_is_rejected():
     with pytest.raises(ValueError):
         make(predicate_kind=PredicateKind.NONE, predicate=None)
+
+
+def test_a_restricted_record_never_reaches_the_default_bundle():
+    from agent_defs.model import default_bundle
+
+    ordinary = make(id="atr:OK-1")
+    agentharm = make(id="atr:ATR-2026-01837", restricted=True,
+                     restricted_reason="embeds AgentHarm text; field-of-use restriction")
+
+    assert ordinary.shippable
+    assert not agentharm.shippable
+    assert [r.id for r in default_bundle([ordinary, agentharm])] == ["atr:OK-1"]
+
+
+def test_a_restricted_record_keeps_its_place_in_the_record():
+    agentharm = make(id="atr:ATR-2026-01837", restricted=True,
+                     restricted_reason="embeds AgentHarm text; field-of-use restriction")
+    assert agentharm.source_id == "X-1" or agentharm.id.startswith("atr:")
+    assert agentharm.restricted_reason
+    assert agentharm.runnable

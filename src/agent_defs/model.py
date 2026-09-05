@@ -17,6 +17,8 @@ import enum
 from dataclasses import dataclass, field
 from typing import Mapping, Sequence
 
+from .rights import excluded_source_path
+
 SCHEMA_VERSION = 1
 
 
@@ -175,7 +177,7 @@ class Rule:
         its sources published rather than deleting it, and a consumer who wants a
         restricted record fetches the pinned upstream under that upstream's terms.
         """
-        return not self.restricted
+        return not self.restricted and not excluded_source_path(self.source, self.source_path)
 
 
 def default_bundle(rules):

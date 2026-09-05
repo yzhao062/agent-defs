@@ -38,6 +38,9 @@ agent-defs = "agent_defs.cli:main"
 [project.urls]
 Homepage = "https://github.com/yzhao062/agent-defs"
 
+[tool.setuptools]
+license-files = ["LICENSE", "THIRD-PARTY-NOTICES"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

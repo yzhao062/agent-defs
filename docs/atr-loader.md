@@ -5,6 +5,19 @@ pointing to a clean ATR Git checkout. The returned `LoadResult` has `rules` and
 `delta`. Fixture subsets can instead supply `atr-source.json`; see the checked-in
 fixtures for its format. A directory name is never used as proof of a revision.
 
+A verified archive tree can pass `source_rev=<full pinned SHA>` explicitly. The
+caller must first verify the archive digest and tree bytes; the release gate in
+`scripts/audit_distribution.py` does both against `sources.lock`. An explicit pin
+cannot override a conflicting fixture manifest or Git revision.
+
+The loader only discovers rule YAML under `rules/`. It counts all files under
+`data/test-corpora/` in `delta.excluded_paths`, without reading their content.
+Fixture manifests cannot reintroduce that excluded path. AgentHarm declarations
+in `author` or `metadata_provenance` set `restricted` and `restricted_reason`,
+while retaining the complete normalized record. `model.default_bundle()` removes
+restricted records and rejects excluded source paths even if a loader emits one.
+See `distribution.md` for the real-corpus release gate.
+
 Every valid entry emits a `Rule`, including entries that cannot execute. The
 complete parsed record is retained in `extra["upstream"]` and the decoded YAML
 in `extra["upstream_yaml"]`. `delta.extra_fields` counts entries retaining each
@@ -19,6 +32,10 @@ The author scalar becomes one verbatim `Lineage`, including project-only
 attribution. Parenthetical spans and a separate corpus-marker classification
 are annotations. Neither severity nor maturity is mapped. ATR's separate
 `status` remains in `extra["upstream"]`.
+
+`metadata_provenance.payload_source` also becomes a verbatim `Lineage` with
+`kind="payload_source"` and evidence identifying the upstream YAML field. The
+original value remains in `extra["upstream"]` as well.
 
 Surface routing uses explicit scan targets and condition fields before category
 inference. Each rule records the reason in `extra["surface_decision"]`. Rules

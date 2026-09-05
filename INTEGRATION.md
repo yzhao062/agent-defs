@@ -1,5 +1,38 @@
 # Integration State
 
+## Five-way repair integration, 2026-09-04
+
+The r1, r3, r4 and r5 branches are merged with the already-integrated r2 work.
+The Windows Miniforge py312 suite now has **458 passing, 5 skipped, and no failing
+tests**, compared with 270 passing and two failing tests at the start of this
+integration. The five skips require the six real corpora and their pinned archives;
+fixture tests do not replace that release gate. All worker test functions remain
+present. The nine interface disagreements listed below are historical and resolved.
+
+The hook retains r3's additive installer, exit-zero launcher, measured decisions,
+depth guard and strict evaluated-rule count. It also retains r2's bounded stdin,
+4 MiB text allowance, metadata-only partial findings, bounded byte accounting,
+null hashes for truncated values, and model-visible incomplete-coverage warnings.
+The event budget is defined once as `SCAN_BUDGET_S = 1.0`; the standalone evaluator
+still defaults to 250 ms. This selects r3's startup allowance over r2's shorter
+hook deadline, without claiming the enabled bundle will complete. r1 measured
+unfinished work on a 28 KB Gmail result even with a 30-second budget. Timeout can
+request approval only for already-admitted PreToolUse DENY protection.
+
+r4's flat regex conjunctions run as independent searches under r2's isolation and
+completeness contract. r1's isolated traffic measurements retain their diagnostics
+and reject incomplete coverage. r5's restrictions, path exclusions and payload-source
+lineage survive normalization. The checked-in corpus census and distribution audit
+remain the workers' measurements; they were not rerun on full corpora here.
+
+One release workflow incompatibility remains: `scripts/audit_distribution.py`
+requires ATR `data/test-corpora/` members on disk, while `sources.fetch()` deliberately
+never extracts that directory. A safely fetched cache cannot satisfy that audit.
+The gate must inspect excluded members in archive memory before it can be run on
+such a cache. No exclusion was relaxed and no sample directory was extracted.
+
+## Historical state before the repair units
+
 Seven units built this package in parallel on 2026-09-04, each in its own clone off the same base
 commit. Merging them is done; reconciling where two of them disagree is not. **The suite is 230
 passing and 9 failing**, and every failure is a place where two units made different, defensible calls

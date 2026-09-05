@@ -1,0 +1,4 @@
+include sources.lock
+include scripts/audit_distribution.py
+include docs/distribution.md
+include docs/distribution-audit.json

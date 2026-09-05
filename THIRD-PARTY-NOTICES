@@ -23,7 +23,7 @@ Our own code is MIT (see `LICENSE`). Rule content is governed by the notices bel
 ## NVIDIA garak, Apache-2.0
 
 Some rules in the ATR corpus contain payload text taken from NVIDIA's garak. 228 of ATR's 793 rules
-name garak in their `author` field, and 110 carry a `metadata_provenance.payload_source` pointing at
+name garak in their `author` field, and 121 carry a `metadata_provenance.payload_source` pointing at
 a specific garak source file, mostly under `garak/probes/` and `garak/data/dan/`.
 
 That text is licensed under Apache License 2.0. ATR redistributes it under its own MIT notice without
@@ -61,6 +61,11 @@ the record with their lineage intact, because this project carries what its sour
 than deleting it. Anyone who wants them fetches ATR at the pinned commit themselves, under AgentHarm's
 terms. A build-time test asserts that no `restricted` record reaches the default bundle.
 
+The pinned Netzilo corpus also declares 25 conversions of those same ATR rules. Those converted
+records are marked `restricted` and excluded under the same field-of-use heading, pending separate
+rights review. This is a conservative redistribution decision based on declared derivation, not a
+claim that every converted predicate reproduces an entire AgentHarm prompt.
+
 - Upstream: https://huggingface.co/datasets/ai-safety-institute/AgentHarm
 
 ## ATR
@@ -73,9 +78,14 @@ ATR's `TRADEMARK.md` section 7 restricts use of its name and identifier namespac
 neither: records are addressed as `atr:<upstream id>`, where the ATR identifier is a foreign key
 rather than a minted one, and nothing here claims official status or affiliation.
 
-`data/test-corpora/` is excluded in full. Its 1,101 files are draft proposals with empty detection
-conditions, so they carry no detection value and are harmful-prompt payload only. ATR's own npm
-artifact already excludes them, and this follows that boundary.
+`data/test-corpora/` is excluded in full. Of its 1,101 files, 1,013 are draft YAML proposals with empty
+detection conditions and a literal `TODO(human)` stub; the remaining 88 are JSON, Markdown and logs.
+The drafts carry no executable detection value. ATR's npm file allowlist excludes this directory,
+and this follows that boundary.
+
+Counts above were re-parsed from the pinned archives on 2026-09-04 Pacific. The earlier figure of
+110 garak payload-source pointers was not reproduced: the corpus has 121. See
+`docs/distribution.md` for the mandatory release check and the enumerated consumer delta.
 
 ## Apache License 2.0, full text
 

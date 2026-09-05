@@ -11,6 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from agent_defs import evaluate
+from agent_defs.bench import reachability
 from agent_defs.model import Rule
 
 REVIEW = {"by": "agent_defs.json_loaders.v1", "date": "2026-09-05"}
@@ -114,11 +115,10 @@ def finish_rule(rule: Rule, row: dict, promoted: set[str], delta: dict) -> Rule:
     if positives and not rule.runnable:
         reach.update(status="not_runnable", reason=rule.not_runnable_reason)
     elif positives:
-        hits = sum(bool(evaluate.scan(example, [rule],
-                        max_bytes=max(1, len(example.encode("utf-8"))),
-                        budget_s=float("inf")).findings) for example in positives)
-        reach.update(checked=len(positives), hits=hits, misses=len(positives) - hits,
-                     status="reachable" if hits else "unreachable", reason="")
+        result = reachability([rule])[rule.id]
+        reach.update(checked=result["trials"], hits=result["hits"],
+                     misses=result["trials"] - result["hits"],
+                     status=result["status"], reason=result.get("reason", ""))
     delta["reachability"].update({reach["status"]: 1, "examples": len(positives),
                                  "checked": reach["checked"], "hits": reach["hits"],
                                  "misses": reach["misses"]})

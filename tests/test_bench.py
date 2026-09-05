@@ -11,6 +11,7 @@ import pytest
 
 from agent_defs.bench import (Corpus, Unit, admit_from_report, apply_report, binomial_u95,
                              load_corpus, load_rules, measure, reachability)
+from agent_defs.evaluate import RuleError, ScanResult
 from agent_defs.lanes import u95_zero_hits
 from agent_defs.model import Lane, PredicateKind, Rule, Surface
 
@@ -189,11 +190,27 @@ def test_apply_report_requires_exact_bundle_and_attaches_native_measurement():
         apply_report(rules[:1], report)
 
 
-def test_incomplete_evaluation_aborts_instead_of_reporting_zero(monkeypatch):
+@pytest.mark.parametrize("state", [
+    {"errors": (RuleError("quiet", "rejected condition"),)},
+    {"worker_error": "worker failed"},
+    {"truncated_input": True},
+    {"rules_evaluated": 0},
+    {"rules_evaluated": 2},
+    {"rules_skipped_budget": 1},
+], ids=["rule-error", "worker-error", "truncated", "missing-rule", "extra-rule", "skipped-rule"])
+@pytest.mark.parametrize("phase", ["positive", "benign"])
+def test_incomplete_evaluation_aborts_instead_of_reporting_zero(monkeypatch, state, phase):
     from agent_defs import bench
-    from agent_defs.evaluate import ScanResult
 
-    monkeypatch.setattr(bench, "scan", lambda *a, **kw: ScanResult((), 0, 1, 0, False))
+    original = bench.scan_trusted
+    incomplete = replace(ScanResult(findings=(), rules_evaluated=1, rules_skipped_budget=0,
+                                    elapsed_s=0, truncated_input=False), **state)
+
+    def scan(text, *args, **kwargs):
+        is_positive = text == "SENTINEL_POSITIVE"
+        return incomplete if is_positive == (phase == "positive") else original(text, *args, **kwargs)
+
+    monkeypatch.setattr(bench, "scan_trusted", scan)
     with pytest.raises(RuntimeError, match="incomplete benchmark"):
         measure([rule()], [corpus(1, 1)])
 

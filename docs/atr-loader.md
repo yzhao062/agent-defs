@@ -28,9 +28,9 @@ actual before/after comparison.
 
 Every original regex is screened, including patterns in non-runnable entries.
 Same-field ANY conditions use alternation with scoped inline flags. Same-field
-ALL conditions use anchored lookaheads preserving whole-input search semantics.
-Composed predicates are screened again. A rejected branch disables the complete
-rule. Cross-condition backreferences, unknown modifiers, stateful methods,
+ALL conditions use `STRUCTURED` with `regex_all`: independent screened searches
+that must each match the same input. ANY compositions are screened again. A
+rejected branch disables the complete rule. Backreferences, unknown modifiers, stateful methods,
 explicit code-block suppression, and disabled upstream statuses fail closed.
 The 19 declared semantic pattern fallbacks are selected explicitly; the model
 configuration survives as data. This implements raw published pattern paths,

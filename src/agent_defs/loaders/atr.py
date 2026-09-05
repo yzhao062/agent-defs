@@ -327,6 +327,10 @@ def _predicate(raw: dict[str, Any], rid: str, delta: Delta) -> tuple[PredicateKi
     if reasons:
         return PredicateKind.NONE, None, reasons, decisions
 
+    if logic == "all" and len(patterns) > 1:
+        decisions["composition"] = "independent screened regex searches; all must match the same payload"
+        return PredicateKind.STRUCTURED, {"regex_all": patterns}, [], decisions
+
     predicate = patterns[0]
     if len(patterns) > 1:
         # Joining independently numbered backreferences can silently redirect a
@@ -335,9 +339,8 @@ def _predicate(raw: dict[str, Any], rid: str, delta: Delta) -> tuple[PredicateKi
             unsupported("detection.conditions.regex.backreference_composition", "backreferences cannot be safely composed across conditions")
             return PredicateKind.NONE, None, reasons, decisions
         scoped = [_scoped(p) for p in patterns]
-        predicate = ("|".join(scoped) if logic == "any" else
-                     r"\A" + "".join(r"(?=[\s\S]*" + p + ")" for p in scoped))
-        decisions["composition"] = "scoped regex alternation" if logic == "any" else "anchored conjunction of whole-payload searches"
+        predicate = "|".join(scoped)
+        decisions["composition"] = "scoped regex alternation"
         try:
             evaluate.screen_pattern(predicate)
         except evaluate.UnsafePattern as exc:

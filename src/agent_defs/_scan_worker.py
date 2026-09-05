@@ -21,7 +21,7 @@ def main():
                         predicate_kind=PredicateKind(item["kind"]), predicate=item["predicate"],
                         case_sensitive=item["case_sensitive"])
             runtime = compile_rule(rule)
-            if rule.predicate_kind is PredicateKind.REGEX:
+            if rule.predicate_kind in (PredicateKind.REGEX, PredicateKind.STRUCTURED):
                 hit = runtime.search(payload)
                 span = [hit.start(), hit.end()] if hit else None
             else:

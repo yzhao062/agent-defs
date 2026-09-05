@@ -140,6 +140,32 @@ def screen_pattern(pattern: str, flags: int = re.IGNORECASE) -> None:
         raise UnsafePattern(f"does not compile: {exc}") from exc
 
 
+def _regex_all_patterns(predicate) -> Sequence[str]:
+    if not isinstance(predicate, dict) or set(predicate) != {"regex_all"}:
+        raise ValueError("STRUCTURED requires exactly a regex_all list")
+    patterns = predicate["regex_all"]
+    if not isinstance(patterns, (list, tuple)) or not 1 <= len(patterns) <= _MAX_NEEDLES:
+        raise ValueError(f"regex_all requires 1 to {_MAX_NEEDLES} patterns")
+    if any(not isinstance(p, str) or len(p) > _MAX_PATTERN_LEN for p in patterns):
+        raise ValueError("regex_all patterns must be strings of at most 4096 characters")
+    return patterns
+
+
+@dataclass(frozen=True)
+class _RegexAll:
+    patterns: Sequence[re.Pattern]
+
+    def search(self, payload: str):
+        first = None
+        for pattern in self.patterns:
+            hit = pattern.search(payload)
+            if hit is None:
+                return None
+            if first is None:
+                first = hit
+        return first
+
+
 def compile_rule(rule: Rule) -> object:
     """Build a runtime predicate. Call at build time or inside the scan worker.
 
@@ -153,6 +179,11 @@ def compile_rule(rule: Rule) -> object:
     if rule.predicate_kind is PredicateKind.REGEX:
         screen_pattern(rule.predicate, flags)
         return re.compile(rule.predicate, flags)
+    if rule.predicate_kind is PredicateKind.STRUCTURED:
+        patterns = _regex_all_patterns(rule.predicate)
+        for pattern in patterns:
+            screen_pattern(pattern, flags)
+        return _RegexAll(tuple(re.compile(pattern, flags) for pattern in patterns))
     if rule.predicate_kind in (PredicateKind.SUBSTRING_ANY, PredicateKind.SUBSTRING_ALL):
         if not isinstance(rule.predicate, (list, tuple)) or not 1 <= len(rule.predicate) <= _MAX_NEEDLES:
             raise ValueError(f"substrings require 1 to {_MAX_NEEDLES} needles")
@@ -197,6 +228,8 @@ def _wire_rule(rule: Rule) -> dict:
     if kind is PredicateKind.REGEX:
         if not isinstance(pred, str) or len(pred) > _MAX_PATTERN_LEN:
             raise ValueError("regex must be a string of at most 4096 characters")
+    elif kind is PredicateKind.STRUCTURED:
+        pred = {"regex_all": list(_regex_all_patterns(pred))}
     elif kind in (PredicateKind.SUBSTRING_ANY, PredicateKind.SUBSTRING_ALL):
         if not isinstance(pred, (list, tuple)) or not 1 <= len(pred) <= _MAX_NEEDLES:
             raise ValueError(f"substrings require 1 to {_MAX_NEEDLES} needles")
@@ -213,6 +246,10 @@ def _wire_rule(rule: Rule) -> dict:
 
 def _schedule_key(item: dict) -> tuple:
     pred = item["predicate"]
+    if item["kind"] == PredicateKind.STRUCTURED.value:
+        patterns = pred["regex_all"]
+        return (2, sum(map(len, patterns)), item["id"], tuple(patterns),
+                item["case_sensitive"], item["surface"])
     if item["kind"] == PredicateKind.REGEX.value:
         # A reproducible cost hint, never a safety claim or severity ranking.
         cost = len(pred) + 32 * sum(pred.count(ch) for ch in "*+?{|(")
@@ -364,6 +401,8 @@ def scan(
             errors.append(RuleError(rule.id, str(exc)))
             continue
         pred = item["predicate"]
+        if item["kind"] == PredicateKind.STRUCTURED.value:
+            pred = pred["regex_all"]
         chars += len(pred) if isinstance(pred, str) else sum(map(len, pred))
         if chars > _MAX_BUNDLE_CHARS:
             worker_error = f"bundle exceeds {_MAX_BUNDLE_CHARS} predicate characters"
@@ -449,7 +488,7 @@ def scan_trusted(
             continue
         try:
             runtime = compile_rule(rule)
-            if rule.predicate_kind is PredicateKind.REGEX:
+            if rule.predicate_kind in (PredicateKind.REGEX, PredicateKind.STRUCTURED):
                 hit = runtime.search(payload)
                 span = (hit.start(), hit.end()) if hit else None
             else:

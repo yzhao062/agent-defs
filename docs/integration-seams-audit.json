@@ -1,0 +1,1184 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-09-04 America/Los_Angeles",
+  "revisions": {
+    "atr": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+    "netzilo": "0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+    "agentshield": "1bd56f9854426e29d59715e81c45fcfe38c7ee0e"
+  },
+  "census_command": "PYTHONPATH=src python scripts/audit_integration_seams.py ~/agent-defs-work/corpora",
+  "sources": {
+    "atr": {
+      "entries": 793,
+      "predicates_before": {
+        "REGEX": 608,
+        "NONE": 185
+      },
+      "predicates_after": {
+        "REGEX": 605,
+        "NONE": 185,
+        "STRUCTURED": 3
+      },
+      "conjunctions": [
+        {
+          "id": "atr:ATR-2026-00140",
+          "path": "rules/prompt-injection/ATR-2026-00140-indirect-reference-reversal.yaml",
+          "title": "Indirect Reference Instruction Reversal",
+          "conditions": 2,
+          "fields": [
+            "content"
+          ],
+          "predicate_kind": "STRUCTURED",
+          "reasons": [],
+          "composition": "independent screened regex searches; all must match the same payload"
+        },
+        {
+          "id": "atr:ATR-2026-02210",
+          "path": "rules/prompt-injection/ATR-2026-02210-negation-topic-evil-persona-two-script-jailbreak.yaml",
+          "title": "Negated-Topic Two-Script Evil-Persona Jailbreak",
+          "conditions": 2,
+          "fields": [
+            "content"
+          ],
+          "predicate_kind": "STRUCTURED",
+          "reasons": [],
+          "composition": "independent screened regex searches; all must match the same payload"
+        },
+        {
+          "id": "atr:ATR-2026-02377",
+          "path": "rules/prompt-injection/ATR-2026-02377-novel-persona-jailbreak-cosignal.yaml",
+          "title": "Novel-Persona Jailbreak via Co-Signal (persona swap + explicit restriction removal)",
+          "conditions": 2,
+          "fields": [
+            "content"
+          ],
+          "predicate_kind": "STRUCTURED",
+          "reasons": [],
+          "composition": "independent screened regex searches; all must match the same payload"
+        }
+      ],
+      "pattern_rejections": [
+        {
+          "rule_id": "atr:ATR-2026-00032",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00074",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00074",
+          "condition_index": 5,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00108",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00268",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00268",
+          "condition_index": 5,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00269",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00269",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00288",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00314",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00317",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00342",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00261",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00274",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00290",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "does not compile: invalid group reference 1 at position 20"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00431",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00524",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00858",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00858",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01450",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01772",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01772",
+          "condition_index": 8,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02107",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02122",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02304",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02351",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02406",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02406",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02570",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02408",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00713",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01805",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02400",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02401",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02401",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02409",
+          "condition_index": 5,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02409",
+          "condition_index": 6,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00502",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00517",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00111",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01803",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01808",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01808",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02100",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02100",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02100",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02100",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02101",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02142",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02300",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02300",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02300",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02300",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02404",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02404",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02404",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02404",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02407",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02530",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00001",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00003",
+          "condition_index": null,
+          "stage": "composed",
+          "reason": "pattern longer than 4096 characters"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00004",
+          "condition_index": null,
+          "stage": "composed",
+          "reason": "pattern longer than 4096 characters"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00005",
+          "condition_index": null,
+          "stage": "composed",
+          "reason": "pattern longer than 4096 characters"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00080",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00084",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00084",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00088",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00090",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00091",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00202",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00213",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00256",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00256",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00264",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00264",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00267",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00267",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00276",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00276",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00282",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00282",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00285",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00285",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00285",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00285",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00308",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00309",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00313",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00409",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00409",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00442",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "does not compile: look-behind requires fixed-width pattern"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00442",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00454",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00454",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00475",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00475",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00481",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00488",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00488",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00497",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00498",
+          "condition_index": 5,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00519",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01005",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01007",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01007",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "backreferences and conditional references are not supported"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01007",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "backreferences and conditional references are not supported"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01012",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01771",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01925",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01925",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01925",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02001",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02015",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02502",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02502",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02502",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00066",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00121",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00220",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00262",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00262",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00262",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00262",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00263",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00263",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00263",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00266",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00266",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00266",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00427",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00429",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00527",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02261",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "backreferences and conditional references are not supported"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02410",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02410",
+          "condition_index": 5,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00012",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00209",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00435",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00435",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00533",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00534",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00536",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00536",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-00536",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01300",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01300",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01303",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01310",
+          "condition_index": 4,
+          "stage": "upstream",
+          "reason": "quantified group under an outer quantifier"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01973",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-01973",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02141",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02263",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02403",
+          "condition_index": 0,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02403",
+          "condition_index": 1,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02403",
+          "condition_index": 2,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        },
+        {
+          "rule_id": "atr:ATR-2026-02403",
+          "condition_index": 3,
+          "stage": "upstream",
+          "reason": "alternation under repetition"
+        }
+      ],
+      "reference_rejected_ids": [
+        "atr:ATR-2026-00290",
+        "atr:ATR-2026-01007",
+        "atr:ATR-2026-02261"
+      ]
+    },
+    "netzilo": {
+      "entries": 1156,
+      "predicates_before": {
+        "NONE": 1079,
+        "REGEX": 77
+      },
+      "predicates_after": {
+        "NONE": 1076,
+        "REGEX": 77,
+        "STRUCTURED": 3
+      },
+      "conjunctions": 262,
+      "conjunction_operator_shapes": {
+        "and,not,or": 197,
+        "and,or": 53,
+        "and": 12
+      },
+      "boolean_runtime_refused_before": 1030,
+      "boolean_runtime_refused_after": 1027,
+      "remaining_boolean_only_conjunctions": [
+        {
+          "id": "netzilo:7c1f2a94-6b3d-4e58-9a02-5d8c31ef47b1",
+          "path": "ai_agent/ai_agent_pypi_tollbooth_dpyc_impersonation.yml",
+          "title": "Supply Chain PyPI Impersonation Package tollbooth-dpyc",
+          "operators": {
+            "and": 1,
+            "or": 2,
+            "not": 1
+          },
+          "leaves": 20,
+          "leaf_kinds": {
+            "regex": 20
+          },
+          "fields": [
+            "content"
+          ],
+          "flat_regex_all": false,
+          "reasons": [
+            "boolean_tree_requires_structured_runtime"
+          ]
+        },
+        {
+          "id": "netzilo:6f2c7b41-9d3e-4a58-b0c7-2e1f84d5a9c3",
+          "path": "ai_agent/ai_agent_vllm_trust_remote_code_override.yml",
+          "title": "vLLM Hardcoded trust_remote_code Override",
+          "operators": {
+            "and": 1,
+            "or": 4,
+            "not": 1
+          },
+          "leaves": 26,
+          "leaf_kinds": {
+            "regex": 26
+          },
+          "fields": [
+            "content"
+          ],
+          "flat_regex_all": false,
+          "reasons": [
+            "boolean_tree_requires_structured_runtime"
+          ]
+        }
+      ]
+    },
+    "agentshield": {
+      "entries": 69,
+      "predicates_before": {
+        "NONE": 68,
+        "REGEX": 1
+      },
+      "predicates_after": {
+        "NONE": 68,
+        "REGEX": 1
+      },
+      "conjunctions": 38,
+      "conjunction_operator_shapes": {
+        "and,not,or": 9,
+        "and,or": 28,
+        "and": 1
+      },
+      "boolean_runtime_refused_before": 54,
+      "boolean_runtime_refused_after": 53,
+      "remaining_boolean_only_conjunctions": [
+        {
+          "id": "agentshield:bda7609c-a617-557c-b181-aae8ca747f71",
+          "path": "rules/rules/ai_agent/ai_agent_file_edit_persistence_write.yml",
+          "title": "File-Edit Tool Directed at SSH Authorized Keys or Shell Startup File",
+          "operators": {
+            "and": 1,
+            "or": 1,
+            "not": 1
+          },
+          "leaves": 4,
+          "leaf_kinds": {
+            "regex": 4
+          },
+          "fields": [
+            "content"
+          ],
+          "flat_regex_all": false,
+          "reasons": [
+            "boolean_tree_requires_structured_runtime"
+          ]
+        }
+      ]
+    }
+  },
+  "source_verification": [
+    {
+      "source": "atr",
+      "archive_sha256": "5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5",
+      "verified_rule_files": 793,
+      "url": "https://codeload.github.com/Agent-Threat-Rule/agent-threat-rules/tar.gz/faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+      "http_status": 200,
+      "observed_at_utc": "2026-09-05T04:18:56.648892+00:00"
+    },
+    {
+      "source": "netzilo",
+      "archive_sha256": "e30304ebb01a4ada70ed99623681d49aff7bcc446f5a8ce5a1b1492b83fac9a3",
+      "verified_rule_files": 1156,
+      "url": "https://codeload.github.com/netzilo/aidr-sigma/tar.gz/0139a6648ed3daa1094fc4f49e2b157524a0bec7",
+      "http_status": 200,
+      "observed_at_utc": "2026-09-05T04:18:56.942499+00:00"
+    },
+    {
+      "source": "agentshield",
+      "archive_sha256": "d4debb12f6d72a01bed904a5128b02dc6450db8ae2ae1edebb6956cad394f7df",
+      "verified_rule_files": 69,
+      "url": "https://codeload.github.com/agentshield-ai/agentshield/tar.gz/1bd56f9854426e29d59715e81c45fcfe38c7ee0e",
+      "http_status": 200,
+      "observed_at_utc": "2026-09-05T04:18:57.182362+00:00"
+    }
+  ],
+  "conjunction_parity": [
+    {
+      "atr_id": "atr:ATR-2026-00140",
+      "netzilo_id": "netzilo:31cedb3a-c7e2-4446-8634-001298058640",
+      "results": {
+        "true_positives": {
+          "trials": 5,
+          "hits": 5
+        },
+        "true_negatives": {
+          "trials": 5,
+          "hits": 0
+        }
+      },
+      "parity_mismatches": 0
+    },
+    {
+      "atr_id": "atr:ATR-2026-02210",
+      "netzilo_id": "netzilo:ea8d1159-fe10-4146-a36d-c016d3526ffe",
+      "results": {
+        "true_positives": {
+          "trials": 2,
+          "hits": 2
+        },
+        "true_negatives": {
+          "trials": 6,
+          "hits": 0
+        }
+      },
+      "parity_mismatches": 0
+    },
+    {
+      "atr_id": "atr:ATR-2026-02377",
+      "netzilo_id": "netzilo:5fa775e8-e6c5-4344-ac4a-e53320c4bd25",
+      "results": {
+        "true_positives": {
+          "trials": 5,
+          "hits": 5
+        },
+        "true_negatives": {
+          "trials": 5,
+          "hits": 0
+        }
+      },
+      "parity_mismatches": 0
+    }
+  ]
+}

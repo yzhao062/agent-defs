@@ -2,8 +2,9 @@
 
 ``load()`` and ``dedup()`` return ``(rules, delta)``. YAML is imported only inside
 ``load()``. Source text is retained as data in ``extra['source_text_raw']``.
-The scalar evaluator cannot enforce event guards or walk boolean regex trees;
-those records remain NONE, with all refusal codes in their delta and extra.
+The scalar evaluator supports flat regex conjunctions but cannot enforce event
+guards or general boolean trees; those records remain NONE, with all refusal
+codes in their delta and extra.
 """
 
 from __future__ import annotations
@@ -221,6 +222,9 @@ def _map_predicate(detection: object):
     elif tree[0] in ("and", "or") and all(n[0] == "leaf" and n[2] == "contains" for n in tree[1:]):
         kind = PredicateKind.SUBSTRING_ALL if tree[0] == "and" else PredicateKind.SUBSTRING_ANY
         predicate = tuple(n[3] for n in tree[1:])
+    elif tree[0] == "and" and all(n[0] == "leaf" and n[2] == "regex" for n in tree[1:]):
+        kind = PredicateKind.STRUCTURED
+        predicate = {"regex_all": [n[3] for n in tree[1:]]}
     else:
         issues.add("boolean_tree_requires_structured_runtime")
     if issues:

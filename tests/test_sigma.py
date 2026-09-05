@@ -74,6 +74,28 @@ def test_lists_of_maps_do_not_lose_conjunctions():
     assert "boolean_tree_requires_structured_runtime" in rule.not_runnable_reason
 
 
+def test_flat_regex_conjunction_keeps_case_flags_and_requires_each_selection():
+    r = make_rule({"s_a": {"content|re": "(?i)alpha"}, "s_b": {"content|re": "beta"},
+                   "condition": "all of s_*"})
+    assert r.predicate_kind is PredicateKind.STRUCTURED
+    assert r.predicate == {"regex_all": ["(?i)alpha", "beta"]}
+    assert scan("beta then ALPHA", [r]).findings
+    assert not scan("alpha", [r]).findings
+    assert not scan("beta", [r]).findings
+    assert not scan("alpha BETA", [r]).findings
+
+
+@pytest.mark.parametrize("other", [
+    {"response|re": "beta"}, {"content|re|i": "beta"},
+    {"content|re": "(a+)+$"}, {"event_type": "tool_response", "content|re": "beta"},
+])
+def test_regex_conjunction_does_not_drop_other_refusals(other):
+    r = make_rule({"s_a": {"content|re": "alpha"}, "s_b": other,
+                   "condition": "s_a and s_b"})
+    assert r.predicate_kind is PredicateKind.NONE
+    assert r.not_runnable_reason
+
+
 def test_case_modes_and_wildcard_escapes():
     sensitive = make_rule({"s": {"content|re": "marker"}, "condition": "s"})
     insensitive = make_rule({"s": {"content|re|i": "marker"}, "condition": "s"})

@@ -203,7 +203,7 @@ def _prepare(rules: Sequence[Rule]) -> tuple[list[Rule], dict, dict[str, str]]:
 def _hits(text: str, rules: Sequence[Rule], compiled: dict) -> set[str]:
     # A benchmark must finish every rule and every byte, unlike a hook scan.
     result = scan_trusted(text, rules, max_bytes=max(1, len(text.encode("utf-8"))))
-    if result.truncated_input or result.rules_skipped_budget or result.rules_evaluated != len(rules):
+    if not result.complete or result.rules_evaluated != len(rules):
         raise RuntimeError("incomplete benchmark scan; refusing a quiet measurement")
     return {f.rule_id for f in result.findings}
 

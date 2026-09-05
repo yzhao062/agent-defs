@@ -71,6 +71,14 @@ this deliberately and record why in `extra`.
 a condition to make it runnable manufactures exactly the noise this project exists to avoid. A
 condition that cannot be carried faithfully gets `predicate_kind=NONE` and a reason, and is counted.
 
+The supported `STRUCTURED` form is `{"regex_all": [pattern, ...]}`: 1 to 64 regexes that must
+each match the same text payload. Each leaf passes `screen_pattern` and is searched independently;
+the loader adds no regex syntax and the runtime does not retry one leaf in response to another.
+The rule's case mode applies to each leaf, including its original inline flags. Findings show the
+first leaf's match span only after every leaf matches, as with `SUBSTRING_ALL`. Other structured
+forms, mixed payload fields, mixed case modes and backreferences remain unsupported. `scan()`
+screens and searches the entire conjunction in its worker under the same scan deadline.
+
 ## What the source says about itself
 
 | Field | Meaning |

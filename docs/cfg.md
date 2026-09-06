@@ -180,9 +180,9 @@ against all 133 eligible rules of the pinned corpus.
 Isolation costs about 0.1 s to start the worker plus the cost of screening and
 compiling the bundle again in a cold process, which is deliberate: revalidating
 inside the worker is what stops stale or unscreened data from bypassing the
-screen. `CFG_DEFAULT_BUDGET_S` is 2.0 s rather than `evaluate`'s 0.25 s, because
+screen. `CFG_DEFAULT_BUDGET_S` is 2.0 s rather than `evaluate`'s 1.0 s, because
 this channel runs once when someone installs or edits a file rather than on every
-turn, and because 0.25 s fails every row in that table. A deadline a correct
+turn, and because its own worst measured case is 1.02 s. A deadline a correct
 document cannot meet does not report a slow document, it reports a broken tool,
 and a caller who sees `complete=False` on ordinary input learns to reach for
 `scan_cfg_trusted`.

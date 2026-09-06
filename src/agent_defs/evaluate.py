@@ -39,7 +39,41 @@ from typing import Iterable, Mapping, Sequence
 from .model import PredicateKind, Rule
 
 DEFAULT_MAX_BYTES = 4 * 1024 * 1024
-DEFAULT_BUDGET_S = 0.25
+
+#: Deadline for one tool-call scan, derived rather than chosen.
+#:
+#: It is a ceiling, not a cost. A scan that finishes early finishes early, so
+#: raising it does not slow an ordinary turn; it only decides when an unfinished
+#: scan is abandoned. The two ways to be wrong are not symmetric. Too high and an
+#: attacker holds a turn open for the difference. Too low and every honest scan
+#: reports ``complete=False``, the caller degrades on every turn, and the screen
+#: stops being consulted at all.
+#:
+#: Measured over 20 runs per cell, against payloads of 1, 4 and 64 KB, on the two
+#: hosts available. Times are the worst of the 20.
+#:
+#: =========================  ==========  =========
+#: bundle                     Windows     Linux
+#: =========================  ==========  =========
+#: one rule that never matches   0.167 s    0.046 s
+#: the four builtin rules        0.156 s    0.048 s
+#: 427 rules                     2.770 s    2.298 s
+#: =========================  ==========  =========
+#:
+#: Nearly all of the first row is fixed: starting the worker, importing the
+#: package and parsing the measurement table. Windows pays about four times what
+#: Linux does for it, and a loaded shared runner pays more again: CI reported
+#: 0.290 s for a single-rule scan, about twice this laptop's worst.
+#:
+#: So the worst honest scan of the shipping bundle on the slowest host is
+#: 0.167 s; double it for loaded shared hardware and take three times that for
+#: margin. 0.25 s was under two times the worst honest scan and expired before
+#: matching began on a CI runner.
+#:
+#: The 427-rule row is not covered by this and is not meant to be. A bundle that
+#: costs seconds per tool call does not become shippable by widening its
+#: deadline; see the per-turn cost question in the plan.
+DEFAULT_BUDGET_S = 1.0
 # Bounds one upstream-authored pattern, never a string this package composes.
 # The longest pattern any of the six pinned corpora publishes is 2,213
 # characters (ATR-2026-02502) and the largest condition count is 46

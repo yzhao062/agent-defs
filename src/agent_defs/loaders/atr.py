@@ -597,6 +597,26 @@ def _cfg_binding(raw: dict[str, Any],
     )
 
 
+_FIGURE = re.compile(r"\d+(?:\.\d+)?")
+_SLOT = "\x00"
+
+
+def _merge_figures(key: str, members: Sequence[Sequence[str]]) -> str:
+    """Put the masked figures back, naming each one the group actually saw.
+
+    Members of a group share every word and differ only in the numbers, so a
+    slot that read the same in all of them prints once and a slot that varied
+    prints the values in condition order.
+    """
+    columns = list(zip(*members)) if members else []
+    out: list[str] = []
+    for position, piece in enumerate(key.split(_SLOT)):
+        out.append(piece)
+        if position < len(columns):
+            out.append(", ".join(dict.fromkeys(columns[position])))
+    return "".join(out)
+
+
 def _join_reasons(reasons: Sequence[str]) -> str:
     """One line per distinct reason, with the conditions that share it.
 
@@ -604,27 +624,38 @@ def _join_reasons(reasons: Sequence[str]) -> str:
     conditions used to repeat the same sentence six times and push the reason
     past the length a person will read. Group by the text after the condition
     prefix and name the indices once.
+
+    Figures are masked before grouping. A measured refusal carries the time it
+    crossed at, so three conditions of one rule state one sentence and three
+    different numbers; grouping on the raw text put them in three groups and the
+    reason grew past the length again. Masking collapses them to one clause that
+    still reports every measurement.
     """
     prefix = re.compile(r"^condition (\d+): (.*)$", re.DOTALL)
     order: list[str] = []
     grouped: dict[str, list[str]] = {}
+    figures: dict[str, list[Sequence[str]]] = {}
     for reason in reasons:
         match = prefix.match(reason)
-        key, index = (match.group(2), match.group(1)) if match else (reason, None)
+        text, index = (match.group(2), match.group(1)) if match else (reason, None)
+        key = _FIGURE.sub(_SLOT, text)
         if key not in grouped:
             grouped[key] = []
+            figures[key] = []
             order.append(key)
+        figures[key].append(_FIGURE.findall(text))
         if index is not None:
             grouped[key].append(index)
     parts = []
     for key in order:
         indices = grouped[key]
+        text = _merge_figures(key, figures[key])
         if not indices:
-            parts.append(key)
+            parts.append(text)
         elif len(indices) == 1:
-            parts.append(f"condition {indices[0]}: {key}")
+            parts.append(f"condition {indices[0]}: {text}")
         else:
-            parts.append(f"conditions {', '.join(indices)}: {key}")
+            parts.append(f"conditions {', '.join(indices)}: {text}")
     return "; ".join(parts)
 
 

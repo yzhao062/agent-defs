@@ -147,19 +147,38 @@ def test_the_counterexample_really_does_lose_its_match_when_rewritten(probes, pa
 
 
 def test_an_unprunable_rule_is_still_probed(probes):
-    """Refusing the rewrite must widen the probe, not silence it."""
+    """Refusing the rewrite must widen the probe, not silence it.
+
+    The fixture is a conditional rather than the atomic group used above,
+    because ``build_probes`` compiles what it is given and ``(?>`` is a syntax
+    error before Python 3.11. The two are the same case here: both are in
+    ``UNSUPPORTED``, so both take the unprunable path.
+    """
 
     class Fake:
-        id = "t:atomic"
+        id = "t:conditional"
         case_sensitive = False
         predicate_kind = probes.PredicateKind.REGEX
-        predicate = r"a(?>bc\nx|b)c"
+        predicate = r"(a)?(?(1)b|c)"
 
     relaxed, splits, census, unprunable = probes.build_probes([Fake()])
-    assert unprunable == ["t:atomic"]
-    assert "t:atomic" in splits
+    assert unprunable == ["t:conditional"]
+    assert "t:conditional" in splits
     # The stand-in probe admits every unit, so nothing is pruned away.
     assert relaxed[0][1]("anything at all") is True
+
+
+def test_the_string_level_detection_needs_no_interpreter_support(probes):
+    """Detection is a scan, so it holds on a Python that cannot compile these.
+
+    CI runs 3.9, where an atomic group and a possessive quantifier are syntax
+    errors. Classification must still refuse them, because the script's job is
+    to decide whether a rule can be pruned, not to run every pattern.
+    """
+    for pattern in (r"a(?>bc|b)c", r"ab++c", r"a{2,3}+b"):
+        assert probes.unsupported_constructs(pattern) == {
+            "atomic group or possessive quantifier"}
+        assert probes.strip_assertions(pattern) == (None, {"unsupported"})
 
 
 def test_stripping_never_loses_a_substring_match(probes):
@@ -177,13 +196,17 @@ def test_stripping_never_loses_a_substring_match(probes):
     checked = refused = 0
     for _ in range(6000):
         pattern = "".join(random.choice(atoms) for _ in range(random.randint(1, 4)))
-        try:
-            strict = re.compile(pattern)
-        except re.error:
-            continue
+        # Classification first, and independent of whether this interpreter can
+        # compile the pattern. Before Python 3.11 an atomic group is a syntax
+        # error, so ordering the compile first would have made the refusal
+        # count collapse on 3.9 and this test pass for the wrong reason.
         relaxed, _ = probes.strip_assertions(pattern)
         if relaxed is None:
             refused += 1
+            continue
+        try:
+            strict = re.compile(pattern)
+        except re.error:
             continue
         loose = re.compile(relaxed, re.MULTILINE)
         text = "".join(random.choice("ab\n c]") for _ in range(random.randint(0, 6)))

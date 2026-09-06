@@ -166,6 +166,12 @@ def close_paren(pattern: str, start: int):
 #: widening it: ``^ab(?=x){0}c$`` relaxes to ``ab{0}c``, matching ``ac`` and no
 #: longer ``abc``. A conditional depends on whether a group participated. Round
 #: 3 of the review built all three.
+#:
+#: Detection is a scan of the pattern text, so it works on an interpreter that
+#: cannot compile what it finds. An atomic group and a possessive quantifier
+#: are syntax errors before Python 3.11, and a rule carrying one would fail to
+#: compile here long before this classification mattered; the scan still names
+#: it rather than letting it look ordinary.
 UNSUPPORTED = ("atomic group or possessive quantifier", "conditional",
                "quantified lookaround")
 

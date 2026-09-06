@@ -3993,6 +3993,2773 @@
      "fast"
     ]
    }
+  },
+  {
+   "key": "derived_pattern_sweep",
+   "note": "Times the strings this loader derives rather than labelling them from their origin's verdict. A rule that never crossed had its own conditions measured, but the surrogate port rewrites the expression and the scoped alternation composes several of them, and unit e3 found composition is exactly where a rule that looks fast crosses. Until this sweep those derived strings carried the origin's fast row, which is the inference least entitled to be made. The 707 strings screened by agent_defs.loaders.atr and agent_defs.cfg that had no row of their own were timed on spark-37f2 (CPython 3.12.3, Linux aarch64) on 2026-09-05 with the unmodified research/efficacy-2026-09-05/scripts/e3_empirical.py: same method as this table's other rows, LENGTHS to 262144 with confirmation to 1 MiB, 1.10 s discovery cap, 62 s confirmation cap, budget_s=1.0, one killable subprocess per attempt. `python3 e3_empirical.py discovery --workers 20` then `confirmation --workers 20`. 484 fast, 218 slow, 5 left unmeasured because they do not compile under Python re, which the screen refuses on its own.",
+   "rules": {},
+   "patterns": {
+    "004ed479a49825f7": [
+     "fast"
+    ],
+    "00a813f92dc0f3ee": [
+     "fast"
+    ],
+    "00c2aa0f7304c6c9": [
+     "fast"
+    ],
+    "013574fc6abc98bf": [
+     "fast"
+    ],
+    "01554cc32c146943": [
+     "fast"
+    ],
+    "018c4a1843a81608": [
+     "slow",
+     16384,
+     1.26,
+     true
+    ],
+    "0191271c24b615dc": [
+     "slow",
+     16384,
+     1.679,
+     true
+    ],
+    "01e78125425786c7": [
+     "fast"
+    ],
+    "025292e9fc60cfb1": [
+     "fast"
+    ],
+    "025c553c23016e66": [
+     "slow",
+     1024,
+     12.514,
+     true
+    ],
+    "027de3e1b222b625": [
+     "slow",
+     1024,
+     4.074,
+     true
+    ],
+    "029aaf74197a84fb": [
+     "slow",
+     16384,
+     1.801,
+     true
+    ],
+    "02d1be9f68d613a7": [
+     "fast"
+    ],
+    "02d9cf3cd22e1084": [
+     "fast"
+    ],
+    "02e9a036dd129048": [
+     "fast"
+    ],
+    "03562a932f12137e": [
+     "fast"
+    ],
+    "03667237ecb96627": [
+     "slow",
+     16384,
+     4.791,
+     true
+    ],
+    "037f21b8c16e4674": [
+     "fast"
+    ],
+    "0401d95e7a08df0d": [
+     "fast"
+    ],
+    "04907539de2e6bb9": [
+     "fast"
+    ],
+    "04b49b74ca10247c": [
+     "fast"
+    ],
+    "050ce2bb14e04ba1": [
+     "fast"
+    ],
+    "05146d5f728b9f94": [
+     "fast"
+    ],
+    "063248d7f3889485": [
+     "fast"
+    ],
+    "064508b9f61dc502": [
+     "fast"
+    ],
+    "067db36f13e71af1": [
+     "slow",
+     16384,
+     3.139,
+     true
+    ],
+    "06b1e7b33a0ec1af": [
+     "fast"
+    ],
+    "075a9ff131cdcada": [
+     "fast"
+    ],
+    "076c2197cc61416b": [
+     "slow",
+     16384,
+     5.656,
+     true
+    ],
+    "087509a1f633218b": [
+     "slow",
+     16384,
+     1.599,
+     true
+    ],
+    "0882ea7cf24d2f88": [
+     "fast"
+    ],
+    "088bfc0c392332f4": [
+     "fast"
+    ],
+    "08bf8f57ee387456": [
+     "fast"
+    ],
+    "098cd1c2f5e3fe50": [
+     "fast"
+    ],
+    "09f6522720b2f86b": [
+     "fast"
+    ],
+    "0a18f55ea917f779": [
+     "fast"
+    ],
+    "0a439473eac22666": [
+     "slow",
+     262144,
+     3.562,
+     false
+    ],
+    "0a91961121ac5cce": [
+     "fast"
+    ],
+    "0abfcd1f54bb986d": [
+     "fast"
+    ],
+    "0b4b046de48e466f": [
+     "fast"
+    ],
+    "0c7d643cad66395c": [
+     "slow",
+     262144,
+     3.25,
+     false
+    ],
+    "0d1f44bffbe2c9aa": [
+     "slow",
+     4096,
+     21.143,
+     true
+    ],
+    "0d663673370a5587": [
+     "fast"
+    ],
+    "0de27df118d80381": [
+     "fast"
+    ],
+    "0de8ab19fafbd1ee": [
+     "fast"
+    ],
+    "0e722e58b6b2782e": [
+     "slow",
+     16384,
+     2.862,
+     true
+    ],
+    "0e8cfcf7d05a2df3": [
+     "slow",
+     16384,
+     3.713,
+     true
+    ],
+    "0eb383aeb0fb50f1": [
+     "fast"
+    ],
+    "0ef3de591cf127eb": [
+     "fast"
+    ],
+    "0f787d964816e9ba": [
+     "slow",
+     16384,
+     3.068,
+     true
+    ],
+    "100d6bfa23a2d20a": [
+     "fast"
+    ],
+    "1013c27c66dc8812": [
+     "slow",
+     16384,
+     5.984,
+     true
+    ],
+    "1058599123ff1eeb": [
+     "slow",
+     4095,
+     10.824,
+     true
+    ],
+    "10b001d7aceed9fe": [
+     "fast"
+    ],
+    "10bd12f4bdcd49d7": [
+     "slow",
+     262144,
+     1.724,
+     false
+    ],
+    "10cbb71afa90ef9f": [
+     "slow",
+     1024,
+     1.662,
+     true
+    ],
+    "10cc006a787135c3": [
+     "slow",
+     65536,
+     4.21,
+     true
+    ],
+    "11551d64cc8bd1ac": [
+     "slow",
+     4096,
+     2.846,
+     true
+    ],
+    "1169264f439da7f3": [
+     "fast"
+    ],
+    "11a96bb434f1a98c": [
+     "fast"
+    ],
+    "125ba043b75f2c96": [
+     "fast"
+    ],
+    "12c6995562ec4fb1": [
+     "fast"
+    ],
+    "13b0ea8dead8e629": [
+     "slow",
+     16384,
+     3.631,
+     true
+    ],
+    "14031844edb9f2a1": [
+     "slow",
+     16384,
+     5.429,
+     true
+    ],
+    "14072100412594ae": [
+     "fast"
+    ],
+    "14940c8d077cff70": [
+     "slow",
+     16384,
+     5.597,
+     true
+    ],
+    "15a579c32fdbdbdc": [
+     "slow",
+     262144,
+     1.988,
+     false
+    ],
+    "15d6e31edfcf35d5": [
+     "fast"
+    ],
+    "15df98c8230c8d84": [
+     "slow",
+     262144,
+     1.666,
+     false
+    ],
+    "16199d492efadafa": [
+     "fast"
+    ],
+    "166f4088c5973996": [
+     "fast"
+    ],
+    "1739c2d6cfecf09a": [
+     "fast"
+    ],
+    "174777e8aa035b55": [
+     "slow",
+     16384,
+     1.228,
+     true
+    ],
+    "17d0db9249529ce1": [
+     "fast"
+    ],
+    "1848b2ea7455fcd4": [
+     "fast"
+    ],
+    "186d873a87478bbe": [
+     "fast"
+    ],
+    "18b14005da3edea3": [
+     "fast"
+    ],
+    "1917103b13dfd006": [
+     "slow",
+     262144,
+     1.947,
+     false
+    ],
+    "1938bbe7f889f383": [
+     "fast"
+    ],
+    "1958ac25caea2dc5": [
+     "fast"
+    ],
+    "19adff188d33fa52": [
+     "slow",
+     4096,
+     6.838,
+     true
+    ],
+    "1ab1e38eae54e082": [
+     "fast"
+    ],
+    "1b1ccfc6faf246fb": [
+     "slow",
+     16384,
+     5.191,
+     true
+    ],
+    "1b978b91aab987b9": [
+     "slow",
+     16384,
+     2.669,
+     true
+    ],
+    "1bd88348c393efda": [
+     "fast"
+    ],
+    "1c41d727399ce4ba": [
+     "fast"
+    ],
+    "1c923294d0d24159": [
+     "slow",
+     16384,
+     4.258,
+     true
+    ],
+    "1cda293749df87e3": [
+     "fast"
+    ],
+    "1cfdf520efc67c1d": [
+     "fast"
+    ],
+    "1d03742496bc0bba": [
+     "slow",
+     262144,
+     1.534,
+     false
+    ],
+    "1e120b1979631b53": [
+     "slow",
+     262144,
+     1.733,
+     false
+    ],
+    "1e75aa59f89f9c45": [
+     "fast"
+    ],
+    "1eb9cc53bd574ad8": [
+     "fast"
+    ],
+    "1eefd7c0cf2dd22d": [
+     "slow",
+     16384,
+     5.27,
+     true
+    ],
+    "1f03fc429d84e35e": [
+     "fast"
+    ],
+    "1fa7155ae3e3aafc": [
+     "fast"
+    ],
+    "200a9a7670af89c7": [
+     "slow",
+     65536,
+     1.256,
+     true
+    ],
+    "204568aba5e9e166": [
+     "fast"
+    ],
+    "205f41b32c55759c": [
+     "fast"
+    ],
+    "2063e28a4660da95": [
+     "slow",
+     262135,
+     17.414,
+     true
+    ],
+    "20a56a82ab98a7a4": [
+     "fast"
+    ],
+    "20c54e7c84cbb39e": [
+     "slow",
+     16384,
+     1.118,
+     true
+    ],
+    "20e081a980b5f4aa": [
+     "fast"
+    ],
+    "2108645f6e4babb9": [
+     "slow",
+     16384,
+     10.666,
+     true
+    ],
+    "21602d5ffe4a6d53": [
+     "fast"
+    ],
+    "216c5b54b8b4d670": [
+     "fast"
+    ],
+    "21cc5537f1f6bb1e": [
+     "fast"
+    ],
+    "22433482e46bed5a": [
+     "fast"
+    ],
+    "22a3f2f50045da35": [
+     "fast"
+    ],
+    "22cb21d99998f932": [
+     "fast"
+    ],
+    "23193232d2529f46": [
+     "fast"
+    ],
+    "239d40715e0a9442": [
+     "slow",
+     16384,
+     2.093,
+     true
+    ],
+    "23b9eb45307df133": [
+     "slow",
+     16384,
+     3.181,
+     true
+    ],
+    "2427e4620ccbd17d": [
+     "slow",
+     16384,
+     8.884,
+     true
+    ],
+    "2481f5e6b44c6423": [
+     "fast"
+    ],
+    "2511dda77b631d55": [
+     "slow",
+     65536,
+     4.621,
+     true
+    ],
+    "25725920ae8e5e4d": [
+     "slow",
+     16384,
+     2.642,
+     true
+    ],
+    "257c658fdb0c5bc0": [
+     "fast"
+    ],
+    "25e64df09c774903": [
+     "fast"
+    ],
+    "266c014a44fb9a16": [
+     "fast"
+    ],
+    "27c5a5aa0f142f70": [
+     "fast"
+    ],
+    "281cc8c733519200": [
+     "fast"
+    ],
+    "283fbee38c2e66ba": [
+     "slow",
+     16384,
+     8.259,
+     true
+    ],
+    "28f6397d1fa4ad45": [
+     "fast"
+    ],
+    "2910bf975970e5d6": [
+     "fast"
+    ],
+    "298417ee961d801c": [
+     "fast"
+    ],
+    "29f8d8741a88a19d": [
+     "fast"
+    ],
+    "2a52e7ef50bc33b5": [
+     "fast"
+    ],
+    "2adfb5e5b2c19bd2": [
+     "slow",
+     1024,
+     1.177,
+     true
+    ],
+    "2af2851b68db0509": [
+     "slow",
+     16384,
+     12.848,
+     true
+    ],
+    "2b8cc4d64dd77e3b": [
+     "slow",
+     1024,
+     1.336,
+     true
+    ],
+    "2b99f2d85e02c751": [
+     "fast"
+    ],
+    "2bdf757e9d0ba3ac": [
+     "fast"
+    ],
+    "2c1ea3109045b48d": [
+     "fast"
+    ],
+    "2ccc824919709219": [
+     "fast"
+    ],
+    "2d1aee68b643340e": [
+     "slow",
+     262144,
+     3.018,
+     false
+    ],
+    "2d2d2a5dae4643c7": [
+     "fast"
+    ],
+    "2d941e2a3e76823f": [
+     "fast"
+    ],
+    "2de6e84281fbcc2b": [
+     "slow",
+     1024,
+     1.158,
+     true
+    ],
+    "2ec1e442da9cea92": [
+     "fast"
+    ],
+    "2ee2c619f1948731": [
+     "slow",
+     262131,
+     1.831,
+     false
+    ],
+    "2f5569f883ce7cc2": [
+     "fast"
+    ],
+    "2fcc8bbcac538678": [
+     "fast"
+    ],
+    "30c9ad00fb6b15c5": [
+     "fast"
+    ],
+    "30f04f0bf3ea0299": [
+     "fast"
+    ],
+    "31458781df4f2c10": [
+     "fast"
+    ],
+    "319c65d17e62e6e9": [
+     "slow",
+     4096,
+     4.217,
+     true
+    ],
+    "33307812bb72490c": [
+     "fast"
+    ],
+    "338b2cec92112016": [
+     "slow",
+     16384,
+     5.422,
+     true
+    ],
+    "33c57c8ee1353ddf": [
+     "fast"
+    ],
+    "3433f15b026e23e0": [
+     "fast"
+    ],
+    "34462878f59d39d5": [
+     "slow",
+     65533,
+     26.983,
+     true
+    ],
+    "34b4a87efddb8528": [
+     "fast"
+    ],
+    "35041a0c9ca0de25": [
+     "fast"
+    ],
+    "351d93993da463be": [
+     "fast"
+    ],
+    "356545fe0eb8650c": [
+     "fast"
+    ],
+    "35d97653a026ac8e": [
+     "fast"
+    ],
+    "3635b4d10596ac0b": [
+     "fast"
+    ],
+    "369551d5cd24bc0b": [
+     "fast"
+    ],
+    "3700c114e1c168b6": [
+     "fast"
+    ],
+    "372e7bdf444558eb": [
+     "slow",
+     1024,
+     1.415,
+     true
+    ],
+    "384734dcc3131d85": [
+     "fast"
+    ],
+    "387aebe977346edb": [
+     "slow",
+     16384,
+     6.893,
+     true
+    ],
+    "387e30c1af436158": [
+     "fast"
+    ],
+    "3932a243d91f0f59": [
+     "fast"
+    ],
+    "3979026f21a8cc23": [
+     "fast"
+    ],
+    "3993510852790559": [
+     "fast"
+    ],
+    "3994eec62f58da3b": [
+     "fast"
+    ],
+    "39ba44926c11314c": [
+     "fast"
+    ],
+    "3a4c04041b3dfbaa": [
+     "slow",
+     16384,
+     2.194,
+     true
+    ],
+    "3afd05611fce338c": [
+     "fast"
+    ],
+    "3b3f9480e0223030": [
+     "fast"
+    ],
+    "3b7061cdc22c0fc5": [
+     "fast"
+    ],
+    "3ba8adca8b3e0390": [
+     "fast"
+    ],
+    "3bde376430a5e002": [
+     "slow",
+     65535,
+     5.147,
+     true
+    ],
+    "3c539124a82a0f29": [
+     "fast"
+    ],
+    "3c7034e7092dc9b5": [
+     "slow",
+     16384,
+     6.567,
+     true
+    ],
+    "3c90952e3cc25061": [
+     "slow",
+     241,
+     3.13,
+     true
+    ],
+    "3ca40f7334eea8e5": [
+     "slow",
+     16384,
+     6.63,
+     true
+    ],
+    "3ce8ba8e052d3cfe": [
+     "slow",
+     65536,
+     14.207,
+     true
+    ],
+    "3d88ccfccb025fc6": [
+     "slow",
+     16384,
+     4.684,
+     true
+    ],
+    "3e28542e3dd685de": [
+     "fast"
+    ],
+    "3e3d5567a1453df6": [
+     "fast"
+    ],
+    "3e3f5680876f7c8a": [
+     "slow",
+     262144,
+     4.218,
+     false
+    ],
+    "3f2ecae78e6c2828": [
+     "fast"
+    ],
+    "3f5d5309893da34f": [
+     "fast"
+    ],
+    "3f6648598878828c": [
+     "fast"
+    ],
+    "3fe5859c9db95fb9": [
+     "fast"
+    ],
+    "40c5784ee65dd0e7": [
+     "fast"
+    ],
+    "416d42f0a5aed998": [
+     "fast"
+    ],
+    "41b0514709eaea2b": [
+     "slow",
+     262144,
+     2.908,
+     false
+    ],
+    "41ef49286e6c61d8": [
+     "fast"
+    ],
+    "4277fb12778b1649": [
+     "fast"
+    ],
+    "433fb23ff1352458": [
+     "fast"
+    ],
+    "43997c8586dd7d6d": [
+     "slow",
+     4096,
+     3.485,
+     true
+    ],
+    "43df9c94c8f61df2": [
+     "fast"
+    ],
+    "4429d58e0f1e788e": [
+     "fast"
+    ],
+    "455653e0946302a5": [
+     "fast"
+    ],
+    "456e436afd991c47": [
+     "fast"
+    ],
+    "45d8a8e93c988661": [
+     "fast"
+    ],
+    "479aeeb034aff850": [
+     "fast"
+    ],
+    "47c5b1adf59a5b5d": [
+     "fast"
+    ],
+    "47c5ff333e2a7763": [
+     "slow",
+     4096,
+     21.798,
+     true
+    ],
+    "489f81fae9cac36c": [
+     "fast"
+    ],
+    "48ccf304356eb4e6": [
+     "fast"
+    ],
+    "494d3769e51fa598": [
+     "fast"
+    ],
+    "495139c719c8808c": [
+     "fast"
+    ],
+    "4976eb480e26ec5d": [
+     "fast"
+    ],
+    "498f3f4283599f7d": [
+     "fast"
+    ],
+    "49dfdd2bc246d1c1": [
+     "fast"
+    ],
+    "4a1abe805747c87d": [
+     "fast"
+    ],
+    "4a4585fcf321737e": [
+     "fast"
+    ],
+    "4a4c74a09722547a": [
+     "fast"
+    ],
+    "4abaa851ee5e4faa": [
+     "slow",
+     1024,
+     3.6,
+     true
+    ],
+    "4b2f00aedd83b033": [
+     "fast"
+    ],
+    "4b43e048cb1187a0": [
+     "fast"
+    ],
+    "4ca061c8392d3daa": [
+     "fast"
+    ],
+    "4ce30618364c813d": [
+     "fast"
+    ],
+    "4f01e625e37bc160": [
+     "fast"
+    ],
+    "4f802610a1f604e0": [
+     "fast"
+    ],
+    "4fcfc5867c6988b3": [
+     "fast"
+    ],
+    "50d96507cbc95a7c": [
+     "fast"
+    ],
+    "519b1a898c398d34": [
+     "fast"
+    ],
+    "523698d2b66f5663": [
+     "slow",
+     16384,
+     6.772,
+     true
+    ],
+    "52b14bd8bc2f168f": [
+     "slow",
+     262144,
+     4.608,
+     false
+    ],
+    "52bb49a67dc5a3fe": [
+     "fast"
+    ],
+    "5350a38f6a1a28f2": [
+     "fast"
+    ],
+    "536f5a2f7418f338": [
+     "fast"
+    ],
+    "53a56c0681040808": [
+     "slow",
+     16384,
+     2.273,
+     true
+    ],
+    "54087bf81a6aa713": [
+     "fast"
+    ],
+    "543686d95e5032fa": [
+     "fast"
+    ],
+    "546ca76e4d678789": [
+     "fast"
+    ],
+    "548b6b7e3dba599c": [
+     "fast"
+    ],
+    "54d1fd0ff6176b3f": [
+     "fast"
+    ],
+    "54f13bdb2ff53855": [
+     "slow",
+     16384,
+     10.401,
+     true
+    ],
+    "5566b4a6262ca892": [
+     "fast"
+    ],
+    "55794790fe8d4546": [
+     "slow",
+     4096,
+     8.237,
+     true
+    ],
+    "55ab8a04f9c9000b": [
+     "slow",
+     16384,
+     3.639,
+     true
+    ],
+    "55e0d701d13e49ff": [
+     "fast"
+    ],
+    "565ec1579ac18ede": [
+     "fast"
+    ],
+    "5826865d5cba1c6d": [
+     "fast"
+    ],
+    "59d94ab0b119226f": [
+     "slow",
+     1024,
+     3.898,
+     true
+    ],
+    "5a9e36b4a979f8a3": [
+     "slow",
+     262144,
+     30.898,
+     true
+    ],
+    "5af2e9ebb6d6c45f": [
+     "fast"
+    ],
+    "5b011cd51d468777": [
+     "fast"
+    ],
+    "5b359fea80f7535b": [
+     "slow",
+     1021,
+     10.516,
+     true
+    ],
+    "5b404a6737eddaf3": [
+     "fast"
+    ],
+    "5ba9202c44189898": [
+     "fast"
+    ],
+    "5c1036c45c3e0532": [
+     "fast"
+    ],
+    "5c773915a8c27e18": [
+     "slow",
+     1024,
+     1.224,
+     true
+    ],
+    "5c7d7c416b3ff4cd": [
+     "fast"
+    ],
+    "5ca5c20920dad973": [
+     "fast"
+    ],
+    "5cbc88b7f02c723a": [
+     "slow",
+     65536,
+     4.616,
+     true
+    ],
+    "5cf8c7a03e2a778f": [
+     "fast"
+    ],
+    "5d6c7a97dd3c905f": [
+     "slow",
+     65536,
+     14.268,
+     true
+    ],
+    "5d9ad8f534cf3cfc": [
+     "fast"
+    ],
+    "5dc62c67b379dd75": [
+     "fast"
+    ],
+    "5e792f7ebc915dfe": [
+     "fast"
+    ],
+    "5ed01083da1d9bd2": [
+     "fast"
+    ],
+    "5f5e44295be2c80d": [
+     "fast"
+    ],
+    "5f911d457f64ddbb": [
+     "fast"
+    ],
+    "5fb922cb278fbc17": [
+     "fast"
+    ],
+    "5fc62f494fe5040e": [
+     "fast"
+    ],
+    "60f5faf454c72720": [
+     "fast"
+    ],
+    "610d02ec30a53cc1": [
+     "fast"
+    ],
+    "61227b3d49dae2ac": [
+     "slow",
+     16384,
+     7.18,
+     true
+    ],
+    "62185ed81bc304f2": [
+     "slow",
+     16384,
+     1.923,
+     true
+    ],
+    "6222fde94fe5496b": [
+     "fast"
+    ],
+    "6224f2134c8e1dc5": [
+     "fast"
+    ],
+    "625d26d50e3687ac": [
+     "fast"
+    ],
+    "62cdde4d662c1913": [
+     "slow",
+     16384,
+     1.718,
+     true
+    ],
+    "63056c1fadf57453": [
+     "slow",
+     4096,
+     4.689,
+     true
+    ],
+    "63810011bfa73d8d": [
+     "fast"
+    ],
+    "6447421d35638b9b": [
+     "fast"
+    ],
+    "645488a63f8df727": [
+     "slow",
+     16384,
+     2.281,
+     true
+    ],
+    "647d7840d70f5ed7": [
+     "slow",
+     16384,
+     3.805,
+     true
+    ],
+    "656fa1ce6b554143": [
+     "fast"
+    ],
+    "658922eda3ee4b72": [
+     "slow",
+     16384,
+     1.149,
+     true
+    ],
+    "65c13828d17b2170": [
+     "fast"
+    ],
+    "664b67491d98c2b9": [
+     "slow",
+     16384,
+     5.36,
+     true
+    ],
+    "6681efeae0eebce8": [
+     "slow",
+     262144,
+     2.962,
+     false
+    ],
+    "670d65a3ae37afda": [
+     "fast"
+    ],
+    "671e36f444d87da1": [
+     "fast"
+    ],
+    "674db81e5ca18618": [
+     "fast"
+    ],
+    "67e649c4addebad3": [
+     "fast"
+    ],
+    "685280d4213165c9": [
+     "fast"
+    ],
+    "6852fd563896287e": [
+     "slow",
+     16384,
+     3.111,
+     true
+    ],
+    "6887017c935debd6": [
+     "fast"
+    ],
+    "6921b1d8155b623a": [
+     "fast"
+    ],
+    "696137907e03187c": [
+     "fast"
+    ],
+    "6a0eaf18ff5c64d2": [
+     "fast"
+    ],
+    "6a1e8abdfca45daa": [
+     "slow",
+     65536,
+     9.781,
+     true
+    ],
+    "6a8e17559f675189": [
+     "fast"
+    ],
+    "6b24e156ec6aa0ec": [
+     "fast"
+    ],
+    "6bcf12e4b6f9eeb6": [
+     "fast"
+    ],
+    "6c117a8a78b2814f": [
+     "slow",
+     16384,
+     3.796,
+     true
+    ],
+    "6cae597823197c00": [
+     "slow",
+     262144,
+     1.262,
+     false
+    ],
+    "6cd43dfcdd4474d4": [
+     "fast"
+    ],
+    "6db367eec47d35a8": [
+     "fast"
+    ],
+    "6dbc1c2e43e60e0f": [
+     "fast"
+    ],
+    "6e58b07ce0587ced": [
+     "fast"
+    ],
+    "6f07d73de6005d2d": [
+     "fast"
+    ],
+    "6f5dd26bed4e7a69": [
+     "fast"
+    ],
+    "6fdbf22f6cebc5a4": [
+     "fast"
+    ],
+    "6fed657d3877ab64": [
+     "fast"
+    ],
+    "702e6a332eb1277d": [
+     "fast"
+    ],
+    "704a899f38575af3": [
+     "fast"
+    ],
+    "70540378b7efe2ea": [
+     "fast"
+    ],
+    "7145f26216e300a8": [
+     "fast"
+    ],
+    "714adca8a055f36b": [
+     "fast"
+    ],
+    "723b5d2e5ecffe1a": [
+     "fast"
+    ],
+    "72c7cf7b1ceb9bf1": [
+     "fast"
+    ],
+    "72f9007ca4b2f9dd": [
+     "fast"
+    ],
+    "738a104e9446a247": [
+     "slow",
+     16384,
+     5.443,
+     true
+    ],
+    "744a7f68a280d438": [
+     "slow",
+     16384,
+     6.389,
+     true
+    ],
+    "74a87841b803e15b": [
+     "fast"
+    ],
+    "75b283d3537a758b": [
+     "fast"
+    ],
+    "760f900a675fc6c1": [
+     "fast"
+    ],
+    "7667f55b6ec10395": [
+     "fast"
+    ],
+    "7668c4868329d9db": [
+     "fast"
+    ],
+    "7693d41b29b6df0f": [
+     "fast"
+    ],
+    "7763e00dc2c1a3a5": [
+     "fast"
+    ],
+    "77a69bdcea207180": [
+     "slow",
+     65536,
+     2.349,
+     false
+    ],
+    "77e2cfa6fba937f4": [
+     "fast"
+    ],
+    "786098ae497ed6f7": [
+     "fast"
+    ],
+    "7869103c6d6ee9c8": [
+     "slow",
+     65536,
+     10.123,
+     true
+    ],
+    "78e4bae28dea18a7": [
+     "fast"
+    ],
+    "79591a28bcb77c16": [
+     "fast"
+    ],
+    "796cbae92d1145f7": [
+     "slow",
+     16384,
+     1.736,
+     true
+    ],
+    "79fe5fa82b651fe5": [
+     "fast"
+    ],
+    "7ae5642473e59035": [
+     "slow",
+     16384,
+     5.983,
+     true
+    ],
+    "7b620a127ebcf1aa": [
+     "fast"
+    ],
+    "7b7518539cf4670c": [
+     "fast"
+    ],
+    "7b9d5ad4722372d8": [
+     "fast"
+    ],
+    "7bb7b90a95f397ef": [
+     "slow",
+     16384,
+     5.469,
+     true
+    ],
+    "7bf4cc3a3def0dbb": [
+     "fast"
+    ],
+    "7bf8ba8cc269983f": [
+     "fast"
+    ],
+    "7c20287e35aeab11": [
+     "fast"
+    ],
+    "7c56789a98ea7fa4": [
+     "fast"
+    ],
+    "7c6e9c53ab46ec68": [
+     "slow",
+     16384,
+     4.229,
+     true
+    ],
+    "7d0b1c7996255bce": [
+     "fast"
+    ],
+    "7d30a3019db1225d": [
+     "fast"
+    ],
+    "7d3378d8bcd4e556": [
+     "fast"
+    ],
+    "7d425087ee9fbba2": [
+     "fast"
+    ],
+    "7d4db8f2a338c6e5": [
+     "slow",
+     65536,
+     1.913,
+     false
+    ],
+    "7d56c3bff436bf1e": [
+     "fast"
+    ],
+    "7d7c3f8f4cb6c24d": [
+     "fast"
+    ],
+    "7e053da90416aebb": [
+     "slow",
+     16384,
+     1.876,
+     true
+    ],
+    "7e7b4e7331385d88": [
+     "slow",
+     65536,
+     9.977,
+     true
+    ],
+    "7ec4eddb4a2c8bf5": [
+     "fast"
+    ],
+    "7ee102acd57bc1ca": [
+     "fast"
+    ],
+    "7fbef1c36109e1b3": [
+     "slow",
+     65536,
+     2.89,
+     true
+    ],
+    "807ef1e60e8b9147": [
+     "fast"
+    ],
+    "808193133cab85d2": [
+     "fast"
+    ],
+    "8106996456fe9ae7": [
+     "slow",
+     65536,
+     29.386,
+     true
+    ],
+    "82252f809d2b3079": [
+     "slow",
+     1024,
+     4.172,
+     true
+    ],
+    "82b258c1e101d98d": [
+     "slow",
+     16384,
+     15.003,
+     true
+    ],
+    "830eb7dc8e370c6e": [
+     "fast"
+    ],
+    "8339b161d9aa10d6": [
+     "fast"
+    ],
+    "833afe2ae6535f10": [
+     "slow",
+     16384,
+     1.141,
+     true
+    ],
+    "834529df875c7b75": [
+     "fast"
+    ],
+    "837d0fc0017cafdd": [
+     "slow",
+     4096,
+     3.111,
+     true
+    ],
+    "83af8bd7242c7f61": [
+     "fast"
+    ],
+    "8411fde4860a1865": [
+     "fast"
+    ],
+    "8469e53ceb847e3f": [
+     "slow",
+     65536,
+     20.052,
+     true
+    ],
+    "849db7798bbc857f": [
+     "fast"
+    ],
+    "84a419f3663bcb04": [
+     "slow",
+     4096,
+     2.654,
+     true
+    ],
+    "84d9721bb13474fa": [
+     "slow",
+     65536,
+     1.27,
+     true
+    ],
+    "84ecf1669c6e734e": [
+     "fast"
+    ],
+    "85dde429034e33ae": [
+     "fast"
+    ],
+    "8635c850dea900c6": [
+     "fast"
+    ],
+    "863cdf94de9e50ea": [
+     "slow",
+     4081,
+     1.173,
+     true
+    ],
+    "8725216212844381": [
+     "slow",
+     262144,
+     10.269,
+     true
+    ],
+    "875c1c1e8364acb6": [
+     "fast"
+    ],
+    "882fa58ba064fc4a": [
+     "fast"
+    ],
+    "88788898ac235ea6": [
+     "slow",
+     1024,
+     5.021,
+     true
+    ],
+    "891558d72b023bbf": [
+     "fast"
+    ],
+    "89453232a0ce076f": [
+     "fast"
+    ],
+    "89a00a409f07791a": [
+     "fast"
+    ],
+    "8a6f5c309c72aaf6": [
+     "slow",
+     65536,
+     2.965,
+     true
+    ],
+    "8b3545dfcc2fb9c3": [
+     "fast"
+    ],
+    "8b3e46dfae101351": [
+     "fast"
+    ],
+    "8b66936f960e5630": [
+     "fast"
+    ],
+    "8be390d3a2caba07": [
+     "fast"
+    ],
+    "8d802e28e5d38150": [
+     "fast"
+    ],
+    "8d8c432ee11f97ac": [
+     "fast"
+    ],
+    "8e5809a21928f336": [
+     "slow",
+     16384,
+     8.597,
+     true
+    ],
+    "8edaf7cb0ead5e6f": [
+     "slow",
+     1024,
+     37.64,
+     true
+    ],
+    "8f19c28a7819c9a9": [
+     "fast"
+    ],
+    "8f279565eeea6276": [
+     "fast"
+    ],
+    "8fd0cc360799d2fb": [
+     "slow",
+     16384,
+     8.696,
+     true
+    ],
+    "908f4f6b48f5f927": [
+     "slow",
+     65536,
+     2.882,
+     true
+    ],
+    "9115f40bca4fd347": [
+     "fast"
+    ],
+    "91eabdc498d47800": [
+     "fast"
+    ],
+    "91f31a8014f348f5": [
+     "fast"
+    ],
+    "92e945d805aa1285": [
+     "fast"
+    ],
+    "937d320061e5f628": [
+     "fast"
+    ],
+    "940c443d399c08f7": [
+     "slow",
+     4096,
+     2.977,
+     true
+    ],
+    "943269bfd4c32530": [
+     "slow",
+     4096,
+     5.539,
+     true
+    ],
+    "9432a9464f8e51b3": [
+     "fast"
+    ],
+    "947f8272ac36cd07": [
+     "slow",
+     262144,
+     1.824,
+     false
+    ],
+    "94b36eeaa48b5acd": [
+     "fast"
+    ],
+    "94ea248d325d697d": [
+     "fast"
+    ],
+    "9509ed733fa08d86": [
+     "fast"
+    ],
+    "9558da8571f001c5": [
+     "slow",
+     262138,
+     4.043,
+     false
+    ],
+    "963331815b8af7b4": [
+     "slow",
+     16384,
+     9.026,
+     true
+    ],
+    "96ea6f76f21bc41d": [
+     "fast"
+    ],
+    "97686bd47fef9972": [
+     "fast"
+    ],
+    "97741aef9893fea8": [
+     "fast"
+    ],
+    "9841ad506f68d8b0": [
+     "fast"
+    ],
+    "9860593b0b0eabf3": [
+     "fast"
+    ],
+    "9901fe804231909b": [
+     "fast"
+    ],
+    "9947008ad7848bcc": [
+     "fast"
+    ],
+    "9a3a583cb7b5f54e": [
+     "fast"
+    ],
+    "9aebac855f111c4c": [
+     "fast"
+    ],
+    "9b20a7a038a280c9": [
+     "slow",
+     16384,
+     2.732,
+     true
+    ],
+    "9bb7b9ef9004982c": [
+     "fast"
+    ],
+    "9c6300e44fb61c7e": [
+     "fast"
+    ],
+    "9ca0ab443bbfd590": [
+     "fast"
+    ],
+    "9cb5f1b17899de4f": [
+     "fast"
+    ],
+    "9d3bb6d458d573e3": [
+     "fast"
+    ],
+    "9d489f7d5d295ccc": [
+     "fast"
+    ],
+    "9da2dda3d520c754": [
+     "fast"
+    ],
+    "9e7ef3383867fb24": [
+     "fast"
+    ],
+    "9e88776641593b2a": [
+     "fast"
+    ],
+    "9ee78a1b99474dc7": [
+     "fast"
+    ],
+    "9f2b6cae1b58a688": [
+     "fast"
+    ],
+    "9f3babdfa05680fc": [
+     "fast"
+    ],
+    "9fc74f435a67b467": [
+     "slow",
+     1024,
+     8.033,
+     true
+    ],
+    "9ff0aeea292d82ee": [
+     "fast"
+    ],
+    "a0cd74afae3b02ec": [
+     "fast"
+    ],
+    "a108cf9ca6e1c903": [
+     "fast"
+    ],
+    "a151099b1d56c225": [
+     "fast"
+    ],
+    "a180e2ea5f616570": [
+     "fast"
+    ],
+    "a1c408c9ec5071a8": [
+     "fast"
+    ],
+    "a1c89c8f8b38b278": [
+     "fast"
+    ],
+    "a226fe6de6e05b6d": [
+     "fast"
+    ],
+    "a277c75e9b4c2536": [
+     "fast"
+    ],
+    "a28fb8365e6eef23": [
+     "fast"
+    ],
+    "a2c516b6c78edd59": [
+     "fast"
+    ],
+    "a2d8f7141013946c": [
+     "fast"
+    ],
+    "a308c3bca0246a34": [
+     "fast"
+    ],
+    "a30f86a2e72210cc": [
+     "slow",
+     262144,
+     15.206,
+     true
+    ],
+    "a33cb22e7c22dfa0": [
+     "fast"
+    ],
+    "a341a9840425f07c": [
+     "fast"
+    ],
+    "a351cd513b2327df": [
+     "fast"
+    ],
+    "a353494fde62c3bf": [
+     "fast"
+    ],
+    "a37a897c467b23f0": [
+     "fast"
+    ],
+    "a3936a32f848e891": [
+     "fast"
+    ],
+    "a3abdad7919287d4": [
+     "fast"
+    ],
+    "a45d47513c6243cb": [
+     "fast"
+    ],
+    "a53ccfd2c21695ea": [
+     "fast"
+    ],
+    "a56f0ee55bc45638": [
+     "fast"
+    ],
+    "a572c950ff63ada0": [
+     "fast"
+    ],
+    "a5ada3ca86db188f": [
+     "slow",
+     262109,
+     3.924,
+     true
+    ],
+    "a5fa983cb5f309ee": [
+     "fast"
+    ],
+    "a67a33d9ad770664": [
+     "fast"
+    ],
+    "a7222cd429555179": [
+     "fast"
+    ],
+    "a73c709350313cc4": [
+     "fast"
+    ],
+    "a8602ecd8a8f96b9": [
+     "fast"
+    ],
+    "a8805d8d49bddb4a": [
+     "slow",
+     16384,
+     2.658,
+     true
+    ],
+    "a8e25380894b89f9": [
+     "fast"
+    ],
+    "a8ebeed34b0d14b7": [
+     "fast"
+    ],
+    "a8fcc38671c8d105": [
+     "slow",
+     65536,
+     4.61,
+     true
+    ],
+    "a9f71a19762239c9": [
+     "slow",
+     4096,
+     8.632,
+     true
+    ],
+    "aa660e543759538e": [
+     "fast"
+    ],
+    "ab7605d67e7bf795": [
+     "slow",
+     65536,
+     10.045,
+     true
+    ],
+    "ab83667da4d04c6e": [
+     "slow",
+     65536,
+     14.758,
+     true
+    ],
+    "ab987af7430fa8a8": [
+     "fast"
+    ],
+    "abc94d194e0b5b24": [
+     "fast"
+    ],
+    "ac41011b83bb7b0c": [
+     "fast"
+    ],
+    "ac44f5471b46acb8": [
+     "slow",
+     4096,
+     3.035,
+     true
+    ],
+    "ac4dba7e6e31f12b": [
+     "fast"
+    ],
+    "ac94ab66dd647dce": [
+     "slow",
+     16384,
+     1.84,
+     true
+    ],
+    "aca4509da3434b55": [
+     "slow",
+     262133,
+     2.301,
+     false
+    ],
+    "aceb2ddffb665836": [
+     "slow",
+     16384,
+     4.268,
+     true
+    ],
+    "ad11d40dcb6f4c26": [
+     "slow",
+     16384,
+     2.613,
+     true
+    ],
+    "ad949f5378ccecdd": [
+     "fast"
+    ],
+    "add4ddeb1fe0c517": [
+     "fast"
+    ],
+    "aeb28ab1ef305182": [
+     "fast"
+    ],
+    "aed3c33505779eb3": [
+     "fast"
+    ],
+    "afe81477ba446ff9": [
+     "fast"
+    ],
+    "b036f80776eb99b0": [
+     "slow",
+     262143,
+     2.292,
+     false
+    ],
+    "b069195f7e31b382": [
+     "fast"
+    ],
+    "b213309255ac47c3": [
+     "fast"
+    ],
+    "b2dfec4328aaf6f0": [
+     "slow",
+     16384,
+     4.216,
+     true
+    ],
+    "b2fcd926e220cadb": [
+     "fast"
+    ],
+    "b30be39ff54677b0": [
+     "slow",
+     16384,
+     2.569,
+     true
+    ],
+    "b4146eec8b75f84b": [
+     "fast"
+    ],
+    "b4314eed4c5927bd": [
+     "fast"
+    ],
+    "b43dc3f48ba2b7b6": [
+     "fast"
+    ],
+    "b4b691f18b4f0cc5": [
+     "slow",
+     65536,
+     8.221,
+     true
+    ],
+    "b5345216b99a8491": [
+     "slow",
+     16384,
+     20.702,
+     true
+    ],
+    "b6257b72a5f76780": [
+     "slow",
+     16384,
+     6.14,
+     true
+    ],
+    "b6d68e4138075787": [
+     "fast"
+    ],
+    "b7c5a4580d185a46": [
+     "fast"
+    ],
+    "b8044da19becc558": [
+     "slow",
+     262144,
+     1.066,
+     false
+    ],
+    "b82ecf82d075d791": [
+     "fast"
+    ],
+    "b9b62665791ef7d7": [
+     "fast"
+    ],
+    "b9f7b38c1e987195": [
+     "fast"
+    ],
+    "ba8f9b451988e077": [
+     "fast"
+    ],
+    "bb71256e387fa4e0": [
+     "fast"
+    ],
+    "bbf765e1231fe007": [
+     "slow",
+     65536,
+     18.271,
+     true
+    ],
+    "bc14a3e5c4170be7": [
+     "fast"
+    ],
+    "bc42dab86a3a112f": [
+     "fast"
+    ],
+    "bcbe6e1dd98d466a": [
+     "fast"
+    ],
+    "bce068f5e9b3e9bb": [
+     "fast"
+    ],
+    "bce9536f6955e6e2": [
+     "fast"
+    ],
+    "bd1e9e0fb5bf0308": [
+     "slow",
+     4096,
+     2.293,
+     true
+    ],
+    "bd676ca6d9462d02": [
+     "fast"
+    ],
+    "bda4ff3664edb2e4": [
+     "fast"
+    ],
+    "bdc0691c5dae6150": [
+     "fast"
+    ],
+    "be7dfee91103677a": [
+     "fast"
+    ],
+    "be8b45936ea3c117": [
+     "fast"
+    ],
+    "bea0374a0acddfa2": [
+     "fast"
+    ],
+    "bf47ab99a9655ba6": [
+     "fast"
+    ],
+    "bf7565939051039d": [
+     "fast"
+    ],
+    "bf7f25627c38e43e": [
+     "slow",
+     262144,
+     1.774,
+     false
+    ],
+    "c012e832e3118fba": [
+     "fast"
+    ],
+    "c0682c6b01cdf22d": [
+     "slow",
+     16384,
+     5.714,
+     true
+    ],
+    "c1c7145cf1a7ed63": [
+     "slow",
+     65536,
+     9.885,
+     true
+    ],
+    "c23f5df763389f64": [
+     "slow",
+     262144,
+     3.196,
+     false
+    ],
+    "c2987cfb802f030f": [
+     "fast"
+    ],
+    "c2e4a53f9028ec56": [
+     "fast"
+    ],
+    "c2f9380d52ee8cbd": [
+     "fast"
+    ],
+    "c34feed73b540965": [
+     "fast"
+    ],
+    "c441cb87b7d6c95b": [
+     "fast"
+    ],
+    "c4b6891f7d096a73": [
+     "slow",
+     65536,
+     18.278,
+     true
+    ],
+    "c4c79215c7b68107": [
+     "fast"
+    ],
+    "c4e7010b13a8420f": [
+     "fast"
+    ],
+    "c52e40183c55aca8": [
+     "fast"
+    ],
+    "c5cec6bfcafb2444": [
+     "slow",
+     65535,
+     4.352,
+     true
+    ],
+    "c753788c86f027d1": [
+     "fast"
+    ],
+    "c76f385961b693b7": [
+     "slow",
+     4096,
+     2.109,
+     true
+    ],
+    "c83cb72e16fe58e1": [
+     "slow",
+     16384,
+     4.229,
+     true
+    ],
+    "c86695b4ce4fd620": [
+     "fast"
+    ],
+    "c8be11618d39e0bf": [
+     "fast"
+    ],
+    "c9152de883eb3446": [
+     "slow",
+     262141,
+     1.666,
+     false
+    ],
+    "c98b4045561b3aea": [
+     "slow",
+     1048576,
+     4.112,
+     false
+    ],
+    "c9cb65382e07ff02": [
+     "fast"
+    ],
+    "ca0966eec9bc3acf": [
+     "slow",
+     16384,
+     4.011,
+     true
+    ],
+    "caa3c7dd88ca204c": [
+     "slow",
+     65529,
+     2.255,
+     true
+    ],
+    "cb08840236e3d3b9": [
+     "fast"
+    ],
+    "cb535b90fe43418d": [
+     "fast"
+    ],
+    "cb812f116bc01728": [
+     "slow",
+     16384,
+     2.277,
+     true
+    ],
+    "cb8a59ddd5a3b1d3": [
+     "fast"
+    ],
+    "cbb93c79e85b2055": [
+     "fast"
+    ],
+    "cbdb03587193c20f": [
+     "slow",
+     1024,
+     3.02,
+     true
+    ],
+    "cbe273fe62b2bc0b": [
+     "fast"
+    ],
+    "cc63c8a145114f43": [
+     "slow",
+     16384,
+     1.538,
+     true
+    ],
+    "cc8722d446e61e55": [
+     "fast"
+    ],
+    "cc8f4b593d77692d": [
+     "fast"
+    ],
+    "ccd050f247997f5e": [
+     "fast"
+    ],
+    "cd7285223fe4ded8": [
+     "slow",
+     16384,
+     10.3,
+     true
+    ],
+    "cdabecff99857cca": [
+     "fast"
+    ],
+    "cdb30d22ca3e4cf0": [
+     "slow",
+     16382,
+     1.79,
+     true
+    ],
+    "cdc0be1d094f838a": [
+     "fast"
+    ],
+    "cdec0abea594fab5": [
+     "fast"
+    ],
+    "ce3db302919e9fac": [
+     "fast"
+    ],
+    "ce406c751177c4c7": [
+     "fast"
+    ],
+    "cea11122f9d8f935": [
+     "fast"
+    ],
+    "ceb199416fd746c0": [
+     "fast"
+    ],
+    "ced5759c66810200": [
+     "fast"
+    ],
+    "cf0df87c170c37ed": [
+     "slow",
+     1024,
+     8.778,
+     true
+    ],
+    "cf9d5f2c569ffc1f": [
+     "fast"
+    ],
+    "cfafdb56a41cd759": [
+     "fast"
+    ],
+    "cfe64bebee7d9276": [
+     "fast"
+    ],
+    "d0bde0d4160a374a": [
+     "fast"
+    ],
+    "d14fe2c93495529c": [
+     "fast"
+    ],
+    "d200573f96299d61": [
+     "fast"
+    ],
+    "d2bd9d00c3ceaa86": [
+     "fast"
+    ],
+    "d2f1b2bbc95a0466": [
+     "slow",
+     16384,
+     4.577,
+     true
+    ],
+    "d32a8ba51ef2360d": [
+     "slow",
+     16384,
+     6.844,
+     true
+    ],
+    "d34135d7a69bf0b0": [
+     "fast"
+    ],
+    "d3cea3b2cf777791": [
+     "fast"
+    ],
+    "d411c17eef959dd5": [
+     "fast"
+    ],
+    "d48d42e1ec7243db": [
+     "fast"
+    ],
+    "d499083c32fc6bf8": [
+     "fast"
+    ],
+    "d510836a00aa87ee": [
+     "fast"
+    ],
+    "d67d40c53ac49cba": [
+     "slow",
+     65536,
+     25.033,
+     true
+    ],
+    "d683506e9bed68fa": [
+     "fast"
+    ],
+    "d6ada190322b60d0": [
+     "fast"
+    ],
+    "d711b03cc775c6d7": [
+     "slow",
+     65536,
+     18.239,
+     true
+    ],
+    "d72c9a163bef423c": [
+     "slow",
+     16384,
+     2.228,
+     true
+    ],
+    "d73f58605f0cd938": [
+     "fast"
+    ],
+    "d7685b5c245ea996": [
+     "slow",
+     16384,
+     1.873,
+     true
+    ],
+    "d77e7a61b2e6b66f": [
+     "slow",
+     65536,
+     22.216,
+     true
+    ],
+    "d7894fdf9a2297b5": [
+     "slow",
+     4096,
+     62.062,
+     true
+    ],
+    "d7de9464fa9707f7": [
+     "fast"
+    ],
+    "d821b84fc97eb469": [
+     "slow",
+     65536,
+     1.198,
+     false
+    ],
+    "d86d597ff2c5870e": [
+     "slow",
+     1024,
+     1.78,
+     true
+    ],
+    "d8a2367e67763a59": [
+     "fast"
+    ],
+    "d994c1d521784e49": [
+     "fast"
+    ],
+    "da02c6017fdbe2fc": [
+     "fast"
+    ],
+    "da5761c6e042e8b8": [
+     "slow",
+     16383,
+     2.056,
+     true
+    ],
+    "da82f92ee23f0437": [
+     "slow",
+     16384,
+     4.758,
+     true
+    ],
+    "da8ba91ec237d574": [
+     "fast"
+    ],
+    "dad0bcc3f09fc4d4": [
+     "slow",
+     65536,
+     18.214,
+     true
+    ],
+    "db1ef5d11c852a1c": [
+     "fast"
+    ],
+    "dbdc1ab6451c3078": [
+     "fast"
+    ],
+    "dcad91fa62c976b9": [
+     "fast"
+    ],
+    "dd2453e47c802510": [
+     "fast"
+    ],
+    "de3220819b0082e4": [
+     "slow",
+     16384,
+     3.162,
+     true
+    ],
+    "def916d39d578f6e": [
+     "slow",
+     1024,
+     5.172,
+     true
+    ],
+    "df4835676d34a47c": [
+     "fast"
+    ],
+    "df9a90e3f14cfde4": [
+     "fast"
+    ],
+    "dfdea3e855f98a0a": [
+     "fast"
+    ],
+    "e08dbf2764785adf": [
+     "fast"
+    ],
+    "e0ef362452b0007b": [
+     "slow",
+     16384,
+     8.651,
+     true
+    ],
+    "e11d1928d6ba43ff": [
+     "fast"
+    ],
+    "e12a19810f96e92b": [
+     "slow",
+     65536,
+     2.908,
+     true
+    ],
+    "e1488674c5d59c74": [
+     "slow",
+     1024,
+     2.064,
+     true
+    ],
+    "e1786cc15dce7cff": [
+     "slow",
+     16384,
+     3.365,
+     true
+    ],
+    "e1cd5f1b3b9a4247": [
+     "fast"
+    ],
+    "e1daa26d5789463c": [
+     "fast"
+    ],
+    "e21333b33f32ea76": [
+     "slow",
+     16384,
+     2.224,
+     true
+    ],
+    "e214f47bae9b75bf": [
+     "slow",
+     1024,
+     17.979,
+     true
+    ],
+    "e2b61e1d6c3081c2": [
+     "slow",
+     16384,
+     3.212,
+     true
+    ],
+    "e3513876abe83a74": [
+     "slow",
+     65536,
+     13.953,
+     true
+    ],
+    "e3db1a23a73c968a": [
+     "slow",
+     16384,
+     4.759,
+     true
+    ],
+    "e478bc004611a16a": [
+     "fast"
+    ],
+    "e47be07404323816": [
+     "fast"
+    ],
+    "e48adf87136d87b2": [
+     "fast"
+    ],
+    "e4becf2cc09bf236": [
+     "slow",
+     16384,
+     1.1,
+     true
+    ],
+    "e55fcd46d562bf60": [
+     "fast"
+    ],
+    "e56bcb9705af839d": [
+     "fast"
+    ],
+    "e5ae7ea58b946c75": [
+     "fast"
+    ],
+    "e6276559fe79f204": [
+     "slow",
+     1024,
+     2.49,
+     true
+    ],
+    "e64477fbf32d6449": [
+     "slow",
+     4096,
+     1.845,
+     true
+    ],
+    "e68d1aabd2e6113b": [
+     "fast"
+    ],
+    "e6980996fa8c1ae6": [
+     "fast"
+    ],
+    "e7526bd574525d2f": [
+     "slow",
+     4096,
+     1.457,
+     true
+    ],
+    "e76cc4976454c7f7": [
+     "fast"
+    ],
+    "e7dee8ebb1a834e2": [
+     "fast"
+    ],
+    "e851d991f9bb359e": [
+     "slow",
+     65529,
+     3.486,
+     true
+    ],
+    "e8bf2706d11f695a": [
+     "fast"
+    ],
+    "e91848efc07ee3d7": [
+     "slow",
+     1048576,
+     3.952,
+     false
+    ],
+    "e9f432a02f989621": [
+     "fast"
+    ],
+    "eb36cf09ecba462d": [
+     "slow",
+     65536,
+     18.462,
+     true
+    ],
+    "eb6e392ad68db4ea": [
+     "fast"
+    ],
+    "eba55010449f65ce": [
+     "slow",
+     65536,
+     1.24,
+     true
+    ],
+    "ebed3d4d59beec3d": [
+     "fast"
+    ],
+    "ebf73e75b6ef427a": [
+     "fast"
+    ],
+    "ec29262c4aa05485": [
+     "fast"
+    ],
+    "ec5b8467f9787252": [
+     "fast"
+    ],
+    "ec9835324629b29d": [
+     "fast"
+    ],
+    "ecac55bd18e926e1": [
+     "slow",
+     16384,
+     3.277,
+     true
+    ],
+    "ecc96c2d5a6b142d": [
+     "fast"
+    ],
+    "ed8c7f3c297b133e": [
+     "fast"
+    ],
+    "ed97999d65623a9b": [
+     "fast"
+    ],
+    "ee99310b6bfd6437": [
+     "fast"
+    ],
+    "efac7221927b2e4a": [
+     "fast"
+    ],
+    "f01d2781819749a7": [
+     "fast"
+    ],
+    "f0a9a8f6f05f2174": [
+     "slow",
+     1024,
+     2.323,
+     true
+    ],
+    "f0f5c14374cbadc5": [
+     "fast"
+    ],
+    "f127948182901b2c": [
+     "fast"
+    ],
+    "f14e5acc21a9ebd8": [
+     "fast"
+    ],
+    "f1b47be5769d24ab": [
+     "fast"
+    ],
+    "f1f5f3d670440330": [
+     "slow",
+     16384,
+     5.525,
+     true
+    ],
+    "f1f838fc015bb751": [
+     "fast"
+    ],
+    "f209117e4c7d7e0e": [
+     "slow",
+     4096,
+     1.174,
+     true
+    ],
+    "f28ecc9f7b947bce": [
+     "slow",
+     16384,
+     3.799,
+     true
+    ],
+    "f3b24a9e3896ed5a": [
+     "fast"
+    ],
+    "f3b54b09a2cc801e": [
+     "slow",
+     16384,
+     4.733,
+     true
+    ],
+    "f4cf7d7edaec7417": [
+     "fast"
+    ],
+    "f4f770c8376dd12b": [
+     "fast"
+    ],
+    "f61b613d2e083c60": [
+     "slow",
+     16384,
+     5.406,
+     true
+    ],
+    "f673e6d9b0095951": [
+     "slow",
+     65536,
+     11.397,
+     true
+    ],
+    "f680c72d0cbfe86e": [
+     "fast"
+    ],
+    "f6c02ff3630bf6cc": [
+     "fast"
+    ],
+    "f742dadb1d0cd00e": [
+     "fast"
+    ],
+    "f7a44161f4b78981": [
+     "fast"
+    ],
+    "f7ab1b2fdfa9f4d0": [
+     "fast"
+    ],
+    "f7ee2d9945f6c715": [
+     "fast"
+    ],
+    "f81f89e5d3d8827d": [
+     "fast"
+    ],
+    "f89bb0b503368553": [
+     "slow",
+     65536,
+     10.077,
+     true
+    ],
+    "f8acb2ef2a882333": [
+     "slow",
+     16384,
+     1.001,
+     true
+    ],
+    "f8ea67a9dab57192": [
+     "fast"
+    ],
+    "f930f6dde6077806": [
+     "fast"
+    ],
+    "f98ee9bdcfa99ff9": [
+     "fast"
+    ],
+    "f99e6a68d1b964a7": [
+     "slow",
+     262144,
+     1.862,
+     false
+    ],
+    "f9f7cd0472686dc4": [
+     "fast"
+    ],
+    "fa8689549f6d46b8": [
+     "slow",
+     1024,
+     1.388,
+     true
+    ],
+    "fab5e4b6d1c4d056": [
+     "fast"
+    ],
+    "facadd2a677e2c8f": [
+     "fast"
+    ],
+    "fbb0f30441a20f93": [
+     "slow",
+     262144,
+     1.121,
+     false
+    ],
+    "fc11e609eaef6fbf": [
+     "fast"
+    ],
+    "fcc88269e8eef341": [
+     "fast"
+    ],
+    "fce20e6f2da04156": [
+     "slow",
+     4096,
+     4.549,
+     true
+    ],
+    "fd380c703014c782": [
+     "fast"
+    ],
+    "fd3fa69796b15a75": [
+     "fast"
+    ],
+    "fdef04705438b89a": [
+     "fast"
+    ],
+    "fe453a5439b25cbf": [
+     "fast"
+    ],
+    "fe68bb175465e7b7": [
+     "slow",
+     16376,
+     9.5,
+     true
+    ],
+    "fe824aaf359c6c2b": [
+     "slow",
+     65536,
+     4.591,
+     true
+    ],
+    "feacf19167ad1d5e": [
+     "slow",
+     262129,
+     2.142,
+     false
+    ],
+    "fec48b9d28ea723a": [
+     "slow",
+     65536,
+     12.336,
+     true
+    ],
+    "ff224e571b5e2fc7": [
+     "fast"
+    ],
+    "ff2937c34463c47b": [
+     "slow",
+     16384,
+     8.057,
+     true
+    ],
+    "ff95fa688ce94506": [
+     "fast"
+    ],
+    "ffa8dd1b7d35806f": [
+     "fast"
+    ],
+    "ffae7362d7fe9cb6": [
+     "fast"
+    ]
+   }
   }
  ]
 }

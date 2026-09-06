@@ -141,11 +141,22 @@ def test_the_shipped_table_is_a_measurement_and_not_an_assertion():
     for row in shipped["rules"].values():
         assert row[1] in ("slow", "fast")
         assert (len(row) == 5) is (row[1] == "slow")
+    # Three verdicts, and the third is what keeps the title of this test true.
+    # ``inferred-fast`` marks a string this loader derives and nobody timed: a
+    # surrogate port or a scoped alternation, carrying no verdict of its own so
+    # it cannot certify itself on its origin's timing. It yields no measurement,
+    # which is what sends it to the shape screen instead.
     for key, row in shipped["patterns"].items():
         assert re.fullmatch(r"[0-9a-f]{16}", key)
-        assert row[0] in ("slow", "fast")
+        assert row[0] in ("slow", "fast", "inferred-fast")
         if row[0] == "slow":
             assert isinstance(row[1], int) and row[1] > 0 and row[2] > 1.0
+        if row[0] == "inferred-fast":
+            assert len(row) == 1
+    inferred = [key for key, row in shipped["patterns"].items() if row[0] == "inferred-fast"]
+    assert inferred, "the table should still distinguish derived strings from timed ones"
+    assert all(evaluate._measurement_from_row(shipped["patterns"][key], shipped) is None
+               for key in inferred)
 
 
 def test_no_measured_crossing_survives_into_a_runnable_rule():

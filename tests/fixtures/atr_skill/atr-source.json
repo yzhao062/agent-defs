@@ -19,7 +19,12 @@
     "00162.yaml": {
       "source_path": "rules/context-exfiltration/ATR-2026-00162-skill-credential-exfil-combo.yaml",
       "sha256": "ab3a5a47732bf8cea47a321d9e3df1fa052ca4dc208c539e94cc7adfdc8e1f39",
-      "why": "a skill rule carrying tags.suppress_in_code_blocks"
+      "why": "a skill rule whose every condition crosses the budget"
+    },
+    "00421.yaml": {
+      "source_path": "rules/context-exfiltration/ATR-2026-00421-nl-covert-conversation-exfiltration.yaml",
+      "sha256": "858241ca4c0a8041ee36a0c7e9223c62649014ad3d509ceab30cf0dbd891aa7f",
+      "why": "a CFG-eligible rule still carrying tags.suppress_in_code_blocks"
     },
     "00111.yaml": {
       "source_path": "rules/privilege-escalation/ATR-2026-00111-shell-escape.yaml",

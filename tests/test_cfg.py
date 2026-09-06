@@ -226,33 +226,45 @@ def test_the_dispatcher_runs_rules_the_flat_predicate_refuses(loaded):
 
     ``ATR-2026-00121`` has no flat predicate because composing its eight
     conditions into one alternation trips the pattern screen. ATR never composes
-    them, so six of the eight run here unchanged. It was seven before the
-    measurement screen landed, which refuses one more condition on its recorded
-    time rather than on its shape.
+    them, so seven of the eight run here unchanged.
+
+    This count was 6 while it was a prediction. The measurement sweep then timed
+    every condition, and the prediction was wrong in both directions at once:
+    the condition the shape screen had refused measures fast and is readmitted,
+    while condition 1, which the shape screen passed, crosses at 3.91 s on
+    65,536 bytes and is still running at 60 s. One is refused either way, so the
+    count that was guessed at 6 measures 7.
     """
     carrier = rule(loaded, "00121")
     assert carrier.predicate_kind is PredicateKind.NONE
     binding = carrier.binding(Surface.CFG)
     assert binding.eligible is True
-    assert len(binding.conditions) == 6
+    assert len(binding.conditions) == 7
     assert carrier.lane is Lane.RECORD
     assert admit(carrier)[0] is Lane.RECORD
 
 
 def test_a_refused_condition_is_dropped_from_any_and_recorded(loaded):
-    """The carrier moved from ``00276`` to ``00440`` when the measurement landed.
+    """The carrier has moved twice, and the second move is the interesting one.
 
-    ``00276`` no longer carries a screen gate at all, because the measurement
-    admits a condition the shape screen had refused. Sixty CFG-eligible rules in
-    the full corpus still do, so the property is intact and only the example
-    moved, to one already in this fixture.
+    It left ``00276`` when the measurement admitted a condition the shape screen
+    had refused, leaving that rule with no screen gate to read. It leaves
+    ``00162`` now for the opposite reason: all four of that rule's conditions
+    cross the budget, between 2.71 s and 6.29 s with three still running at 60 s,
+    so its gate reads ``block`` and it carries no surviving condition to drop one
+    from. A rule with nothing left cannot show that losing one condition is
+    survivable.
+
+    ``00120`` is picked by rule rather than by search: it is the lowest-numbered
+    rule in this fixture that is still CFG-eligible with exactly one condition
+    refused. Sixty CFG-eligible rules in the full corpus carry the same shape.
     """
-    binding = rule(loaded, "00162").binding(Surface.CFG)
+    binding = rule(loaded, "00120").binding(Surface.CFG)
     screen = next(g for g in binding.gates if g.name == "screen")
     assert screen.verdict == "pass"
-    assert "1 of 4 conditions refused" in screen.detail
+    assert "1 of 5 conditions refused" in screen.detail
     assert "can only lose matches" in screen.detail
-    assert len(binding.conditions) == 3
+    assert len(binding.conditions) == 4
 
 
 def test_a_semantic_rule_without_a_pattern_fallback_never_reaches_the_channel(loaded):
@@ -336,20 +348,29 @@ def test_suppression_applies_only_to_the_rules_that_declare_it(loaded):
 
 
 def test_a_flagged_rule_stops_firing_inside_a_fence(loaded):
-    flagged = rule(loaded, "00162")
+    """``00421`` carries the suppression tag; ``00162`` used to and no longer runs.
+
+    Every one of ``00162``'s four conditions crosses the budget, so it is refused
+    before it reaches this channel and cannot demonstrate anything about
+    suppression. ``00421`` is the lowest-numbered CFG-eligible rule in the corpus
+    that still declares ``tags.suppress_in_code_blocks``, and it was added to the
+    fixture for that. Eleven rules in the full corpus carry the same tag, so the
+    behaviour is upstream's rather than this one rule's.
+    """
+    flagged = rule(loaded, "00421")
     payload = next(text for text in flagged.examples_positive
                    if cfg_ids(text, [flagged]))
     assert cfg_ids(f"```\n{payload}\n```\n", [flagged]) == set()
-    assert cfg_ids(f"```\n```\n{payload}\n", [flagged]) == {"atr:ATR-2026-00162"}
+    assert cfg_ids(f"```\n```\n{payload}\n", [flagged]) == {"atr:ATR-2026-00421"}
 
 
 def test_turning_suppression_off_is_a_measurement_switch_not_a_setting(loaded):
-    flagged = rule(loaded, "00162")
+    flagged = rule(loaded, "00421")
     payload = next(text for text in flagged.examples_positive
                    if cfg_ids(text, [flagged]))
     fenced = f"```\n{payload}\n```\n"
     assert cfg_ids(fenced, [flagged]) == set()
-    assert cfg_ids(fenced, [flagged], suppress_code_blocks=False) == {"atr:ATR-2026-00162"}
+    assert cfg_ids(fenced, [flagged], suppress_code_blocks=False) == {"atr:ATR-2026-00421"}
 
 
 def test_a_payload_hidden_in_base64_is_read(loaded):

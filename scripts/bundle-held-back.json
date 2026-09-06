@@ -1,0 +1,16 @@
+{
+  "atr:ATR-2026-00064": "fired on 81 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00110": "fired on 27 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00111": "fired on 4 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00286": "fired on 2 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00242": "fired on 2 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00051": "fired on 1 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00041": "fired on 1 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00032": "fired on 1 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
+  "atr:ATR-2026-00307": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)",
+  "atr:ATR-2026-00150": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)",
+  "atr:ATR-2026-00213": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)",
+  "atr:ATR-2026-00308": "fired on 2 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)",
+  "atr:ATR-2026-00511": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)",
+  "atr:ATR-2026-00065": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)"
+}

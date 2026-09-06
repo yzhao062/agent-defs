@@ -11,3 +11,4 @@ data/avtest/
 data/cache/
 benchmarks/*.json
 *.stackdump
+.idea/

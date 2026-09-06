@@ -131,11 +131,30 @@ def _parser() -> argparse.ArgumentParser:
 
     measure = sub.add_parser("calibrate", parents=[common],
                              help="measure the enabled bundle on a benign corpus")
-    measure.add_argument("--benign-dir", type=Path, required=True)
-    measure.add_argument("--corpus-label", required=True)
+    source = measure.add_mutually_exclusive_group(required=True)
+    source.add_argument("--benign-dir", type=Path,
+                        help="a directory of prose and source files to scan directly")
+    source.add_argument("--report", type=Path,
+                        help="an agent_defs.bench report over extracted tool traffic, "
+                             "which is the population the OUT surface is defined over")
+    measure.add_argument("--corpus-label", default=None,
+                         help="required with --benign-dir; a report carries its own identity")
+    measure.add_argument("--accept-pooled-bound", action="store_true",
+                         help="record that you are gating on the pooled interval where the "
+                              "benchmark gates on the worst per-stratum one. Never relaxes a "
+                              "refusal about duplicate material or missing coverage.")
 
     sub.add_parser("status", parents=[common, harness],
                    help="what this install would do on the next tool call")
+
+    export = sub.add_parser("export-bundle", parents=[common],
+                            help="write the exact enabled set, for measuring")
+    export.add_argument("--out", type=Path, required=True)
+
+    lane = sub.add_parser("promote", parents=[common],
+                          help="let one source act, up to what its measurement allows")
+    lane.add_argument("--source", required=True)
+    lane.add_argument("--lane", required=True, choices=["RECORD", "ADVISE", "DENY"])
     return parser
 
 
@@ -145,13 +164,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     impl = _impl()
     config = Path(args.config or impl.config_path()).expanduser().resolve()
     try:
-        if args.command == "status":
+        if args.command == "export-bundle":
+            # calibrate refuses a report that does not cover every enabled rule,
+            # and the enabled set is the starter rules plus the bundle minus
+            # whatever the config gates out. Nothing else reproduces that set,
+            # so measuring anything else produces a report calibrate rejects.
+            from . import bundle as bundle_format
+
+            settings_config = impl.read_config(config)
+            enabled = impl.active_rules(settings_config, impl.hook_rules(settings_config)[0])
+            written = bundle_format.write(args.out, enabled, exported_from=str(config),
+                                          surfaces=list(settings_config["surfaces"]))
+            result = {"agent_defs": "exported", "rules": len(enabled),
+                      "out": str(args.out), "bytes": written}
+        elif args.command == "promote":
+            result = impl.promote(config, args.source, args.lane)
+        elif args.command == "status":
             settings = Path(args.settings).expanduser().resolve() if args.settings else _default_settings()
             result = status(config, settings)
+        elif args.command == "calibrate" and args.report:
+            report = Path(args.report).expanduser().resolve()
+            if not report.is_file():
+                parser.exit(USAGE_ERROR, f"agent-defs: no such report: {report}\n")
+            result = impl.calibrate_from_report(
+                config, report, accept_pooled_bound=args.accept_pooled_bound)
         elif args.command == "calibrate":
             directory = Path(args.benign_dir).expanduser().resolve()
             if not directory.is_dir():
                 parser.exit(USAGE_ERROR, f"agent-defs: no such directory: {directory}\n")
+            if not args.corpus_label:
+                parser.exit(USAGE_ERROR, "agent-defs: --corpus-label is required with --benign-dir\n")
             result = impl.calibrate(config, directory, args.corpus_label)
         else:
             settings = Path(args.settings).expanduser().resolve() if args.settings else _default_settings()

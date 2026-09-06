@@ -14,16 +14,17 @@ any of that carries instructions, the model may follow them, and you have no way
 the one threat here an individual cannot defend against alone, and it is what this package is aimed
 at.
 
-It acts at three moments rather than producing a report you have to read.
+It acts at the moment the text arrives rather than producing a report you have to read. Three moments
+are reachable in principle; one is wired.
 
-| Moment | What is caught |
-|---|---|
-| A skill or server is added | an install step piping a download into a shell, a plaintext secret, a declaration of no `tools` beside authority over all of them |
-| A tool call is about to run | the call does something you did not authorise |
-| A tool result comes back | instructions addressed to your agent, carried in the returned text |
+| Moment | What is caught | State here |
+|---|---|---|
+| A tool result comes back | instructions addressed to your agent, carried in the returned text | **wired and measured.** 206 rules on Claude Code's `PostToolUse`, calibrated on real traffic; see [`docs/calibration.md`](docs/calibration.md) |
+| A tool call is about to run | the call does something you did not authorise | scanner reachable, no measured rules. The 57 `IN` rules in the corpus have no benign corpus to calibrate against, so none ships |
+| A skill or server is added | an install step piping a download into a shell, a plaintext secret, a declaration of no `tools` beside authority over all of them | `cfg.py` scans a document, and nothing calls it. No installer hook, and `read_config` accepts no surface but `IN` and `OUT` |
 
-All three interception points exist today in Claude Code, Codex and Copilot. Two of the three can
-remove hostile content before the model reads it.
+Claude Code, Codex and Copilot each expose all three interception points. Only Claude Code has an
+adapter here, and that is a statement about this package rather than about those harnesses.
 
 ## What it will not do
 
@@ -47,13 +48,40 @@ only on a measured benign firing rate with an exact binomial bound behind it. Th
 | `SCHEMA.md` | the loader contract |
 | `docs/hazards.md` | why the screen refuses on measurement rather than on shape |
 
+## Using it
+
+```sh
+agent-defs install --settings ~/.claude/settings.json    # prints the diff
+agent-defs install --settings ~/.claude/settings.json --yes
+agent-defs status                                        # what it would do next call
+```
+
+Everything starts in `RECORD`. A completed `RECORD` finding is written to the
+local log and changes nothing the model sees. Two other paths still speak: a
+scan that could not finish adds a line to the model's context and a warning to
+yours, and so does a diagnostic log that could not be written. Letting a source
+act takes a measurement of the set you actually have installed, and then saying
+so once:
+
+```sh
+agent-defs export-bundle --out enabled.json      # the exact enabled set
+python scripts/measure_tool_traffic.py --evidence <dir> --names <corpus> \
+    --surface OUT --rules enabled.json --workers 4
+agent-defs calibrate --report <corpus>-out-report.json
+agent-defs promote --source atr --lane ADVISE
+```
+
+`promote` refuses a lane the evidence does not support and prints what the
+change does. The shipped bundle fired once on 1,743 held-out tool results, an
+exact upper bound of 0.272%, which reaches `ADVISE` and not `DENY`.
+[`docs/calibration.md`](docs/calibration.md) has the procedure, the corpora, and
+the two gates that disagree about it.
+
 ## Seeing what an install is doing
 
 `agent-defs status` answers it without guesswork: which bundle loaded, how many
 rules that leaves enabled on each surface, the lane each of them can reach on
 today's measurement, and whether a harness is registered to call any of it.
-`agent-defs install` prints the settings diff and writes nothing until it is
-rerun with `--yes`.
 
 The hook reads `bundle.json` and never a loader, because the machine running it
 has neither the pinned corpora nor a YAML parser, and a corpus fetched from

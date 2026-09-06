@@ -1,177 +1,605 @@
-<!-- Design round 2 -->
+<!-- Round 1 -->
 
 Verification notes:
 
-All shell verification ran in `C:/Users/yuezh/PycharmProjects/agent-defs` with `/c/Program Files/PowerShell/7/pwsh`, profiles disabled. These are fresh round 2 checks of existing behavior, not verification of an implementation diff.
+All shell commands below ran in C:/Users/yuezh/PycharmProjects/agent-defs with the prescribed Python interpreter. Root AGENTS.md and AGENTS.local.md were absent; the supplied instructions applied. No implementation file, installed configuration, Git index entry, commit, or remote was changed by this review.
 
-1. Admission, settings preservation, hook behavior, and scan completeness:
+1. Read the staged scope with `git diff --cached -- . ':!src/agent_defs/bundle.json'`, exit 0. The generated artifact was reviewed through its metadata and builder, not by reading its 206 rule rows. Final scope checks completed with exit 0: no whitespace errors and all 14 reviewed working files matched the index.
 
-~~~powershell
-$env:PYTHONPATH = 'src'
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q tests/test_model_and_lanes.py tests/test_claude_settings_safety.py tests/test_claude_code_hook.py tests/test_claude_hook_failures.py tests/test_hook_integration.py tests/test_scan_completeness.py
-~~~
-
-Outcome: exit 0; **190 passed in 15.21 s**. These tests establish current adapter and installer behavior. They do not establish asynchronous delivery, a proposed activation guard, or live harness enforcement.
-
-2. Recompute the supplied 0 KB fit, construct an upward-drift counterexample, and check the lane arithmetic:
+<details>
+<summary>Exact final scope commands</summary>
 
 ~~~powershell
-$env:PYTHONPATH = 'src'
+git diff --cached --check
+git diff --exit-code -- . ':!Review-Codex.md'
 @'
 import json
-from agent_defs.lanes import trials_needed, u95_zero_hits
-x = [1, 8, 32, 64, 128, 231, 427]
-y = [.102, .120, .156, .191, .306, .439, .675]
-xm, ym = sum(x)/len(x), sum(y)/len(y)
-b = sum((n-xm)*(v-ym) for n,v in zip(x,y))/sum((n-xm)**2 for n in x)
-a = ym-b*xm
-r2 = 1-sum((v-a-b*n)**2 for n,v in zip(x,y))/sum((v-ym)**2 for v in y)
-drift = [v-(.100+.000300*n) for n,v in zip(x,y)]
-assert all(right > left for left,right in zip(drift,drift[1:]))
-print(json.dumps({'observed_slope_ms': b*1000, 'observed_r2': r2, 'assumed_true_slope_ms': .3, 'compatible_increasing_drift_s': drift, 'fraction_of_fitted_slope_from_drift': 1-.000300/b}))
-for n in [466, 598, 2833, 2995]:
-    print(json.dumps({'trials': n, 'zero_hit_u95': u95_zero_hits(n), 'zero_hit_u95_percent': 100*u95_zero_hits(n)}))
-print(json.dumps({'ADVISE_trials_needed': trials_needed(.005), 'DENY_trials_needed': trials_needed(.001)}))
+import subprocess
+raw = subprocess.check_output(["git", "diff", "--cached", "--name-only"])
+paths = raw.decode().splitlines()
+assert len(paths) == 14, paths
+assert subprocess.run(["git", "diff", "--quiet", "--", *paths]).returncode == 0
+print("All 14 reviewed working files match the index.")
 '@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
 ~~~
 
-Outcome: exit 0. Observed slope **1.348016549 ms/rule**, R² **0.995996457**. A hypothetical true slope of 0.300 ms/rule plus strictly increasing drift reproduces every supplied observation; drift accounts for **77.745%** of the fitted slope in that construction. Zero-hit upper bounds: **0.640799% at 466**, **0.499706% at 598**, **0.105688% at 2,833**, and **0.099974% at 2,995**. Required clean counts: ADVISE **598**, DENY **2,995**. The construction demonstrates non-identification; it does not establish that drift actually occurred.
+</details>
 
-3. Probe registration, real worker dispatch, and RECORD logging without touching installed settings:
+2. The initial command `& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q` completed with exit 1: 24 collection errors because agent_defs was not on the import path. Correcting the checkout import path, without installing or changing configuration, produced **599 passed, 6 skipped, 1 warning in 37.78 s**, exit 0. The warning was the existing possible nested regex set in test_evaluate_adversarial.py.
 
 ~~~powershell
-$env:PYTHONPATH = 'src'
+$env:PYTHONPATH = 'C:\Users\yuezh\PycharmProjects\agent-defs\src'
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q
+~~~
+
+3. The metadata check completed with exit 0. The staged artifact declares 206 shipped OUT rules, 206 reachable rules, revision faf743fee8a5018467959ec8ea7ccdb1a1aab333, and 793 loaded records. Shipped plus drop counts equals 793. Its 14 held-back entries match scripts/bundle-held-back.json; 11 were counted under measured_loud. Earlier filters precede that counter, so 14 entries versus 11 drops is not itself an arithmetic defect. The metadata records that the scanner self-check has not run.
+
+<details>
+<summary>Exact metadata command</summary>
+
+~~~powershell
 @'
 import json
+import subprocess
+from pathlib import Path
+def metadata(raw):
+    prefix = raw.split(b' "rules": [', 1)[0]
+    assert prefix != raw
+    return json.loads(prefix.rstrip().rstrip(b",") + b"\n}")
+old = metadata(subprocess.check_output(["git", "show", "HEAD:src/agent_defs/bundle.json"]))
+new = metadata(subprocess.check_output(["git", "show", ":src/agent_defs/bundle.json"]))
+for name, data in [("HEAD", old), ("staged", new)]:
+    print(name, json.dumps({key: data.get(key) for key in
+        ["source_rev", "shipped", "loaded", "surfaces", "reachability", "dropped", "scanner_self_check"]}))
+held = json.loads(Path("scripts/bundle-held-back.json").read_text(encoding="utf-8"))
+assert held == new["held_back"]
+assert new["shipped"] + sum(new["dropped"].values()) == new["loaded"]
+assert new["reachability"] == {"reachable": 206}
+print("metadata verified; held-back entries:", len(held), "; measured_loud drops:", new["dropped"]["measured_loud"])
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+</details>
+
+4. Controlled admission, report, split, build-trimming, and independent numerical probes completed with exit 0. They used synthetic fixtures and temporary configurations, not installed settings. Results:
+
+- An unmodified bench report over 4,000 units containing 3,998 duplicates was refused by bench only for duplicates. Import nevertheless reached DENY; promote succeeded; process withheld the matching string.
+- A report missing its required attacker-reachable stratum likewise imported and promoted to DENY.
+- Replacing an eight-rule report's aggregate with a genuine one-rule aggregate from the same corpus changed the imported ceiling from ADVISE to DENY. The actual union was 8 hits; the substituted union was 2. The aggregate fingerprint named only one enabled rule.
+- Synthetic 1-hit/1,743-unit evidence refused DENY promotion without changing configuration. A direct DENY request still yielded ADVISE and additionalContext only.
+- Missing-rule and stale-rule reports raised ValueError and preserved configuration bytes.
+- With valid rule evidence and bundle=None, all lanes were RECORD and no exception occurred. An ADVISE bundle capped individually DENY-eligible rules at ADVISE.
+- Twenty distinct results from one synthetic session split 9/11 across the digest halves.
+- The build trim fixture preserved the predicate, removed sample fields and raw upstream extras, and retained correct reachability counts and example hashes.
+- SciPy agreed with binomial_u95(1743, 1) to 6.27e-16 absolute error. Larger-count counterexamples appear in N5.
+
+<details>
+<summary>Exact controlled verification command</summary>
+
+~~~powershell
+$env:PYTHONPATH = 'C:\Users\yuezh\PycharmProjects\agent-defs\src'
+@'
+import contextlib
+import copy
 from dataclasses import replace
+import hashlib
+import importlib.util
+import io
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from scipy.stats import beta
+from agent_defs import bench, bundle as bundle_format
+from agent_defs.builtin import STARTER_RULES
+from agent_defs.hooks import _claude_code_impl as hook
+from agent_defs.lanes import binomial_u95
+from agent_defs.model import Lane
+
+results = {}
+def unit(i, text, prose=None):
+    raw = text.encode("utf-8")
+    return bench.Unit(str(i), text, STARTER_RULES[0].surface,
+                      {"file_type": "tool-result", "prose": prose or ("ordinary" if i % 2 else "security-adjacent")},
+                      hashlib.sha256(raw).hexdigest(), len(raw))
+
+def corpus(name, units, required=()):
+    return bench.Corpus(name, "a" * 40, tuple(units), "b" * 64, required)
+
+with TemporaryDirectory(prefix="agent-defs-review-") as tmp:
+    root = Path(tmp)
+    bundle_path = root / "bundle.json"
+    bundle_format.write(bundle_path, [
+        replace(rule, id=rule.id.replace("builtin:", "atr:"), source="atr")
+        for rule in STARTER_RULES])
+    config_path = root / "config.json"
+    baseline = hook.default_config()
+    baseline.update(bundle=str(bundle_path), surfaces=["OUT"], log_path=str(root / "log.jsonl"))
+    hook.atomic_json(config_path, baseline)
+    enabled = hook.active_rules(baseline, hook.hook_rules(baseline)[0])
+
+    def import_report(report):
+        hook.atomic_json(config_path, baseline)
+        report_path = root / "report.json"
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        return hook.calibrate_from_report(config_path, report_path)
+
+    duplicate_report = bench.measure(enabled, [corpus(
+        "duplicate-probe", [unit(i, "Ordinary text " + str(i % 2)) for i in range(4000)])])
+    imported = import_report(duplicate_report)
+    promoted = hook.promote(config_path, "atr", "DENY")
+    response = hook.process(
+        {"hook_event_name": "PostToolUse", "tool_response": STARTER_RULES[0].examples_positive[0]},
+        hook.read_config(config_path), hook.hook_rules(baseline)[0])
+    assert promoted["lane"] == "DENY"
+    assert "updatedToolOutput" in response["hookSpecificOutput"]
+    results["duplicate_corpus"] = {
+        "failures": duplicate_report["bundle"]["failures"],
+        "duplicate_units": duplicate_report["corpora"][0]["duplicate_units"],
+        "import_reaches": imported["reaches"], "promoted": promoted["lane"],
+        "process_withheld": response["hookSpecificOutput"]["updatedToolOutput"] == hook.WITHHELD}
+
+    missing_report = bench.measure(enabled, [corpus(
+        "missing-stratum-probe", [unit(i, f"Ordinary unique result {i}") for i in range(4000)],
+        ("exposure=attacker-reachable",))])
+    imported = import_report(missing_report)
+    results["missing_required_stratum"] = {
+        "failures": missing_report["bundle"]["failures"],
+        "import_reaches": imported["reaches"],
+        "promoted": hook.promote(config_path, "atr", "DENY")["lane"]}
+
+    materials = [unit(i, (STARTER_RULES[i // 2].examples_positive[0] + f" Case {i}")
+                      if i < 8 else f"Ordinary unique result {i}") for i in range(10000)]
+    measured_corpus = corpus("union-probe", materials)
+    full = bench.measure(enabled, [measured_corpus])
+    subset = bench.measure([enabled[0]], [measured_corpus])
+    original_import = import_report(full)
+    stale = copy.deepcopy(full)
+    stale["bundle"] = subset["bundle"]
+    imported = import_report(stale)
+    results["stale_aggregate"] = {
+        "true_union_hits": next(row["hits"] for row in full["bundle"]["measurements"] if row["stratum"] == "all"),
+        "true_reaches": original_import["reaches"],
+        "substituted_union_hits": next(row["hits"] for row in subset["bundle"]["measurements"] if row["stratum"] == "all"),
+        "aggregate_rule_count": len(stale["bundle"]["rule_sha256"]),
+        "enabled_rule_count": len(enabled),
+        "import_reaches": imported["reaches"],
+        "promoted": hook.promote(config_path, "atr", "DENY")["lane"]}
+
+    heldout = bench.measure(enabled, [corpus("heldout-probe", [
+        unit(i, STARTER_RULES[0].examples_positive[0] if i == 0 else f"Ordinary unique result {i}")
+        for i in range(1743)])])
+    imported = import_report(heldout)
+    hook.promote(config_path, "atr", "ADVISE")
+    before = config_path.read_bytes()
+    try:
+        hook.promote(config_path, "atr", "DENY")
+        raise AssertionError("DENY unexpectedly accepted")
+    except ValueError as exc:
+        denial = str(exc)
+    assert config_path.read_bytes() == before
+    config = hook.read_config(config_path)
+    config["sources"]["atr"] = "DENY"
+    lanes = hook.effective_lanes(config, enabled)
+    response = hook.process(
+        {"hook_event_name": "PostToolUse", "tool_response": STARTER_RULES[0].examples_positive[0]},
+        config, hook.hook_rules(config)[0])
+    results["heldout_ceiling"] = {
+        "u95": imported["u95"], "DENY_refusal": denial, "config_unchanged": True,
+        "atr_lanes_when_DENY_requested": sorted({lane.value for rid, (lane, _) in lanes.items() if rid.startswith("atr:")}),
+        "advice_only": "additionalContext" in response["hookSpecificOutput"] and
+                       "updatedToolOutput" not in response["hookSpecificOutput"]}
+    assert results["heldout_ceiling"]["advice_only"]
+
+    for name, transform in [
+        ("missing_rule", lambda report: report["rules"].pop(enabled[-1].id)),
+        ("stale_rule", lambda report: report["rules"][enabled[-1].id].update(rule_sha256="0" * 64))]:
+        report = copy.deepcopy(heldout)
+        transform(report)
+        hook.atomic_json(config_path, baseline)
+        before = config_path.read_bytes()
+        try:
+            import_report(report)
+            raise AssertionError("bad report accepted")
+        except ValueError as exc:
+            results[name] = {"refused": str(exc), "config_unchanged": config_path.read_bytes() == before}
+
+    config = hook.read_config(config_path)
+    quiet = dict(trials=4000, hits=0, u95=binomial_u95(4000, 0),
+                 corpus="probe", measured_at="2026-09-06T00:00:00Z")
+    config["sources"]["atr"] = "DENY"
+    config["evidence"] = {"fingerprint": hook.fingerprint(enabled, config["surfaces"]),
+                          "rules": {rule.id: dict(quiet) for rule in enabled}, "bundle": None}
+    assert {lane for lane, _ in hook.effective_lanes(config, enabled).values()} == {Lane.RECORD}
+    config["evidence"]["bundle"] = dict(trials=1743, hits=1, u95=binomial_u95(1743, 1),
+                                        corpus="probe", measured_at="2026-09-06T00:00:00Z")
+    results["indirect_DENY_guard"] = {
+        "absent_bundle_all_RECORD": True,
+        "quiet_rules_with_ADVISE_bundle": sorted({lane.value for rid, (lane, _) in hook.effective_lanes(config, enabled).items() if rid.startswith("atr:")})}
+
+    script_path = Path("scripts/split_traffic_corpus.py")
+    spec = importlib.util.spec_from_file_location("review_split", script_path)
+    splitter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(splitter)
+    groups = {0: [], 1: []}
+    for i in range(20):
+        groups[splitter.half(hashlib.sha256(f"same session result {i}".encode()).hexdigest(),
+                             "agent-defs-split-v1")].append(i)
+    results["same_session_digest_split"] = {str(part): len(rows) for part, rows in groups.items()}
+    assert all(groups.values())
+
+    spec = importlib.util.spec_from_file_location("review_build", Path("scripts/build_bundle.py"))
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    sample = replace(STARTER_RULES[0], extra={"upstream": "sample", "upstream_yaml": "sample", "preserved": True})
+    trimmed, reach = builder.trim([sample])
+    assert not trimmed[0].examples_positive and not trimmed[0].examples_negative
+    assert "upstream" not in trimmed[0].extra and "upstream_yaml" not in trimmed[0].extra
+    assert trimmed[0].predicate == sample.predicate
+    assert trimmed[0].extra["reachability"]["example_sha256"] == [
+        hashlib.sha256(text.encode()).hexdigest() for text in sample.examples_positive]
+    results["build_trim_fixture"] = {"predicate_unchanged": True, "samples_removed": True,
+                                     "reachability": dict(reach), "sample_digests_correct": True}
+
+numerical = []
+for n, k in [(1743, 1), (3556, 1), (100000000, 500000), (10000000000, 10000000),
+             (1000000000000000, 1)]:
+    local = binomial_u95(n, k)
+    reference = float(beta.ppf(.95, k + 1, n - k))
+    stored = dict(trials=n, hits=k, u95=reference, corpus="numeric-probe",
+                  measured_at="2026-09-06T00:00:00Z")
+    numerical.append({"trials": n, "hits": k, "implementation": local,
+                      "scipy": reference, "error": local-reference,
+                      "independent_bound_accepted": hook.measurement(stored) is not None,
+                      "own_bound_accepted": hook.measurement(dict(stored, u95=local)) is not None})
+results["numerical"] = numerical
+print(json.dumps(results, indent=2))
+
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+</details>
+
+5. Boundary probes completed with exit 0. At trials=1,001,645,599 and hits=1,000,000, both local and independent bounds exceed 0.001, but measurement accepts stored u95=0.001. At trials=10,005,200,450 and hits=10,000,000, the implementation itself falls below 0.001 while SciPy's bound is above it.
+
+<details>
+<summary>Exact numerical boundary command</summary>
+
+~~~powershell
+$env:PYTHONPATH = 'C:\Users\yuezh\PycharmProjects\agent-defs\src'
+@'
+import math
+from scipy.stats import beta
+from agent_defs.hooks._claude_code_impl import measurement
+from agent_defs.lanes import binomial_u95
+for hits in [10000, 100000, 1000000, 10000000]:
+    target = .001
+    low, high = int(hits / target), int((hits + 10 * math.sqrt(hits) + 100) / target)
+    while high - low > 1:
+        middle = (low + high) // 2
+        if beta.ppf(.95, hits + 1, middle - hits) > target:
+            low = middle
+        else:
+            high = middle
+    n = low
+    exact = float(beta.ppf(.95, hits + 1, n - hits))
+    calculated = binomial_u95(n, hits)
+    row = dict(trials=n, hits=hits, u95=target, corpus="boundary-probe",
+               measured_at="2026-09-06T00:00:00Z")
+    print({"n": n, "hits": hits, "scipy": exact, "local": calculated,
+           "true_bound_above_DENY": exact > target,
+           "implementation_allows_DENY": calculated <= target,
+           "stored_DENY_threshold_accepted": measurement(row) is not None})
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+</details>
+
+6. Event-shape and incomplete-scan probes completed with exit 0. An anchored regex had zero benchmark hits in 4,000 joined text results, but process withheld a leaf of the corresponding structured result using that evidence. An intentionally substituted incomplete scan in RECORD produced both additionalContext and a user systemMessage. That substitution tested response policy; it was not a measured timeout.
+
+<details>
+<summary>Exact event-shape and RECORD command</summary>
+
+~~~powershell
+$env:PYTHONPATH = 'C:\Users\yuezh\PycharmProjects\agent-defs\src'
+@'
+import copy
+from dataclasses import asdict, replace
+import hashlib
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from agent_defs import evaluate as e
-from agent_defs.hooks import _claude_code_impl as h
-from agent_defs.hooks._settings import merge
-from agent_defs.model import Surface
-with TemporaryDirectory() as tmp:
-    config = h.default_config()
-    log = Path(tmp) / 'findings.jsonl'
-    config['log_path'] = str(log)
-    merged, _ = merge('{}', h.hook_spec(Path(tmp) / 'config.json'), h.owned)
-    print(json.dumps({'registered_events': sorted(json.loads(merged)['hooks']), 'starter_surfaces': sorted({r.surface.value for r in h.STARTER_RULES})}))
-    real = e._run_worker
-    for event, value in [('PreToolUse', 'ordinary'), ('PostToolUse', 'ordinary'), ('PostToolUse', {'a': 'ordinary', 'b': 'ordinary'})]:
-        field = 'tool_input' if event == 'PreToolUse' else 'tool_response'
-        with patch.object(e, '_run_worker', wraps=real) as worker:
-            response = h.process({'hook_event_name': event, field: value}, config)
-        print(json.dumps({'event': event, 'structured': isinstance(value, dict), 'workers': worker.call_count, 'response': response, 'log_exists': log.exists()}))
-    rule = h.STARTER_RULES[0]
-    response = h.process({'hook_event_name': 'PostToolUse', 'session_id': 'probe-session', 'tool_use_id': 'probe-tool', 'tool_response': rule.examples_positive[0]}, config, [rule])
-    row = json.loads(log.read_text())
-    print(json.dumps({'record_match_response': response, 'log_event_keys': sorted(row), 'finding_keys': sorted(row['records'][0])}))
-    with patch.object(h, 'scan', return_value=e.ScanResult((), 0, 1, 0, False)):
-        response = h.process({'hook_event_name': 'PostToolUse', 'tool_response': 'ordinary'}, config, [rule])
-    print(json.dumps({'record_incomplete_response': response}))
+from agent_defs import bench, evaluate
+from agent_defs.builtin import STARTER_RULES
+from agent_defs.hooks import _claude_code_impl as hook
+from agent_defs.lanes import binomial_u95
+from agent_defs.model import PredicateKind
+
+rule = replace(STARTER_RULES[0], predicate_kind=PredicateKind.REGEX,
+               predicate=r"^REVIEW_MARKER$", examples_positive=("REVIEW_MARKER",))
+units = []
+for i in range(4000):
+    text = f"REVIEW_MARKER\nOrdinary result {i}"
+    raw = text.encode()
+    units.append(bench.Unit(str(i), text, rule.surface,
+        {"file_type": "tool-result", "prose": "ordinary" if i % 2 else "security-adjacent"},
+        hashlib.sha256(raw).hexdigest(), len(raw)))
+corpus = bench.Corpus("flattened-probe", "a" * 40, tuple(units), "b" * 64, ())
+report = bench.measure([rule], [corpus])
+pooled = next(row for row in report["bundle"]["measurements"] if row["stratum"] == "all")
+with TemporaryDirectory(prefix="agent-defs-review-event-") as tmp:
+    config = hook.default_config()
+    config.update(bundle="", surfaces=["OUT"], log_path=str(Path(tmp) / "log.jsonl"))
+    config["sources"]["builtin"] = "DENY"
+    m = dict(trials=pooled["trials"], hits=pooled["hits"], u95=pooled["u95"],
+             corpus="flattened-probe", measured_at="2026-09-06T00:00:00Z")
+    config["evidence"] = dict(fingerprint=hook.fingerprint([rule], config["surfaces"]),
+                              bundle=dict(m), rules={rule.id: dict(m)})
+    response = hook.process({"hook_event_name": "PostToolUse",
+        "tool_response": [{"type": "text", "text": "REVIEW_MARKER"},
+                          {"type": "text", "text": "Ordinary result 0"}]}, config, [rule])
+    print(json.dumps({"flattened_benchmark_trials": pooled["trials"],
+                      "flattened_benchmark_hits": pooled["hits"],
+                      "hook_lane": hook.effective_lanes(config, [rule])[rule.id][0],
+                      "structured_result_withheld": "updatedToolOutput" in response["hookSpecificOutput"]}))
+    config["sources"]["builtin"] = "RECORD"
+    config["evidence"] = None
+    with patch.object(hook, "scan", return_value=evaluate.ScanResult((), 0, 1, 0, False)):
+        response = hook.process({"hook_event_name": "PostToolUse", "tool_response": "ordinary"}, config, [rule])
+    print(json.dumps({"incomplete_RECORD_adds_context": "additionalContext" in response["hookSpecificOutput"],
+                      "incomplete_RECORD_warns_user": "systemMessage" in response}))
 '@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
 ~~~
 
-Outcome: exit 0. Both events are registered although all starter rules are OUT. Starter Pre starts **0 workers**, scalar Post **1**, and two-leaf Post **2**. All three clean cases return `{}` and create no log. A completed RECORD match returns `{}`; its log has neither session nor tool-call identity even when supplied. An injected incomplete result returns both model context and a user warning in RECORD. Matching used real workers; the incomplete-result case deliberately substituted a result to exercise response policy.
+</details>
 
-4. Validate and replace the review from a temporary file in the repository root:
+7. A 60-digit mpmath CDF check completed with exit 0. At p=0.001, the two boundary cases had CDFs 0.050000036129900565753901806089441941 and 0.050000013519296606959118874161231148, both above 0.05. Thus both true upper bounds exceed the DENY ceiling, independently confirming N5.
+
+<details>
+<summary>Exact high-precision verification command</summary>
+
+~~~powershell
+$env:PYTHONPATH = 'C:\Users\yuezh\PycharmProjects\agent-defs\src'
+@'
+import mpmath as mp
+from agent_defs.hooks._claude_code_impl import measurement
+from agent_defs.lanes import binomial_u95
+mp.mp.dps = 60
+for n, k in [(1001645599, 1000000), (10005200450, 10000000)]:
+    p = mp.mpf("0.001")
+    term = total = mp.mpf(1)
+    for j in range(k, 0, -1):
+        term *= mp.mpf(j) / (n-j+1) * (1-p) / p
+        total += term
+        if term < total * mp.mpf("1e-55"):
+            break
+    log_cdf = (mp.loggamma(n+1)-mp.loggamma(k+1)-mp.loggamma(n-k+1)
+               + k*mp.log(p)+(n-k)*mp.log1p(-p)+mp.log(total))
+    cdf = mp.exp(log_cdf)
+    assert cdf > mp.mpf("0.05")
+    print(n, k, "60-digit CDF at p=.001:", mp.nstr(cdf, 35), "true upper bound exceeds .001")
+    stored = dict(trials=n, hits=k, u95=.001 if n==1001645599 else binomial_u95(n,k),
+                  corpus="precision-probe", measured_at="2026-09-06T00:00:00Z")
+    assert measurement(stored) is not None
+    print("accepted stored bound:", stored["u95"])
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+</details>
+
+8. Review format validation and same-directory atomic replacement completed with exit 0. The required round marker, verification status, verdict, and finding sections were present; exact readback succeeded and all 14 staged implementation files remained unchanged.
+
+<details>
+<summary>Exact review validation and replacement command</summary>
 
 ~~~powershell
 @'
 import os
 from pathlib import Path
-root = Path('C:/Users/yuezh/PycharmProjects/agent-defs').resolve()
-temporary = root / '.Review-Codex-design-round2.tmp'
-target = root / 'Review-Codex.md'
+import subprocess
+root = Path("C:/Users/yuezh/PycharmProjects/agent-defs").resolve()
+temporary = root / ".Review-Codex-round1.tmp"
+target = root / "Review-Codex.md"
 data = temporary.read_bytes()
-review = data.decode('utf-8')
-assert review.startswith('<!-- Design round 2 -->\n\nVerification notes:\n')
-assert review.splitlines().count('Verification status: VERIFIED') == 1
-assert review.splitlines().count('Commit verdict: BLOCK') == 1
+review = data.decode("utf-8")
+assert review.startswith("<!-- Round 1 -->\n\nVerification notes:\n")
+assert review.splitlines().count("Verification status: VERIFIED") == 1
+assert review.splitlines().count("Commit verdict: BLOCK") == 1
+for heading in ["## New", "## Previously raised", "### Fixed", "### Still open", "### Reopened", "### Deferred"]:
+    assert heading in review
+assert not any(char in review for char in ("\u202f", "\u2013", "\u2014"))
 assert temporary.parent.resolve() == target.parent.resolve() == root
+paths = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=root).decode().splitlines()
+assert len(paths) == 14
+assert subprocess.run(["git", "diff", "--quiet", "--", *paths], cwd=root).returncode == 0
 os.replace(temporary, target)
 assert target.read_bytes() == data
 assert not temporary.exists()
-print('Review format checks passed; same-directory replacement and exact readback passed.')
+print("Atomic replacement and review format checks passed; 14 staged files remain unchanged.")
 '@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
 ~~~
 
-Outcome: exit 0; format checks, same-directory replacement, and exact readback passed.
+</details>
 
-The official Claude Code hooks reference was fetched on 2026-09-06; relevant links appear beside the documentation claims below. Neither root instruction file exists, so the supplied baseline instructions apply. The cited 2,833-file inventory and its plan were not located in this checkout; its count is treated as your supplied premise, not independently verified evidence. No original latency run, full corpus calibration, or live asynchronous harness session was repeated. Initial `git status --short` showed only ` M Review-Codex.md`. This review changes that file only; no installed settings, commit, push, or destructive Git operation was performed.
+The official NIST exact-binomial reference and scikit-learn grouped-validation documentation were fetched during this review; links accompany the statistical discussion. No held-out report, inventory, or units JSONL was found in this checkout. I verified the formula given n=1,743 and k=1, not those empirical counts, corpus completeness, the claimed five cross-corpus overlaps, or selection chronology. I did not rebuild from the upstream archive, scan a release with antivirus, or run a live Claude Code session. Passing the full suite does not validate those claims.
 
 Verification status: VERIFIED
 
 Commit verdict: BLOCK
 
-This verdict applies to the round 2 design **as worded**, specifically the directional inference in disagreement 1 and the inference from present admission limits to performance irrelevance in disagreement 3. There is no implementation diff to approve or reject. I endorse the revised sequence below.
+The blockers are N1, N2, and N3.
 
-**1. I reject the direction argument; I accept the descriptive affine-fit claim.**
+Scope and lens:
 
-Upward drift means later measurements become more expensive. Superlinearity means their marginal cost increases with rule count. The first does not imply the second. In `observed_cost(n) = true_cost(n) + drift(time(n))`, drift proportional to `n` adds to the slope and leaves an affine relationship exactly affine. Even drift linear in run index need not be convex in `n`: your tested counts are very unevenly spaced.
+The staged diff covers .gitignore, README.md, docs/calibration.md, docs/distribution.md, scripts/build_bundle.py, scripts/bundle-held-back.json, scripts/dedupe_traffic_corpus.py, scripts/split_traffic_corpus.py, src/agent_defs/bench.py, src/agent_defs/bundle.json, src/agent_defs/cli.py, src/agent_defs/hooks/_claude_code_impl.py, src/agent_defs/lanes.py, and tests/test_calibrate_from_report.py. Supporting reads covered the evaluator, bundle model/loader, traffic extractor, existing benchmark contract, SAMPLES.md, and relevant tests. The lens is code correctness, admission arithmetic and evidence integrity, ADVISE/DENY behavior, and whether the statistical claims follow from the procedure.
 
-The counterexample uses your actual 0 KB observations. Suppose true cost is `0.100 + 0.000300*n` seconds. Add drift of `[0.0017, 0.0176, 0.0464, 0.0718, 0.1676, 0.2697, 0.4469]` seconds at the seven successive measurements. That drift is strictly increasing and accounts for about 78% of the observed fitted slope, while reproducing the same R² of 0.996. It requires no pattern-mix explanation. It is a possible decomposition, not a diagnosis of the experiment.
+## New
 
-An affine fit could count against a *specified* drift model that predicts detectable positive curvature, given assumptions about baseline cost, time spacing, noise, and pattern mix. Those assumptions are absent here. Monotone upward drift as a class does not predict that curvature. Therefore I would not record even the proposed weak directional conclusion from ordering alone. The problem is identifiability, not a claim that a large confound certainly exists.
+### N1. High: Report import discards hard coverage failures, allowing invalid evidence to authorize DENY
 
-I accept this replacement:
+Location: src/agent_defs/hooks/_claude_code_impl.py:648, with the import decision beginning at line 592.
 
-> An affine model fits the observed timings well over the tested bundles of 1 to 427 rules at three payload sizes; no knee is apparent in those observations. Sizes were tested in monotone order and bundles were prefixes, so the count effect is confounded with time and pattern composition. An interleaved, randomized, blocked rerun is needed to estimate scaling. The fit alone does not rule out substantial upward drift contributing to the slope.
+The exemption is broader than selecting a pooled rather than a per-stratum interval. bench.bundle_ok also encodes duplicate material and missing required coverage. calibrate_from_report records these failures under evidence.bench, marks skipped=0, and gives them no admission effect. No explicit pooled-policy choice or ADVISE-only restriction limits the bypass.
 
-Round 1 already said local approximate linearity was supported. Calling the descriptive fit unsupported would be too strong; interpreting it as an identified scaling law would also be too strong. Your proposed rerun addresses the right defects.
+The duplicate probe used an unmodified report from bench.measure: two distinct quiet payloads repeated to 4,000 units produce 3,998 duplicate warnings but a pooled zero-hit bound below the DENY threshold. Both promote and process then act on it. Missing attacker-reachable coverage has the same result. This contradicts docs/bench.md's duplicate and required-stratum admission rules. It is not just the documented thin-stratum disagreement.
 
-**2. I accept guarded removal of the unused Pre registration as the first implementation change, ahead of A.**
+Recommendation: preserve benchmark refusal by default. A separate pooled policy needs an explicit, versioned contract identifying which statistical criterion changes and which coverage failures remain fatal. Logging a failed gate is insufficient. The tradeoff is that this personal corpus remains unable to promote under the existing contract.
 
-I placed it too late in round 1. Healthy starter Pre invocations evaluate no IN rule and record no scan. Removing their process launches has a clear rationale without first building a corpus artifact or rerunning the latency experiment. A dedicated measurement is unnecessary to justify the removal.
+Exact conservative rewrite at **src/agent_defs/hooks/_claude_code_impl.py:592**, immediately after loading report and before reading rows:
 
-The approximately 0.099 s remains a reported measurement for the measured environment, not a guaranteed reduction in every installation's elapsed tool latency. Other matching hooks can overlap this work, and machines differ. Claude documents that matching hooks run in parallel, so a slower parallel handler can determine the wait. This qualifies the claimed saving, not the priority of removing redundant work. [Claude Code hook execution](https://code.claude.com/docs/en/hooks#hook-handler-fields).
+~~~python
+    benchmark_bundle = report.get("bundle") or {}
+    if benchmark_bundle.get("bundle_ok") is not True:
+        failures = benchmark_bundle.get("failures") or ["bundle admission was not verified"]
+        raise ValueError("benchmark refused admission: " + "; ".join(failures))
+~~~
 
-Approve it as a small installer change with an explicit invariant: **an enabled executable IN bundle cannot become active until its required Pre registration is effective in that harness**. This applies to RECORD IN rules too; the absence of blocking authority does not excuse missing promised observation. An activation failure must leave the candidate inactive and report unavailable coverage, not silently claim it was enabled.
+This deliberately refuses the current thin-stratum report too. It is the narrow safe default while the policy is settled, not a claim that pooled intervals are inherently invalid. Add regression cases asserting that duplicate and missing-required-coverage reports cannot change configuration or authorize either interrupting lane.
 
-The guard must execute in installation, update, or bundle activation. Putting it only in the Pre handler that is absent cannot work. A future IN activation should establish registration and any required trust/reload first, confirm the harness can invoke it, and then activate the bundle generation. If activation fails partway, retain the prior active bundle. On removal, disable IN before removing its registration. A settings file containing an entry is weaker evidence than a harness that has actually loaded it.
+### N2. High: The aggregate measurement is never checked against its enabled-rule fingerprint
 
-For today's fixed starter release, this can remain narrow: omit its owned Pre entry and require the future corpus-enabling release to implement the guarded transition. Keep the existing settings preview, backup, ownership, and preservation behavior. Acceptance cases should cover fresh install, upgrade from the two-hook starter, reinstall/uninstall, preservation of other handlers, and attempted IN activation with absent or ineffective Pre registration. These are proposed checks; the passing current tests do not certify that future change.
+Location: src/agent_defs/hooks/_claude_code_impl.py:624 and line 642.
 
-The future registration/bundle coupling is a reason for this guard, not a reason to postpone the starter fix until all of A exists. No live settings mutation is part of this design review.
+Per-rule rule_sha256 checks do not establish that the bundle union was measured over those rules. The report supplies bundle.rule_sha256, but the importer ignores it and stamps the current installed fingerprint onto the imported aggregate.
 
-**3. I accept deciding the target behavior before substantial latency optimization. I reject both “RECORD can only ever be the lane” and “therefore performance does not bind.”**
+In the probe, all eight per-rule measurements were current. A genuine aggregate measured over one rule reported 2 hits/10,000 instead of the enabled set's 8 hits/10,000. Import accepted it, and promote allowed DENY where the complete aggregate only reached ADVISE. This is a report consistency failure; it does not depend on authenticating malicious report producers.
 
-There is no inherent requirement to finish detection synchronously merely because the system records events. Synchronous capture or durable acceptance can be separated from asynchronous matching. Conversely, the lane name alone does not determine timing. The deciding question is when the promised result must be available:
+Exact rewrite at **src/agent_defs/hooks/_claude_code_impl.py:593**, before iterating over rules:
 
-| Promised behavior | Required timing |
-|---|---|
-| DENY the current input or withhold output before model consumption | Matching must finish at the relevant interception boundary. |
-| ADVISE before the model acts on this event | Advice must be available before that next action; this imposes a synchronous dependency. |
-| Advisory report for later inspection | Matching may be asynchronous; it does not provide same-event protection. |
-| RECORD with eventual findings and explicit pending/lost coverage | Matching may be asynchronous after capture. |
-| Completed scan or audit certificate required before continuation | Completion is synchronous by the product contract, even if the lane is RECORD. |
+~~~python
+    expected = {rule.id: rule_fingerprint(rule) for rule in rules}
+    if (report.get("bundle") or {}).get("rule_sha256") != expected:
+        raise ValueError("the bundle measurement does not describe the exact enabled set; remeasure it")
+~~~
 
-“After the response is emitted” is too imprecise for IN/OUT design: distinguish before tool execution, before the result reaches the model, and before a user-facing answer. A later warning cannot retroactively prevent an earlier action. I recommend **eventual RECORD with explicit coverage status for the initial non-intervening release**, while preserving a synchronous evaluation interface for a future admitted enforcement bundle. The main tradeoff is delayed knowledge and additional delivery bookkeeping.
+Keep the existing missing-rule and stale-rule refusals. Real report fixtures should retain the aggregate hash map instead of omitting it. Related hardening should require aggregate evidence for every enabled surface: the current comprehension drops absent surfaces and only checks whether any aggregate remains. Counts, corpus revision, manifest, and trial population should also agree between native rule rows and their aggregate before importing an assembled report.
 
-Your corpus argument does not establish a permanent RECORD ceiling. With 2,833 qualifying independent zero-hit trials, the upper bound is 0.105688%: insufficient for DENY but sufficient for ADVISE's 0.5% threshold. Thus the arithmetic alone does not even force RECORD on that larger corpus. The 466-trial result does force RECORD under these thresholds, but it is CFG evidence and establishes no runtime IN/OUT ceiling. Today's missing runtime evidence prevents promotion today; it does not prove runtime promotion impossible. Additional representative independent evidence is a valid task. Adding 162 files is not automatically sufficient: duplication, dependence, domain mismatch, hits, bundle changes, and selection on the same data can all defeat that arithmetic. The current hook also refuses positive-hit measurements. See [lane admission](src/agent_defs/lanes.py) and [runtime evidence validation](src/agent_defs/hooks/_claude_code_impl.py).
+### N3. High: Deduplication and a payload split do not establish the claimed traffic-rate confidence bound
 
-There is also a concrete qualification to “RECORD observes and never intervenes.” Completed RECORD findings do not advise or deny, but **incomplete RECORD scans currently inject model context and a user warning**. The fresh probe verifies that behavior. Moving matching off the path changes when those warnings can arrive. If warning the model before it consumes incompletely checked content is a requirement, that requirement retains a synchronous completion dependency. If eventual coverage reporting is acceptable, change that contract explicitly; simply setting an async flag does not preserve it.
+Locations: scripts/dedupe_traffic_corpus.py:1; scripts/split_traffic_corpus.py:41; docs/calibration.md:35, line 70, and line 91; README.md:72.
 
-Pairing and exit loss are delivery problems, not proofs that the matcher must block. Capture immutable event data at the boundary, including session/tool-call identity, event type, sequence or attempt identity where needed, field structure, and bundle/evaluator generation. Preserve missing results as missing; do not assume every Pre has a Post. Durable acceptance before continuation can support eventual processing after process or session exit. A volatile queue supports a weaker claim. Capturing at the boundary also avoids reconstructing different or truncated text later from a transcript.
+The arithmetic is correct for the stated binomial model. The procedure has not established that model for these observations:
 
-The current log is not a complete audit ledger even with synchronous scans: clean events produce no record, supplied session/tool-call IDs are discarded, and finding writes do not request a durability flush. The probe verifies the first two; [_log and process](src/agent_defs/hooks/_claude_code_impl.py) show the third. Consequently “retain synchronous scanning to preserve today's complete session audit” would defend a guarantee the implementation does not provide. Durable replay would also require retaining the needed input bytes somewhere; today's hashes cannot reconstruct them. That adds a payload-retention decision to an asynchronous audit design.
+- Removing identical text does not make distinct outputs from the same session, task, repository, or user independent. The splitter hashes payloads rather than sessions or tasks; the probe demonstrates one session appearing in both halves.
+- Identical strings are not necessarily duplicate observations of one invocation. Independent calls can legitimately return the same output. Conversely, distinct strings can be dependent. Deduplicating text and ignoring occurrences changes the target from invocation traffic to distinct payloads. The unweighted rate is not automatically a rate for a session's traffic.
+- The documented five units shared with the first selection corpus are not excluded by the splitter. Their allocation and broader session overlap must be checked before calling final evaluation untouched.
+- One implementer scanning both corpora does not by itself invalidate a holdout. What matters is whether the final rule set, split, exclusions, and admission criterion were fixed before inspecting holdout outcomes. Code cannot enforce the claim that nothing consulted that half, and no dated selection/measurement ledger was available.
 
-For a complete audit, maintain capture and completion records, report gaps and pending work, bound the queue, and make overflow, shutdown, and restart behavior explicit. Publish a final coverage statement only after reconciling the expected events and completed work. Sampling is a valid cheaper product, but it cannot support a complete-session coverage claim. Even exhaustive completed matching supports only “no findings under this bundle on these captured surfaces,” not “this session contained no attack.”
+A session/task split prevents known groups from crossing the boundary; it still does not make every observation within a held-out group independent. Use an uncertainty calculation justified for the sampling unit and define the deployment population. The grouped-data concerns follow from the assumptions described in the [scikit-learn validation guide](https://scikit-learn.org/stable/modules/cross_validation.html#cross-validation-iterators-for-grouped-data).
 
-Native background hooks illustrate both feasibility and limitations. Claude's documentation says async command hooks receive the same JSON input, cannot veto the completed action, and deliver context on a later turn. It also says outstanding async hooks are killed at non-interactive teardown, and ordinary async hooks no longer receive the harness timeout after backgrounding. Therefore retain the evaluator's external deadline and test delivery/lifecycle behavior on each supported harness. These are documented capabilities, not live tests performed here. [Claude Code asynchronous hooks](https://code.claude.com/docs/en/hooks#run-hooks-in-the-background).
+One fixed bundle's union of hits is a valid single Bernoulli endpoint under suitable independent representative sampling. Promoting 206 rules does **not** by itself require dividing alpha by 206 when the claim concerns that union. The defect is the sampling and selection contract, not the number of rules.
 
-Asynchronous matching removes its service time from the direct wait for that event; it does not remove its CPU, memory, storage, or scheduling costs. If arrivals outrun processing capacity, the backlog grows until some combination of delay, backpressure, dropped work, or sampling occurs. A record required by tomorrow's audit has a completion deadline too. Measure capture/acknowledgment latency, throughput, queue age, completion/loss rates, and interference with foreground work. Expensive matching can still justify batching or admission caching, but those choices would answer a throughput or audit-delay problem instead of a per-event interception budget.
+A pooled criterion can be defensible if chosen in advance for a specified traffic mixture; it offers no uniform guarantee for rare or attacker-reachable tools. Here the justification is that the consumer accepts the number despite the benchmark refusal. That does not justify switching admission policy after seeing which gate passes. Treat this as an explicit relaxation, not equivalent evidence. Bench's per-stratum bounds are also pointwise, not a simultaneous 95% guarantee over every stratum.
 
-Thus **the target lane together with its timing and coverage contract gates the expensive latency work**. A small feasibility measurement still belongs in making that decision. Under eventual RECORD, defer the full synchronous scaling campaign and evaluate capture/delivery plus sustained processing cost. Under same-event ADVISE or DENY, event-shaped latency and completion remain required. For mixed bundles, the admitted rules requiring immediate action can define the synchronous subset while RECORD-only work runs later, provided the action bundle is calibrated as deployed. Merely requesting a higher lane must never promote asynchronous results into authority over an event that already proceeded.
+Disjoint sets of noisy rules justify concern about transfer and collecting a third independent corpus. They do not mathematically falsify a valid bound for a fixed population and preselected bundle: it already allows future hits. The claim that the tail thins is not established by comparing numbers of firing rules across changing candidate sets and different corpora.
 
-**The revised order I recommend is:**
+Exact replacement for the full module docstring at **scripts/dedupe_traffic_corpus.py:1**:
 
-1. Specify the initial lane, action deadline, audit completeness, and event-loss contract; run only the small capability checks needed to make that choice credible.
-2. Make guarded starter Pre omission the first implementation change.
-3. Implement minimal A: a pinned normalized bundle and a verified path from that bundle to the selected adapter's result. For eventual RECORD, acceptance means attributable capture, completed findings, and explicit gaps; enforcement canaries become required before an enforcement release.
-4. Pursue IN/OUT selection and evaluation against the chosen objective. Measure synchronous event latency/completion for immediate intervention, or capture latency and processing capacity for eventual recording. Keep selection separate from final admission evidence.
-5. Choose D, admission caching, a resident matcher, or a smaller bundle only when the relevant measurements justify it. Expanding calibration evidence can proceed independently.
+~~~python
+"""Collapse exact duplicate tool-result text and record its multiplicity.
 
-**What you conceded too readily:** none of the concrete corrections about worker dispatch, starter Pre, the unisolated slope, cold pickle reconstruction, or the CFG/runtime evidence mismatch needs reversal. The concession **A before C** needs a scope limit. It is sensible for deployment claims and selection intended to represent the actual runtime path; it is not a prohibition on exploratory C before A, nor does it require enforcement integration before deciding whether enforcement is the product. Round 1 explicitly allowed exploratory C, but my statement that the entire proposed integration work was necessary under every viable outcome was too broad. An eventual recorder needs a different acceptance contract. You also should not surrender the descriptive affine fit along with the unsupported causal attribution; those remain separate claims.
+The output contains one row per distinct payload. This removes repeated text;
+it does not establish independent observations or preserve the frequency
+distribution of tool invocations.
+"""
+~~~
 
+Exact replacement for the paragraph at **docs/calibration.md:35**:
+
+~~~markdown
+Content deduplication reduced `trace-commons` from 4,198 to 2,937 distinct
+payloads and `local-claude` from 4,000 to 3,556. These counts are not a count of
+independent invocations. Repeated text can come from separate calls, while
+different results from one session can remain dependent. The measurement
+does not weight payloads by their recorded occurrence counts. The two corpora
+reportedly share five payloads; their overlap with the final holdout must be
+audited.
+~~~
+
+Exact replacement for the result paragraph at **docs/calibration.md:69**:
+
+~~~markdown
+The artifact declares 206 ATR rules on `OUT`, plus the four starter rules, at
+`faf743fe`. The reported evaluation recorded one bundle hit among 1,743
+distinct payloads. Treating these as independent representative Bernoulli
+trials gives a nominal one-sided 95% Clopper-Pearson upper bound of 0.271875%.
+The current pooled importer maps that number to an ADVISE ceiling and refuses
+DENY. This is the code's threshold result; the payload split and deduplication
+do not establish a 95% bound on future invocation traffic or other users.
+~~~
+
+Exact replacement for the paragraph at **docs/calibration.md:87**:
+
+~~~markdown
+`calibrate --report` currently selects the worst whole-corpus row for each
+surface and then the worst of those rows. It does not sum across corpora.
+It recomputes the selected bound and records the benchmark refusal separately.
+This relaxes the benchmark's admission policy. A pooled criterion concerns a
+specified traffic mixture and cannot certify each tool or exposure stratum.
+The present sampling procedure has not established the independent,
+representative trials needed to interpret this number as a deployment bound.
+~~~
+
+Replace the opening of **docs/calibration.md:97** with: "These observations concern selected distinct payloads from one user's traffic. They do not establish a confidence bound for ordinary work generally, and they do not measure attack recall." Qualify README.md:72 consistently. Keep the deployment claim provisional until the protocol and evidence support it.
+
+### N4. Medium: The report measures joined text, while the hook acts on individual string leaves
+
+Locations: src/agent_defs/hooks/_claude_code_impl.py:568; docs/calibration.md:9. Supporting paths: scripts/prepare_tool_traffic.py:24 and src/agent_defs/hooks/_claude_code_impl.py:213.
+
+The extractor joins text blocks with newlines and bench scans one string. process recursively scans individual string leaves and uses a shared one-second event budget. The offline traffic script uses a 30-second scan budget. Rule fingerprints do not identify these different evaluation procedures.
+
+The controlled rule `^REVIEW_MARKER$` had zero hits on 4,000 strings shaped like `REVIEW_MARKER\nOrdinary result i`. Using that evidence, process matched and withheld the marker leaf in a two-block result. No production ATR row was inspected to claim this exact defect affected the reported one hit; the counterexample shows the importer cannot generally certify the deployed decision function.
+
+Preserve event structure during extraction, measure the same leaf traversal, and count the union of leaf hits once per invocation. Bind reports to a versioned evaluation protocol as well as rule fingerprints. Separately report incomplete-scan frequency, since these also inject context. Until then, describe the number as a flattened-text firing measurement, not the frequency of hook advice or withholding.
+
+### N5. Medium: The tolerance works for 1,743 trials but does not validate the full accepted numeric domain
+
+Locations: src/agent_defs/hooks/_claude_code_impl.py:125 and src/agent_defs/lanes.py:58.
+
+For the reported evidence, the implementation returns 0.0027187451457536763 and SciPy returns 0.0027187451457543026. Their difference is far below 1e-12. Bisection rounding does not threaten this ADVISE-versus-DENY decision. The independent calculation uses the Beta(k+1,n-k) 95th percentile, equivalent to the one-sided CDF inversion described by [NIST](https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/exacbino.htm).
+
+The unrestricted-domain claim is false:
+
+| Trials | Hits | Local bound | Independent bound | Consequence |
+|---:|---:|---:|---:|---|
+| 100,000,000 | 500,000 | 0.005011617345907879 | 0.005011617344864613 | A correct independently computed bound is rejected. |
+| 1,001,645,599 | 1,000,000 | 0.0010000000005396712 | 0.001000000000349947 | Stored 0.001 is accepted although both bounds exceed the DENY ceiling. |
+| 10,005,200,450 | 10,000,000 | 0.0009999999973497407 | 0.0010000000000414241 | Self-recomputation falls on the wrong side of the threshold. |
+| 1,000,000,000,000,000 | 1 | 1.2820551951721037e-15 | 4.743864518390568e-15 | Large relative underestimation still passes self-recomputation. |
+
+The 60-digit CDF check independently confirmed that both threshold cases belong above 0.001. Subtracting large lgamma values loses precision. Sixty-four bisection iterations cannot repair an inaccurate CDF. Returning the original stored m also permits a tolerated downward adjustment to survive into the lane comparison. These are large-count or extremely narrow boundary effects; they do not undermine the displayed 0.272% arithmetic.
+
+Specify and test a supported count range or use a stable CDF/coefficient computation over the accepted range. Validate u95's probability range, normalize accepted evidence to a conservatively computed bound, and prevent tolerance from moving evidence across an admission threshold. Do not simply widen the tolerance. Only Windows was execution-tested here; no cross-platform certification is claimed.
+
+## Previously raised
+
+### Fixed
+
+The earlier design review rejected the premise that RECORD was a permanent arithmetic ceiling. This change represents positive-hit evidence and demonstrates mechanical ADVISE promotion. It also addresses the distinction between repository files and tool traffic explicitly. These correct the earlier framing; N3 and N4 explain why the new measurement still does not establish a deployment guarantee.
+
+The reviewed tree has a packaged bundle reader, export path, and exercised hook path. The prior proposal to connect a frozen artifact to an adapter is concrete. Some integration predates this diff; it is not all attributed to this change.
+
+### Still open
+
+**Medium: The README and promote effect text repeat the previously identified unconditional claim that RECORD reaches neither model nor user.** Locations: README.md:59 and src/agent_defs/hooks/_claude_code_impl.py:556. The fresh incomplete-scan probe confirms additionalContext plus systemMessage in RECORD. Clean events also do not always write a log line. Suggested wording: "Completed RECORD findings are logged without changing model context. Incomplete scans and diagnostic failures can still produce warnings, including model context for incomplete scans."
+
+The requirement to separate selection from final admission remains unresolved at the session/task level. N3 records the current concrete issue rather than treating it as a concern with no history.
+
+### Reopened
+
+None established. The above items were not shown to have been fixed and then regressed.
+
+### Deferred
+
+The earlier review's guarded removal of unused Pre registration, asynchronous RECORD design, capture/completion ledger, and interleaved latency experiment are outside this staged change. They are not additional commit blockers here.
+
+The release-artifact scanner self-check remains open. The staged documentation and metadata state this accurately. SAMPLES.md rule 5 requires it before publication; this review did not perform it and does not approve publication.
+
+## Direct answers to the requested safety checks
+
+There is no reachable bundle=None dereference at effective_lanes line 142 under the current admit implementation: bundle_ok is false, so admit returns RECORD before it can return DENY. Verified synthetic 1-hit/1,743-unit evidence cannot make process withhold output, even if configuration directly requests DENY. ADVISE adds context. Other invalid evidence accepted by the importer can authorize DENY, as N1 and N2 demonstrate.
+
+Missing enabled rules, changed rule fingerprints, and unsupported per-source lane requests raise before writing configuration in the exercised cases. promote enforces effective_lanes; it does not independently validate evidence provenance or coherence. Its refusal mechanism works, while the report admission boundary does not fail closed overall.
+
+docs/calibration.md:62 should say "Every selection-stage rule that fired" rather than "Every rule that fired": retaining the holdout firing is intentional. Earlier-stage counts concern different candidate sets, so explain their transition before interpreting firing-rule counts as a thinning tail. The code chooses the worst per-corpus pooled row, not an aggregate formed by pooling multiple corpora. These corrections supplement the blocking overclaims in N3.

@@ -50,8 +50,16 @@ included in these numbers. Only 660 eligible records currently have executable
 predicates; the other 1,771 remain reference records. Redistribution eligibility
 does not grant an interrupting lane or resolve every underlying rights question.
 
-These are normalized bundle counts, not a claim that the current wheel contains
-the six corpora. The package currently contains code and four authored starter
-rules. This gate does not serialize raw rules or certify sample removal, scanner
-results, or the final artifact. `THIRD-PARTY-NOTICES` is explicitly included in
-package license files so attribution accompanies the wheel and source archive.
+These are normalized bundle counts across all six corpora, and the wheel carries
+a subset of one of them. Since 2026-09-06 the package ships
+`src/agent_defs/bundle.json`: 206 ATR rules on the `OUT` surface at
+`faf743fe`, built by `scripts/build_bundle.py`, beside the four authored
+starter rules. Sample text does not travel with them. `build_bundle.py` strips
+`examples_positive`, `examples_negative` and the raw upstream documents that
+repeat them, and records the build-time reachability result in their place,
+which is `SAMPLES.md` rules 2 and 3. Rule 5, scanning the built artifact before
+publishing, has still never run.
+
+This gate does not certify the final artifact. `THIRD-PARTY-NOTICES` is
+explicitly included in package license files so attribution accompanies the
+wheel and source archive.

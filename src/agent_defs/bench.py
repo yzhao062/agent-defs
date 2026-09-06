@@ -10,19 +10,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import re
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
 from typing import Sequence
 
 from . import bundle
 from .evaluate import compile_rule, scan, scan_trusted
-from .lanes import ADVISE_MAX_U95, DENY_MAX_U95, admit, trials_needed, u95_zero_hits
+from .lanes import (ADVISE_MAX_U95, DENY_MAX_U95, admit, binomial_u95,
+                    trials_needed, u95_zero_hits)
 from .model import BenignFiring, Breadth, Lane, Lineage, PredicateKind, Rule, Surface
 
 TRIAL_DEFINITIONS = {
@@ -34,39 +33,6 @@ TRIAL_DEFINITIONS = {
     "NONE": "No interception surface; diagnostic text matching only.",
 }
 _SECURITY_PATH = re.compile(r"security|threat|attack|inject|secret|vulnerab|pentest|audit|red.team", re.I)
-
-
-@lru_cache(maxsize=8192, typed=True)
-def binomial_u95(trials: int, hits: int) -> float:
-    """One-sided exact Clopper-Pearson upper limit, solved numerically.
-
-    For nonzero hits, invert P[Binomial(n, p) <= hits] = .05. Summing
-    downwards from hits is stable because the root is above hits / trials.
-    """
-    if type(trials) is not int or type(hits) is not int or not 0 <= hits <= trials:
-        raise ValueError("require integer 0 <= hits <= trials")
-    if hits == 0:
-        return u95_zero_hits(trials)
-    if hits == trials:
-        return 1.0
-    low, high = hits / trials, 1.0
-    coefficient = math.lgamma(trials + 1) - math.lgamma(hits + 1) - math.lgamma(trials - hits + 1)
-    for _ in range(64):
-        p = (low + high) / 2
-        if p == high or p == low:
-            break
-        term = total = 1.0
-        for k in range(hits, 0, -1):
-            term *= k / (trials - k + 1) * (1 - p) / p
-            total += term
-            if term < total * 1e-16:
-                break
-        log_cdf = coefficient + hits * math.log(p) + (trials - hits) * math.log1p(-p) + math.log(total)
-        if log_cdf > math.log(0.05):
-            low = p
-        else:
-            high = p
-    return high
 
 
 def _digest(value: object) -> str:

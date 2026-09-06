@@ -85,18 +85,46 @@ pattern nobody timed, so a digest mismatch falls back to shape screening. A
 pattern row is keyed by the first 64 bits of the pattern's SHA-256.
 
 The pattern rows carry only what follows from the sweep. A rule that never
-crossed had every pattern measured, so each of its patterns is fast, and so is
-every string this loader derives from them: the surrogate port and the scoped
-alternation. A rule that crossed identifies only the pattern that crossed; its
+crossed had every one of its own conditions measured, so each of those is `fast`.
+What this loader derives from them is a different matter. The surrogate port
+rewrites the expression and the scoped alternation composes several of them, and
+unit e3 found composition is exactly where a rule that looks fast crosses.
+A derived string therefore gets `inferred-fast`, which yields no measurement and
+falls through to the shape screen instead of certifying itself on its origin's
+timing. A rule that crossed identifies only the pattern that crossed; its
 siblings are left out, because the sweep does not say what they do alone.
 
 A missing or malformed table degrades to shape screening rather than to
 admission. That is the fail-closed direction, and it is what a consumer sees if
 the table is stripped from an install.
 
-Regenerate it with `scripts/build_hazards.py`, which reads the sweep's output and
-the pinned corpus. It refuses to write a table whose pattern counts disagree with
-the corpus, and refuses one where any pattern is recorded both fast and slow.
+### Regenerating
+
+`scripts/build_hazards.py` reads the sweep's output and the pinned corpus, and
+takes two committed files beside it.
+
+`hazards-manifest.json` is the digest of every regex condition each rule carried
+at the pinned revision. The report records how many patterns it timed and never
+which ones, so a rule whose condition changed while its count held would take the
+old verdict onto new text. That is worse than a lookup miss: a miss falls back to
+shape, and this produces a hit that is wrong. The builder refuses any rule whose
+corpus text no longer matches the manifest. Emit it once per revision with
+`--emit-manifest`, and only when the corpus and the report were measured
+together; it was emitted from the checkout rather than recorded by the sweep, so
+it freezes drift from here on rather than proving what the sweep read.
+
+`hazards-merge.json` carries measurements the report cannot produce, applied last
+with slow winning over fast. Without it a rebuild silently restored the weaker
+verdict each of these rows was written to replace. It holds the cross-pattern
+replay crossing for `ATR-2026-02351`, the per-condition sweep the configuration
+channel needs, and the timings for the strings this loader derives. A merge row
+that would turn a measured crossing back into `fast` is refused outright: slow
+wins in one direction only.
+
+The builder also refuses a table whose pattern counts disagree with the corpus,
+and one where any pattern is recorded both fast and slow.
+`tests/test_build_hazards.py` checks that the shipped table is what these inputs
+produce, because a table nobody can regenerate is a table nobody can check.
 
 ## The Benefit, Measured
 

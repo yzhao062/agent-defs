@@ -13,6 +13,16 @@ Inputs
                    recorded as not crossing had all of its patterns measured.
 ``--atr``          the pinned corpus, read for the condition texts the sweep
                    timed. Nothing else in the tree is opened.
+``--manifest``     the pattern texts each rule carried when the sweep ran, as
+                   digests. The report names a count and not an identity, so
+                   without this a rule whose condition changed while its count
+                   held would take the old verdict onto new text: not a lookup
+                   miss, which falls back to shape, but a lookup hit that is
+                   wrong. Every rule the builder accepts must match it exactly.
+``--merge``        measurements this table carries that the report cannot
+                   produce. They are applied last, slow winning over fast, so a
+                   rebuild keeps a correction instead of restoring the weaker
+                   verdict it was written to replace.
 
 What lands in the table
 -----------------------
@@ -62,9 +72,14 @@ def condition_patterns(raw):
 
 def main() -> int:
     cli = argparse.ArgumentParser(description=__doc__)
+    here = Path(__file__).resolve().parent
     cli.add_argument("--report-data", type=Path, required=True)
     cli.add_argument("--atr", type=Path, required=True)
     cli.add_argument("--source-rev", default="faf743fee8a5018467959ec8ea7ccdb1a1aab333")
+    cli.add_argument("--manifest", type=Path, default=here / "hazards-manifest.json")
+    cli.add_argument("--merge", type=Path, default=here / "hazards-merge.json")
+    cli.add_argument("--emit-manifest", action="store_true",
+                     help="write --manifest from --atr and stop; run once per pinned revision")
     cli.add_argument("--out", type=Path,
                      default=Path(__file__).resolve().parents[1] / "src" / "agent_defs" / "hazards.json")
     args = cli.parse_args()
@@ -79,6 +94,30 @@ def main() -> int:
         raw = yaml.load(path.read_text(encoding="utf-8"), Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))
         rules[raw["id"]] = (condition_patterns(raw), raw["detection"].get("condition"))
 
+    if args.emit_manifest:
+        manifest = {
+            "policy": "agent-defs.hazards.manifest",
+            "version": 1,
+            "source_rev": args.source_rev,
+            "comment": ("The digest of every regex condition each rule carries at this revision. "
+                        "build_hazards.py refuses a rule whose corpus text no longer matches, "
+                        "because the report records how many patterns were timed and not which "
+                        "ones. Emitted from the checkout rather than recorded by the sweep, so it "
+                        "freezes drift from here on rather than proving what the sweep read."),
+            "rules": {source_id: [_fingerprint(text) for text in patterns]
+                      for source_id, (patterns, _) in sorted(rules.items())},
+        }
+        args.manifest.write_text(json.dumps(manifest, indent=1, sort_keys=False) + "\n",
+                                 encoding="utf-8", newline="\n")
+        print(f"wrote {args.manifest} ({len(manifest['rules'])} rules)")
+        return 0
+
+    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    if manifest.get("source_rev") != args.source_rev:
+        raise SystemExit(f"manifest was emitted for {manifest.get('source_rev')}, "
+                         f"this build asserts {args.source_rev}")
+    expected = manifest["rules"]
+
     rule_rows, pattern_rows = {}, {}
     slow_sources = {}
     unmeasured = []
@@ -90,6 +129,18 @@ def main() -> int:
         if row["patterns_total"] != len(set(patterns)):
             raise SystemExit(f"{source_id}: corpus has {len(set(patterns))} distinct patterns, "
                              f"the measurement covered {row['patterns_total']}")
+        # The count above says how much was timed, never what. Editing a condition
+        # while holding the count produces a rule-level row keyed to a digest of
+        # text nobody measured, which reads as a hit rather than a miss and so
+        # never falls back to the shape screen. The manifest is what makes the
+        # identity checkable at all.
+        current = [_fingerprint(text) for text in patterns]
+        if expected.get(source_id) != current:
+            raise SystemExit(
+                f"{source_id}: condition texts differ from the manifest for "
+                f"{args.source_rev}. The measurement describes text this corpus no "
+                f"longer carries; re-run the sweep, or re-emit the manifest only "
+                f"when the corpus and the report were measured together.")
         digest = _fingerprint("\n".join(patterns))
         if row["cross_1s"]:
             crossing, wall = (row["rep1"] or row["rep60"])[:2]
@@ -111,8 +162,23 @@ def main() -> int:
         for pattern in patterns:
             port, _ = port_utf16_surrogates(pattern)
             ported.append(port)
-            for text in {pattern, port}:
-                pattern_rows.setdefault(_fingerprint(text), ["inferred-fast"])
+            # This rule's own conditions were timed and none crossed, and the
+            # manifest check above is what makes "these are the texts it timed" a
+            # statement rather than an assumption. So they are measured fast.
+            #
+            # What this loader derives from them was never timed. The surrogate
+            # port changes the expression, and the scoped alternation composes
+            # several of them, and neither behaves like its input by
+            # construction: unit e3 found composition is exactly where a rule
+            # that looks fast crosses. An inferred row yields no measurement, so
+            # a derived string falls through to the shape screen rather than
+            # certifying itself on its origin's timing.
+            key = _fingerprint(pattern)
+            prior = pattern_rows.get(key)
+            if prior is None or prior[0] == "inferred-fast":
+                pattern_rows[key] = ["fast"]
+            if port != pattern:
+                pattern_rows.setdefault(_fingerprint(port), ["inferred-fast"])
         if logic == "any" and len(ported) > 1:
             pattern_rows.setdefault(_fingerprint("|".join(_scoped(p) for p in ported)), ["inferred-fast"])
 
@@ -121,6 +187,26 @@ def main() -> int:
     fast_and_slow = [key for key in slow_sources if pattern_rows.get(key, [""])[0] != "slow"]
     if contradictions or fast_and_slow:
         raise SystemExit(f"a pattern is both fast and slow: {sorted(set(contradictions + fast_and_slow))[:5]}")
+
+    # Measurements the report cannot produce. Slow wins on every collision: each
+    # of these rows exists because it corrects a weaker verdict, and letting the
+    # rebuild win would restore exactly the verdict the row was written to
+    # replace, quietly, on the next regeneration.
+    merged = json.loads(args.merge.read_text(encoding="utf-8")) if args.merge.exists() else {"sources": []}
+    merge_notes, merge_counts = {}, {}
+    for source in merged.get("sources", []):
+        added = 0
+        for rows, target in ((source.get("rules", {}), rule_rows),
+                             (source.get("patterns", {}), pattern_rows)):
+            verdict_at = 1 if target is rule_rows else 0
+            for key, row in rows.items():
+                prior = target.get(key)
+                if prior is not None and prior[verdict_at] == "slow" and row[verdict_at] != "slow":
+                    raise SystemExit(f"{source['key']}: {key} would downgrade a measured slow row")
+                target[key] = row
+                added += 1
+        merge_notes[source["key"]] = source["note"]
+        merge_counts[source["key"]] = added
 
     table = {
         "policy": "agent-defs.hazards",
@@ -132,7 +218,9 @@ def main() -> int:
         "provenance": {
             "measurement": "research/efficacy-2026-09-05, unit e3",
             "report_data_sha256": hashlib.sha256(args.report_data.read_bytes()).hexdigest(),
+            "manifest_sha256": hashlib.sha256(args.manifest.read_bytes()).hexdigest(),
             "corpora": {"atr": args.source_rev},
+            **merge_notes,
             "verdicts": {
                 "slow": "a witness held one re.search past the budget; the crossing is proof",
                 "fast": "no witness crossed at any tested length; evidence, not a proof, and the "

@@ -84,8 +84,46 @@ Nothing needs them on disk. Reachability is checked at build time against exampl
 archive in memory, and the full corpus lives on a Linux box with no scanner when a whole-corpus count
 is genuinely required.
 
-## The open one
+## The one that was open, and what it found
 
 Rule content itself carries attack strings, because a detection pattern for a dropper contains the
-dropper's indicators. Whether a bundle of 2,476 such patterns trips a scanner on its own is
-unmeasured, and rule 5 exists to find out before a user does.
+dropper's indicators. Whether a bundle of such patterns trips a scanner on its own was unmeasured,
+and rule 5 existed to find out before a user did.
+
+It has now run. `scripts/scan_artifact.ps1` copies the artifact to a temporary directory and scans
+the copy, so a detection quarantines the copy and leaves the repository alone. The copy also passes
+under whatever resident protection is active, so one run addresses both questions: whether an
+on-demand scan reports a threat, and whether the file survives contact with resident protection.
+
+On 2026-09-06, against `src/agent_defs/bundle.json` at sha256
+`2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1`, 1,372,797 bytes, 205 ATR rules:
+**one Windows Defender on-demand scan reported no threats, and the copy was still on disk three
+seconds after it was written, on a machine registering Windows Defender and Bitdefender Antivirus
+with the Security Center.** Verdict `clean`. The record is `scripts/artifact-scan.json`, keyed by
+that digest rather than by a path, so it names the exact bytes scanned and does not silently carry
+over to a rebuild. `tests/test_shipped_bundle.py` fails when the committed record describes
+different bytes or is missing, so a rebuild without a rescan is caught rather than assumed.
+
+Say it that way rather than "two scanners cleared it", because the run does not establish the
+stronger claim. The product list comes from Security Center registration, which reports that a
+product is installed and not that it was scanning that path; the survival window is three seconds,
+so a delayed detection is not observed; and only one of the two products was asked for a verdict.
+
+Two further limits on the result. It is one machine, so it is evidence rather than a guarantee for
+every consumer. And it was taken after rules 2 and 3 removed 985 sample strings and 4.3 MB of raw
+upstream documents from the artifact; the untrimmed bundle was never scanned, so it says nothing
+about what would have shipped before that change.
+
+The script that produced it took two rounds of review to get its failure handling right, and both
+defects were the same shape: a run that went wrong left an older `clean` record for the same bytes
+standing as the answer. First it threw the moment resident protection removed the copy, so the
+single outcome most worth recording produced no record at all. Then it built the record only after
+hashing the artifact and creating the scan directory, so a failure in either did the same thing
+again, and it published with `Move-Item -Force`, whose provider answers a sharing violation on the
+destination by deleting it and retrying. Setup now runs inside the guarded block, the record is
+created before any of it, and publication uses `File.Replace`.
+
+What the script promises is narrower than "every exit writes a record", which is what this file
+said after the first of those rounds. A destination that cannot be written cannot be written. Every
+*handled* failure replaces the record, and the exit code carries the rest: 0 clean and recorded, 1 a
+detection, 2 an inconclusive run, 3 a result that could not be published.

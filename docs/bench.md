@@ -101,6 +101,20 @@ Nonzero hits invert the binomial CDF for the Clopper-Pearson upper limit. The
 bundle's hit count is the union of enabled native-surface rule hits per unit,
 bounded by its trial count. It is distinct from the sum of rule findings.
 
+The reported limit is not what the gate compares. Inverting the CDF pushes the
+coefficient's rounding into the returned rate, and at large trial counts that
+rounding is enough to place a rate on the wrong side of a ceiling; the gate
+therefore evaluates the CDF once at the ceiling instead, through
+`lanes.bound_within`, and fails the bundle outright when the comparison lands
+inside the slack that arithmetic allows. That failure is worded separately from
+the thin-stratum one, so the importer's pooled-bound opt-in cannot cover it.
+
+`bound_within` also refuses above `lanes.MAX_SUPPORTED_TRIALS`, which is ten
+million. That is where the `lgamma` coefficient's measured error grows past the
+slack, so the band would stop catching a wrong answer; past it the comparison
+is declined rather than answered. The slack itself is an empirical margin over
+a measured worst case, not a derived bound, and `lanes.py` says so.
+
 All-rules prevalence is also reported to permit comparison with earlier
 whole-file experiments. Cross-surface rows explicitly mark
 `admission_eligible_surface: false`; the pooled diagnostic count never grants

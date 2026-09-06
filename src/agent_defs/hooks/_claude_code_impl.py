@@ -18,7 +18,7 @@ import time
 from ..builtin import STARTER_RULES
 from ..evaluate import DEFAULT_MAX_BYTES, scan
 from .. import lanes as admission
-from ..lanes import ADVISE_MAX_U95, DENY_MAX_U95, binomial_u95
+from ..lanes import ADVISE_MAX_U95, DENY_MAX_U95, binomial_u95, bound_within
 from ..model import BenignFiring, Lane, Surface
 
 OWNER = "agent-defs-claude-code-v1"
@@ -31,16 +31,23 @@ INCOMPLETE = "agent-defs: scan incomplete; this tool content has not been fully 
 WITHHELD = "[agent-defs: tool text withheld after a measured injection rule matched.]"
 ORDER = {Lane.DO_NOT_SHIP: 0, Lane.RECORD: 1, Lane.ADVISE: 2, Lane.DENY: 3}
 SOURCES = ("builtin", "atr", "netzilo", "agentshield", "agent_audit_kit", "ave", "guardana")
-#: Above this the exact bound cannot be recomputed reliably enough to check a
-#: stored one against a lane threshold. Benign corpora here are in the thousands.
-MAX_TRIALS = 10_000_000
-#: Benchmark refusals this importer will never relax. Both say the trial count
-#: itself is wrong, and an interval computed from a wrong count means nothing:
-#: repeated material is one observation counted many times, and absent required
-#: coverage is a population that was never sampled. The remaining refusal, that
-#: the worst per-stratum interval is wider than the ceiling, is a disagreement
-#: about which statistic to gate on, and only that one is relaxable.
-FATAL_BENCH_FAILURES = ("duplicate material units", "missing strata")
+#: The largest trial count this adapter will read, which is the arithmetic's
+#: own supported domain rather than a separate policy. Rejecting here refuses
+#: the evidence outright, where ``lanes.bound_within`` would only decline to
+#: certify it; both are fail-closed, and a config asking a hook to sum ten
+#: million terms is not a config to go on reading. It is not a precision
+#: boundary either way: a comparison can be unresolvable far below it.
+MAX_TRIALS = admission.MAX_SUPPORTED_TRIALS
+#: Benchmark refusals this importer will never relax. The first two say the
+#: trial count itself is wrong, and an interval computed from a wrong count
+#: means nothing: repeated material is one observation counted many times, and
+#: absent required coverage is a population that was never sampled. The third
+#: says the comparison could not be made at all, which is not a disagreement
+#: about which statistic to gate on and so is not the caller's to waive. The
+#: remaining refusal, that the worst per-stratum interval is wider than the
+#: ceiling, is such a disagreement, and only that one is relaxable.
+FATAL_BENCH_FAILURES = ("duplicate material units", "missing strata",
+                        "is not resolvable against")
 POOLED_ONLY_FAILURE = "worst bundle stratum u95="
 DEGRADED = "agent-defs: security scan coverage is incomplete or unavailable. Review the local diagnostic log."
 
@@ -130,10 +137,12 @@ def measurement(data):
             return None
         if not m.corpus or not m.measured_at:
             return None
-        # Beyond this the bisection's lgamma coefficient loses enough precision
-        # that a recomputation can land on the other side of a lane threshold,
-        # so the check would be certifying a number it cannot reproduce. No
-        # corpus this adapter calibrates against comes close to the cap.
+        # The cap bounds the work a config can ask for, and it bounds the
+        # domain the slack in ``lanes.LOG_CDF_SLACK`` was derived over. It is
+        # not the point where precision starts to matter: a comparison against
+        # a ceiling can be unresolvable well below the cap, which is why the
+        # lane decision goes through ``bound_within`` and refuses rather than
+        # rounding. No corpus this adapter calibrates against comes close.
         if m.trials > MAX_TRIALS:
             return None
         # A stored bound is never taken on trust. It is recomputed from the
@@ -160,8 +169,11 @@ def effective_lanes(config, rules):
     for rule in rules:
         requested = Lane(config["sources"].get(rule.source, "RECORD"))
         m = measurement(evidence.get("rules", {}).get(rule.id)) if valid else None
-        ceiling, reason = admission.admit(replace(rule, benign=m), bundle_ok=bool(bundle and bundle.u95 <= ADVISE_MAX_U95))
-        if ceiling == Lane.DENY and bundle.u95 > DENY_MAX_U95:
+        bundle_ok = bool(bundle) and bound_within(bundle.trials, bundle.hits,
+                                                  ADVISE_MAX_U95) is True
+        ceiling, reason = admission.admit(replace(rule, benign=m), bundle_ok=bundle_ok)
+        if ceiling == Lane.DENY and bound_within(bundle.trials, bundle.hits,
+                                                 DENY_MAX_U95) is not True:
             ceiling = Lane.ADVISE
         result[rule.id] = (min((requested, ceiling), key=ORDER.get), reason)
     return result
@@ -525,8 +537,9 @@ def calibrate(config_path, directory, label):
     corpus = label + "; manifest-sha256=" + manifest.hexdigest()
     def measured(count):
         # 1.0 used to stand in for any positive count, which the validator then
-        # discarded without saying why. The exact bound is computable, so a rule
-        # that fired now carries the rate it actually implies.
+        # discarded without saying why. The bound is computable, so a rule that
+        # fired now carries the rate it implies. What decides its lane is not
+        # this number but ``lanes.bound_within`` on the counts beside it.
         return asdict(BenignFiring(n, count, binomial_u95(n, count), corpus, when))
     config["evidence"] = {"fingerprint": fingerprint(rules, config["surfaces"]), "bundle": measured(bundle_hits),
                           "rules": {key: measured(count) for key, count in hits.items()}, "skipped": skipped}
@@ -576,7 +589,8 @@ def promote(config_path, source, lane):
 #: What each lane does that a person can perceive, stated once.
 EFFECT = {
     Lane.RECORD: ("a completed finding is logged and changes nothing the model sees; an "
-                  "incomplete scan or an unwritable log still warns you and the model"),
+                  "incomplete scan warns you and the model, and an unwritable log warns "
+                  "you alone"),
     Lane.ADVISE: "a line is added to the model's context telling it to treat the matched tool text as untrusted data",
     Lane.DENY: "the matched tool result is withheld from the model, and a matching tool input is refused",
 }
@@ -720,16 +734,21 @@ def calibrate_from_report(config_path, report_path, *, accept_pooled_bound=False
             "bundle_hits": bundle["hits"], "rules_measured": len(measured_rules),
             "rules_that_fired": len(loud),
             "u95": config["evidence"]["bundle"]["u95"],
-            "reaches": _reachable_lane(config["evidence"]["bundle"]["u95"]),
+            "reaches": _reachable_lane(bundle["trials"], bundle["hits"]),
             "bench_bundle_ok": config["evidence"]["bench"]["bundle_ok"],
             "config": str(config_path)}
 
 
-def _reachable_lane(u95):
-    """The best lane this bundle bound allows, before any source asks for it."""
-    if u95 <= DENY_MAX_U95:
+def _reachable_lane(trials, hits):
+    """The best lane this bundle bound allows, before any source asks for it.
+
+    Asked of the trial and hit counts rather than of the reported rate, so that
+    a bound sitting on a ceiling is refused by the same arithmetic the hook's
+    own admission uses rather than resolved by a float comparison.
+    """
+    if bound_within(trials, hits, DENY_MAX_U95) is True:
         return Lane.DENY.value
-    if u95 <= ADVISE_MAX_U95:
+    if bound_within(trials, hits, ADVISE_MAX_U95) is True:
         return Lane.ADVISE.value
     return Lane.RECORD.value
 

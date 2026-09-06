@@ -226,7 +226,12 @@ def _with_failure(rules, text):
     "c has 3998 duplicate material units; independence requires review",
     "c missing strata: OUT:exposure=attacker-reachable",
     "some check added after this code was written",
-], ids=["duplicates", "missing-coverage", "unrecognised"])
+    # Worded so it does not carry the relaxable refusal's own prefix. The first
+    # draft of this failure began "worst bundle stratum u95=", which the
+    # importer keys its one relaxation on, so an unanswerable comparison would
+    # have been waivable by the flag meant for a different disagreement.
+    "bundle stratum bound 0.005000 is not resolvable against the 0.005 ceiling in double precision",
+], ids=["duplicates", "missing-coverage", "unrecognised", "unresolvable-comparison"])
 def test_a_benchmark_refusal_this_importer_cannot_relax_is_fatal(installed, tmp_path, failure):
     config_path, enabled = installed
     report = tmp_path / "report.json"

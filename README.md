@@ -19,7 +19,7 @@ are reachable in principle; one is wired.
 
 | Moment | What is caught | State here |
 |---|---|---|
-| A tool result comes back | instructions addressed to your agent, carried in the returned text | **wired and measured.** 206 rules on Claude Code's `PostToolUse`, calibrated on real traffic; see [`docs/calibration.md`](docs/calibration.md) |
+| A tool result comes back | instructions addressed to your agent, carried in the returned text | **wired and measured.** 209 rules on Claude Code's `PostToolUse`, being 205 from the corpus plus 4 starter rules, calibrated on real traffic; see [`docs/calibration.md`](docs/calibration.md) |
 | A tool call is about to run | the call does something you did not authorise | scanner reachable, no measured rules. The 57 `IN` rules in the corpus have no benign corpus to calibrate against, so none ships |
 | A skill or server is added | an install step piping a download into a shell, a plaintext secret, a declaration of no `tools` beside authority over all of them | `cfg.py` scans a document, and nothing calls it. No installer hook, and `read_config` accepts no surface but `IN` and `OUT` |
 
@@ -57,25 +57,34 @@ agent-defs status                                        # what it would do next
 ```
 
 Everything starts in `RECORD`. A completed `RECORD` finding is written to the
-local log and changes nothing the model sees. Two other paths still speak: a
-scan that could not finish adds a line to the model's context and a warning to
-yours, and so does a diagnostic log that could not be written. Letting a source
-act takes a measurement of the set you actually have installed, and then saying
-so once:
+local log and changes nothing the model sees. Two other paths still speak, and
+they do not speak to the same audience: a scan that could not finish adds a
+line to the model's context and a warning to yours, while a diagnostic log that
+could not be written warns you alone. Letting a source act takes a measurement
+of the set you actually have installed, and then saying so once:
 
 ```sh
 agent-defs export-bundle --out enabled.json      # the exact enabled set
 python scripts/measure_tool_traffic.py --evidence <dir> --names <corpus> \
     --surface OUT --rules enabled.json --workers 4
-agent-defs calibrate --report <corpus>-out-report.json
+agent-defs calibrate --report <corpus>-out-report.json --accept-pooled-bound
 agent-defs promote --source atr --lane ADVISE
 ```
 
-`promote` refuses a lane the evidence does not support and prints what the
-change does. The shipped bundle fired once on 1,743 held-out tool results, an
-exact upper bound of 0.272%, which reaches `ADVISE` and not `DENY`.
-[`docs/calibration.md`](docs/calibration.md) has the procedure, the corpora, and
-the two gates that disagree about it.
+`--accept-pooled-bound` is there because a personal corpus will not carry the
+roughly 600 clean trials per stratum the benchmark's own gate wants for a
+rarely used tool, so its report arrives refused and the flag is where a caller
+takes the weaker pooled claim in writing. Drop it and the step above will
+refuse.
+
+`promote` refuses a lane the imported evidence does not support and prints what
+the change does. The shipped bundle fired once on 1,743 held-out tool results.
+Treating those as independent representative trials gives a nominal one-sided
+95% bound of 0.272%, which the importer maps to `ADVISE` and not `DENY`. That
+sampling, and a rule removed from the bundle after the evaluation was read, are
+both reasons the number is not established as a bound on what the deployed hook
+does. [`docs/calibration.md`](docs/calibration.md) has the procedure, the
+corpora, the two gates that disagree about it, and what none of it settles.
 
 ## Seeing what an install is doing
 

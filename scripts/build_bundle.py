@@ -5,7 +5,7 @@ Run this on the corpus host. It reads the pinned archive named in
 unpacks a sample directory: the extraction filter is an allow list, so a corpus
 that grows a new data directory cannot start landing on disk by default.
 
-Four filters decide what travels, and each one drops rules for a reason the
+Five filters decide what travels, and each one drops rules for a reason the
 manifest records rather than for a count somebody picked:
 
 ``surface``       the hook evaluates tool input and tool result, so a rule
@@ -21,6 +21,28 @@ manifest records rather than for a count somebody picked:
                   and refuses one measured slow. A refused pattern at runtime
                   is a scan reported incomplete on every tool call, so the
                   refusal belongs here, once, at build time.
+``content-free``  the hook scans each string leaf of a tool result separately,
+                  and leaves holding only whitespace are ordinary. A rule
+                  matching one of the fixtures in ``CONTENT_FREE`` fires on
+                  ordinary work, and no benign rate measured over joined text
+                  can license it.
+
+The last filter rejects rules matching specified whitespace-only fixtures. It
+was introduced after inspecting the held-out traversal diagnostic, which is a
+build policy change informed by that result, so the lower post-change
+measurement is not an untouched validation of the revised detector. Writing the
+criterion as a property of the pattern does not restore that independence: the
+decision to look for this property came from seeing which rule inflated the
+diagnostic, and a feature can be selected adaptively exactly as an identifier
+can. What the fixtures establish is narrower than the name suggests, and
+``CONTENT_FREE`` says so at its definition.
+
+One thing does survive the adaptivity, and it is worth stating because it is
+the reason removing the rule is not a statistical trick: deleting rules cannot
+increase a union of predicate hits, so a bound already established for a fixed
+superset stays conservative for any subset of it, adaptively chosen or not.
+That licenses keeping the earlier number as an upper bound. It does not
+license quoting the tighter post-removal count as a fresh validation.
 """
 
 from __future__ import annotations
@@ -39,7 +61,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from agent_defs import bench, bundle  # noqa: E402
-from agent_defs.evaluate import compile_rule  # noqa: E402
+from agent_defs.evaluate import compile_rule, scan_trusted  # noqa: E402
 from agent_defs.model import default_bundle  # noqa: E402
 
 #: Everything else in the archive stays in the archive.
@@ -87,6 +109,63 @@ def screened(rule) -> str:
     return ""
 
 
+#: Whitespace-only leaves an ordinary tool result carries. ``process`` already
+#: skips the empty string, so these are the remaining shapes. The single space
+#: comes first because a rule firing on it is the loudest case there is, and
+#: the manifest records the first fixture that matched.
+#:
+#: **This is a fixture list, not a decision procedure.** A rule matching no
+#: entry here can still match some whitespace-only string the list omits.
+#: ``^ {7}$`` and ``^\u2028+$`` are both accepted by the screen and both fire
+#: on a blank leaf, and neither is below; the first version of this list had no
+#: single space in it at all. Deciding the real property, that a pattern's
+#: language does not intersect the whitespace-only strings, takes an analysis
+#: of the pattern rather than a longer list, and more lengths do not approach
+#: it. This is a regression policy against the shape that was found.
+#:
+#: It is also the one place the fixtures are written.
+#: ``tests/test_shipped_bundle.py`` imports this tuple rather than restating
+#: it, because two lists drifting apart is how the single space went missing.
+#:
+#: Written as escapes throughout. A literal U+00A0 sitting in source is the one
+#: thing a reader cannot check by looking.
+CONTENT_FREE = (
+    " ", "  ", "   ", " " * 4, " " * 100,
+    "\t", "\v", "\f", "\n", "\r", "\r\n", "\n\n", " \n ", "\t\n\r ",
+    "\u00a0", "\u00a0 ", "\u2007", "\u202f", "\u3000", "\ufeff",
+)
+
+
+class IndeterminateProbe(RuntimeError):
+    """A content-free fixture neither matched nor completed."""
+
+
+def fires_on_nothing(rule) -> str:
+    """The content-free fixture this rule matches, or an empty string.
+
+    ``ATR-2026-02010`` is the case this exists for. It looks for a string made
+    entirely of emoji and invisible characters, which is a real attack shape,
+    but ``\\s`` inside its class means every blank leaf matches it too. Measured
+    over joined tool results it looked quiet, because a whole result is rarely
+    blank; when scanned as a nonempty whitespace-only leaf, it matches. These
+    fixtures do not establish how often such leaves occur in deployed tool
+    responses, and nothing in this repository measures that.
+
+    An incomplete scan raises rather than reading as a quiet one. To a caller
+    that only checks ``findings`` the two are the same value, and a rule
+    leaving here unflagged is supposed to mean it was tested.
+    """
+    for probe in CONTENT_FREE:
+        found = scan_trusted(probe, [rule], max_bytes=len(probe.encode("utf-8")))
+        if not found.complete or found.rules_evaluated != 1:
+            raise IndeterminateProbe(
+                f"{rule.id}: fixture {probe!r} evaluated {found.rules_evaluated} of "
+                f"1 rules, complete={found.complete}")
+        if found.findings:
+            return repr(probe)
+    return ""
+
+
 def select(rules, surfaces, drop=None):
     """Return the rules that travel, and one counted reason per rule that does not."""
     keep, dropped = [], Counter()
@@ -105,6 +184,9 @@ def select(rules, surfaces, drop=None):
         elif (reason := screened(rule)):
             dropped["screen_refused"] += 1
             refusals[rule.id] = reason
+        elif (probe := fires_on_nothing(rule)):
+            dropped["fires_on_content_free_leaf"] += 1
+            refusals[rule.id] = f"matches a leaf holding only {probe}"
         else:
             keep.append(rule)
     return keep, dict(dropped), refusals
@@ -184,7 +266,11 @@ def main(argv=None) -> int:
         args.out, keep,
         reachability=dict(reach), stripped_fields=list(STRIPPED_FIELDS),
         stripped_extra=list(STRIPPED_EXTRA),
-        scanner_self_check="not run; SAMPLES.md rule 5 remains open for this artifact",
+        # A build host has no scanner, so rule 5 is answered separately and
+        # keyed by digest. scripts/artifact-scan.json is that record; a rebuild
+        # changes the digest and leaves the old record obviously stale rather
+        # than quietly attached to bytes nobody scanned.
+        scanner_self_check="see scripts/artifact-scan.json, matched by sha256 of this file",
         source=args.source, source_rev=pin["commit"],
         archive_sha256=pin["archive_sha256"], license_spdx=pin["license_spdx"],
         upstream_url=pin["repo_url"],

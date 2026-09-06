@@ -266,3 +266,31 @@ def test_manifest_rejects_escape_and_changed_bytes(tmp_path):
     path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="digest mismatch"):
         load_corpus(tmp_path)
+
+
+def test_the_bundle_gate_records_the_counts_its_comparison_was_made_from():
+    """A rate alone cannot be re-checked; the counts behind it can."""
+    report = measure([rule()], [corpus(3000, 3000)])
+    bundle = report["bundle"]
+    worst = max(bundle["measurements"], key=lambda row: row["u95"])
+    assert bundle["worst_trials"] == worst["trials"]
+    assert bundle["worst_hits"] == worst["hits"]
+    assert bundle["worst_u95"] == worst["u95"]
+
+
+def test_a_report_without_those_counts_cannot_reach_deny():
+    """Reports predating the counts must degrade, not assert.
+
+    ``admit_from_report`` asks ``bound_within`` whether the bundle clears the
+    DENY ceiling. With nothing to ask about, the answer is not True, and the
+    rule lands on ADVISE rather than inheriting a DENY from a rate nobody can
+    re-derive.
+    """
+    r = rule()
+    report = json.loads(json.dumps(measure([r], [corpus(3000, 3000)])))
+    assert admit_from_report(r, json.loads(json.dumps(report)))[0].value == "DENY"
+    report["bundle"].pop("worst_trials")
+    report["bundle"].pop("worst_hits")
+    lane, reason = admit_from_report(r, report)
+    assert lane.value == "ADVISE"
+    assert "only qualifies for ADVISE" in reason

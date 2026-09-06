@@ -1,0 +1,48 @@
+{
+ "inputs": {
+  "units": "C:\\Users\\yuezh\\AppData\\Local\\Temp\\claude\\C--Users-yuezh-PycharmProjects-agent-startup-thesis\\0c2c85fb-d0d8-49d1-a9cd-a3b2dc006ecd\\scratchpad\\holdout-units-2.jsonl",
+  "units_sha256": "bd429d68174135bab674426bea82e0e58f504241002c3e589202f8c1a828893e",
+  "units_from": "scripts/rebuild_holdout_units.py replaying the 1743 pinned unit ids of the local-claude-unique-holdout corpus from the OUT report at sha256 3106c49d2a220616b8ef8f9b02eba0c389a76b7c24c37bfaa04678a14658ee1f; all 1743 recovered with matching digests",
+  "rules": "src\\agent_defs\\bundle.json",
+  "rules_sha256": "2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1",
+  "rule_count": 205,
+  "rule_ids_sha256": "f0b848547e8ecaa2224f678cc70c5c5f9b11bdf3baaa0925f9ab05ededed97f8",
+  "python": "3.12.12"
+ },
+ "trials": 1743,
+ "joined": {
+  "hits": 1,
+  "nominal_u95": 0.0027187451457536763
+ },
+ "newline_leaf_diagnostic": {
+  "hits": 1,
+  "nominal_u95": 0.0027187451457536763,
+  "rules_gaining": {}
+ },
+ "substring_leaf_diagnostic": {
+  "hits": 489,
+  "nominal_u95": 0.2988039730864678,
+  "rules_gaining": {
+   "atr:ATR-2026-02007": 485,
+   "atr:ATR-2026-00266": 2,
+   "atr:ATR-2026-02106": 1
+  }
+ },
+ "hook_upper_bound": null,
+ "leaf_decomposition_bound": null,
+ "construct_census": {
+  "$": 5,
+  "(?!": 14,
+  "(?<!": 2,
+  "(?=": 1,
+  "\\b": 98,
+  "^": 5
+ },
+ "probed_rules": 102,
+ "probed_without_pruning": [],
+ "method": {
+  "newline_leaf": "joined hits unioned with an all-lines probe, evaluated with each rule's own flags and conjunction. NOT an exact leaf count and NOT a bound: the extractor joined blocks with newlines but a block can contain newlines of its own, so this cuts at a superset of the real boundaries and destroys a match that spans lines inside one block",
+  "substring_leaf": "the same rules matched with every zero-width assertion removed. The rewrite is sound only for patterns free of atomic groups, possessive quantifiers, conditionals and quantified lookarounds; a pattern carrying one is counted as a candidate on every unit rather than rewritten. Loose by construction",
+  "not_covered": "string values of tool_response the extractor never rendered into tool_result.content; no computation on this corpus reaches them, so neither number is a bound on the deployed hook and neither is admission evidence"
+ }
+}

@@ -1,0 +1,21 @@
+{
+  "artifact": "C:\\Users\\yuezh\\PycharmProjects\\agent-defs\\src\\agent_defs\\bundle.json",
+  "sha256": "2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1",
+  "bytes": 1372797,
+  "scanned_at": "2026-09-06T19:28:20.9709917Z",
+  "resident": {
+    "products": [
+      "Windows Defender",
+      "Bitdefender Antivirus"
+    ],
+    "removed_on_contact": false,
+    "note": "a resident scanner that removes the copy within three seconds is a detection"
+  },
+  "on_demand": {
+    "scanner": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.26060.3008-0\\MpCmdRun.exe",
+    "exit_code": 0,
+    "output": "Scan starting...\r\nScan finished.\r\nScanning C:\\Users\\yuezh\\AppData\\Local\\Temp\\agent-defs-scan-29c66df3\\bundle.json found no threats.",
+    "clean": true
+  },
+  "verdict": "clean"
+}

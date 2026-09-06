@@ -1,7 +1,7 @@
 {
  "format_version": 1,
  "reachability": {
-  "reachable": 206
+  "reachable": 205
  },
  "stripped_fields": [
   "examples_positive",
@@ -11,26 +11,27 @@
   "upstream",
   "upstream_yaml"
  ],
- "scanner_self_check": "not run; SAMPLES.md rule 5 remains open for this artifact",
+ "scanner_self_check": "see scripts/artifact-scan.json, matched by sha256 of this file",
  "source": "atr",
  "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
  "archive_sha256": "5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5",
  "license_spdx": "MIT",
  "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules",
- "built_at": "2026-09-06T17:55:16.475574+00:00",
+ "built_at": "2026-09-06T19:26:23.737895+00:00",
  "surfaces": [
   "OUT"
  ],
  "rule_files": 793,
  "loaded": 793,
- "shipped": 206,
+ "shipped": 205,
  "dropped": {
   "not_runnable": 179,
   "measured_loud": 11,
   "surface:IN": 57,
   "surface:CFG": 116,
   "surface:PROMPT": 218,
-  "surface:NONE": 6
+  "surface:NONE": 6,
+  "fires_on_content_free_leaf": 1
  },
  "held_back": {
   "atr:ATR-2026-00064": "fired on 81 of 2937 benign tool results (trace-commons-unique, 2026-09-06)",
@@ -48,7 +49,9 @@
   "atr:ATR-2026-00511": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)",
   "atr:ATR-2026-00065": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)"
  },
- "screen_refusals": {},
+ "screen_refusals": {
+  "atr:ATR-2026-02010": "matches a leaf holding only '   '"
+ },
  "rules": [
   {
    "id": "atr:ATR-2026-00074",
@@ -28798,143 +28801,6 @@
       "475adbf0b181c4dbbd1c626299eab3c7149deff4dc9b5413ba71477c97f2cb7a",
       "b06040d440287d977da904bc034b58f5c5668a05ca739114de9a360f2f66a0a3",
       "0668ab85e8898d53e642e79eb0fafb7326375b97ce28b16761a3a26bfd7ee9e5"
-     ],
-     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
-    }
-   }
-  },
-  {
-   "id": "atr:ATR-2026-02010",
-   "source": "atr",
-   "source_id": "ATR-2026-02010",
-   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
-   "source_path": "rules/prompt-injection/ATR-2026-02010-emoji-only-payload.yaml",
-   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/prompt-injection/ATR-2026-02010-emoji-only-payload.yaml",
-   "lineage": [
-    {
-     "kind": "author_field",
-     "value": "ATR Community",
-     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/prompt-injection/ATR-2026-02010-emoji-only-payload.yaml (YAML author)"
-    }
-   ],
-   "license_spdx": "MIT",
-   "redistribution": "unresolved",
-   "restricted": false,
-   "restricted_reason": "",
-   "title": "Emoji-Only Payload Injection",
-   "description": "Detects prompt injection payloads composed entirely of emoji, pictograph, and symbol glyphs with no Latin text. Attackers use emoji-only sequences to smuggle instructions or narrative payloads past text-pattern filters that assume natural language, relying on the model's ability to interpret pictographic sequences as semantic content (e.g. rebus-style commands, sentiment chains used for jailbreak narrative framing, or symbolic step sequences standing in for an attack script). Detection is whole-string anchored: it fires only when the entire message consists of emoji/pictograph codepoints and whitespace, so mixed emoji+text messages (normal chat usage) do not match.\n",
-   "severity_raw": "high",
-   "severity_field": "severity",
-   "maturity_raw": "test",
-   "tags": [
-    "prompt-injection",
-    "emoji-only-payload",
-    "llm_io",
-    "medium"
-   ],
-   "references": [
-    "LLM01:2025",
-    "ASI01:2026",
-    "AML.T0051 - LLM Prompt Injection",
-    "AML.T0054 - LLM Jailbreak",
-    "T1027 - Obfuscated Files or Information"
-   ],
-   "surface": "OUT",
-   "breadth": "BROAD",
-   "predicate_kind": "REGEX",
-   "predicate": "^[🀀-🿿☀-➿←-⇿⌀-⏿⬀-⯿\\s️‍🏻-🏿]+$",
-   "not_runnable_reason": "",
-   "case_sensitive": false,
-   "bindings": [],
-   "examples_positive": [],
-   "examples_negative": [],
-   "false_positive_notes": [
-    "Single or short emoji reactions sent alone (e.g. a lone thumbs-up or heart) in casual chat",
-    "Emoji used as sentiment decoration mixed with natural-language text (does not match — pattern is whole-string anchored)"
-   ],
-   "extra": {
-    "policy": {
-     "name": "agent-defs.atr",
-     "version": 1,
-     "date": "2026-09-04"
-    },
-    "lineage_parse": {
-     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
-     "parenthetical_spans": [],
-     "classification": "project_attribution",
-     "corpus_marker_matches": []
-    },
-    "surface_decision": {
-     "reason": "generic content at the external-text interception point (inferred)",
-     "fields": [
-      "content"
-     ],
-     "scan_target": "llm_io",
-     "single_surface_limitation": false
-    },
-    "execution": {
-     "method": "pattern",
-     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
-     "measurement": {
-      "verdict": "fast",
-      "budget_s": 1.0,
-      "crossing_bytes": null,
-      "wall_s": null,
-      "over_60s": false,
-      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
-      "measured_at": "2026-09-05"
-     },
-     "breadth": {
-      "policy": "common-text-witness-v1",
-      "probe_indices": [
-       31,
-       32
-      ],
-      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
-     }
-    },
-    "positive_origins": [
-     {
-      "test_case": 0,
-      "path": "input"
-     },
-     {
-      "test_case": 1,
-      "path": "input"
-     },
-     {
-      "test_case": 2,
-      "path": "input"
-     }
-    ],
-    "negative_origins": [
-     {
-      "test_case": 0,
-      "path": "input"
-     },
-     {
-      "test_case": 1,
-      "path": "input"
-     },
-     {
-      "test_case": 2,
-      "path": "input"
-     },
-     {
-      "test_case": 3,
-      "path": "input"
-     }
-    ],
-    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
-    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
-    "reachability": {
-     "status": "reachable",
-     "examples": 3,
-     "matched": 3,
-     "example_sha256": [
-      "40244fb3ee7b1a862254499546ec80e3bc32a643b0a979efb97c67d00a6f33d4",
-      "d036a9c719af914ae225b5bd3b69e62d42a0adf5cecdbe1f1d034319f8ba9a1a",
-      "24ad1af56f69b28ac5148b2c4dbe5029ca2a581b7cd883c8774dbdd344f917ad"
      ],
      "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
     }

@@ -21,7 +21,7 @@ from typing import Sequence
 from . import bundle
 from .evaluate import compile_rule, scan, scan_trusted
 from .lanes import (ADVISE_MAX_U95, DENY_MAX_U95, admit, binomial_u95,
-                    trials_needed, u95_zero_hits)
+                    bound_within, trials_needed, u95_zero_hits)
 from .model import BenignFiring, Breadth, Lane, Lineage, PredicateKind, Rule, Surface
 
 TRIAL_DEFINITIONS = {
@@ -226,7 +226,11 @@ def admit_from_report(rule: Rule, report: dict) -> tuple[Lane, str]:
     lane, reason = admit(replace(rule, benign=benign), bundle_ok=bundle["bundle_ok"])
     if not bundle["bundle_ok"]:
         return Lane.RECORD, "bundle gate: " + "; ".join(bundle["failures"])
-    if lane is Lane.DENY and bundle["worst_u95"] > DENY_MAX_U95:
+    # A report written before the bundle gate recorded its worst stratum's
+    # counts cannot answer this, and an unanswerable question is not a DENY.
+    if lane is Lane.DENY and bound_within(bundle.get("worst_trials") or 0,
+                                          bundle.get("worst_hits") or 0,
+                                          DENY_MAX_U95) is not True:
         return Lane.ADVISE, "bundle bound only qualifies for ADVISE"
     return lane, f"worst native stratum {worst['stratum']}: {reason}"
 
@@ -353,13 +357,27 @@ def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: st
                 report["rules"][rule.id]["measurements"].append(row)
     missing = sorted(enabled_surfaces - observed_surfaces)
     bundle_rows = report["bundle"]["measurements"]
-    worst = _worst(bundle_rows)["u95"] if bundle_rows else 1.0
+    worst_row = _worst(bundle_rows) if bundle_rows else None
+    worst = worst_row["u95"] if worst_row else 1.0
     failures = coverage_failures + ([f"unmeasured enabled surfaces: {', '.join(missing)}"] if missing else [])
     if not runnable:
         failures.append("no runnable rules")
-    if worst > ADVISE_MAX_U95:
+    # Asked of the counts rather than of the rate: a stratum whose bound lands
+    # on the ceiling is refused by the same three-way test the hook admits
+    # with, and an unresolved comparison is a distinct failure so that the
+    # importer's pooled-bound relaxation cannot cover it.
+    within = bound_within(worst_row["trials"], worst_row["hits"], ADVISE_MAX_U95) if worst_row else False
+    if within is None:
+        # Deliberately not phrased as "worst bundle stratum u95=", which is the
+        # string the importer keys its one relaxation on. A comparison nobody
+        # can make is not a disagreement about which statistic to gate on.
+        failures.append(f"bundle stratum bound {worst:.6f} is not resolvable against the "
+                        f"{ADVISE_MAX_U95} ceiling in double precision")
+    elif within is False:
         failures.append(f"worst bundle stratum u95={worst:.6f} exceeds {ADVISE_MAX_U95}")
     report["bundle"].update(bundle_ok=not failures, worst_u95=worst, failures=failures,
+                            worst_trials=worst_row["trials"] if worst_row else 0,
+                            worst_hits=worst_row["hits"] if worst_row else 0,
                             rule_sha256={r.id: rule_fingerprint(r) for r in runnable})
     n = len(material_rows)
     touched = sum(bool(m["findings"]) for m in material_rows)

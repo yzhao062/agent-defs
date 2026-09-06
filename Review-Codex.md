@@ -1,180 +1,177 @@
-<!-- Round 2 -->
+<!-- Design round 2 -->
 
 Verification notes:
 
-- From the repository root, PowerShell: `$env:PYTHONPATH='src'; & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest tests -q`. Exit 0: **564 passed, 6 skipped, 1 warning in 37.59 s**. The warning concerns a possible nested regex set in an existing adversarial test. This verifies the working tree, including three unstaged fixes, not an isolated export of the index.
-- `$env:PYTHONPATH='src'; & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' Review-Codex-probes.py --corpus`. Exit 0, approximately five seconds. I inspected and reran this existing probe script. It reproduced the staged/working-tree CFG differences, the missing-measurement admission, the inferred-fast loader bypass, a builder crash, corpus coverage counts, UTF-16 boundary differences, and the mocked Windows override behavior. Its staged-module checks execute `git show :src/agent_defs/cfg.py` and `git show :src/agent_defs/loaders/atr.py`; other imports use the working tree.
-- That probe invokes `C:\Program Files\nodejs\node.exe -e <decoder-and-harness>` with a ten-second timeout. The exact generated source is in `Review-Codex-probes.py`: it removes type annotations from the fixture's actual `decodeBase64Blocks` function and feeds it the same inputs as Python. All 121 short cases agreed; the additional long case exposed a slice-boundary difference. No tested block retained by Node was dropped by Python.
-- `git diff --cached --check`: exit 0, no diagnostics. `git rev-parse HEAD`: exit 0, `49f11a550f6cd317821226d37450779fa5b727fd`. `git diff --cached --stat` and `git status --short`: 49 staged files, with additional unstaged changes in `cfg.py`, `loaders/atr.py`, and `build_hazards.py`.
-- `git diff -- src/agent_defs/cfg.py src/agent_defs/loaders/atr.py scripts/build_hazards.py`: exit 0; confirms the three recovered fixes are outside the index. The staged implementation was reviewed through `git diff --cached`, supplemented by surrounding source and fixtures.
-- No timing sweep, malicious-corpus extraction, full four-figure calibration, or isolated staged-suite run was performed. The baseline of 458 passed and 5 skipped is user supplied and was not rerun. The Windows probe mocks extraction; it does not extract samples or enable a real extraction override.
+All shell verification ran in `C:/Users/yuezh/PycharmProjects/agent-defs` with `/c/Program Files/PowerShell/7/pwsh`, profiles disabled. These are fresh round 2 checks of existing behavior, not verification of an implementation diff.
+
+1. Admission, settings preservation, hook behavior, and scan completeness:
+
+~~~powershell
+$env:PYTHONPATH = 'src'
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q tests/test_model_and_lanes.py tests/test_claude_settings_safety.py tests/test_claude_code_hook.py tests/test_claude_hook_failures.py tests/test_hook_integration.py tests/test_scan_completeness.py
+~~~
+
+Outcome: exit 0; **190 passed in 15.21 s**. These tests establish current adapter and installer behavior. They do not establish asynchronous delivery, a proposed activation guard, or live harness enforcement.
+
+2. Recompute the supplied 0 KB fit, construct an upward-drift counterexample, and check the lane arithmetic:
+
+~~~powershell
+$env:PYTHONPATH = 'src'
+@'
+import json
+from agent_defs.lanes import trials_needed, u95_zero_hits
+x = [1, 8, 32, 64, 128, 231, 427]
+y = [.102, .120, .156, .191, .306, .439, .675]
+xm, ym = sum(x)/len(x), sum(y)/len(y)
+b = sum((n-xm)*(v-ym) for n,v in zip(x,y))/sum((n-xm)**2 for n in x)
+a = ym-b*xm
+r2 = 1-sum((v-a-b*n)**2 for n,v in zip(x,y))/sum((v-ym)**2 for v in y)
+drift = [v-(.100+.000300*n) for n,v in zip(x,y)]
+assert all(right > left for left,right in zip(drift,drift[1:]))
+print(json.dumps({'observed_slope_ms': b*1000, 'observed_r2': r2, 'assumed_true_slope_ms': .3, 'compatible_increasing_drift_s': drift, 'fraction_of_fitted_slope_from_drift': 1-.000300/b}))
+for n in [466, 598, 2833, 2995]:
+    print(json.dumps({'trials': n, 'zero_hit_u95': u95_zero_hits(n), 'zero_hit_u95_percent': 100*u95_zero_hits(n)}))
+print(json.dumps({'ADVISE_trials_needed': trials_needed(.005), 'DENY_trials_needed': trials_needed(.001)}))
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+Outcome: exit 0. Observed slope **1.348016549 ms/rule**, R² **0.995996457**. A hypothetical true slope of 0.300 ms/rule plus strictly increasing drift reproduces every supplied observation; drift accounts for **77.745%** of the fitted slope in that construction. Zero-hit upper bounds: **0.640799% at 466**, **0.499706% at 598**, **0.105688% at 2,833**, and **0.099974% at 2,995**. Required clean counts: ADVISE **598**, DENY **2,995**. The construction demonstrates non-identification; it does not establish that drift actually occurred.
+
+3. Probe registration, real worker dispatch, and RECORD logging without touching installed settings:
+
+~~~powershell
+$env:PYTHONPATH = 'src'
+@'
+import json
+from dataclasses import replace
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from agent_defs import evaluate as e
+from agent_defs.hooks import _claude_code_impl as h
+from agent_defs.hooks._settings import merge
+from agent_defs.model import Surface
+with TemporaryDirectory() as tmp:
+    config = h.default_config()
+    log = Path(tmp) / 'findings.jsonl'
+    config['log_path'] = str(log)
+    merged, _ = merge('{}', h.hook_spec(Path(tmp) / 'config.json'), h.owned)
+    print(json.dumps({'registered_events': sorted(json.loads(merged)['hooks']), 'starter_surfaces': sorted({r.surface.value for r in h.STARTER_RULES})}))
+    real = e._run_worker
+    for event, value in [('PreToolUse', 'ordinary'), ('PostToolUse', 'ordinary'), ('PostToolUse', {'a': 'ordinary', 'b': 'ordinary'})]:
+        field = 'tool_input' if event == 'PreToolUse' else 'tool_response'
+        with patch.object(e, '_run_worker', wraps=real) as worker:
+            response = h.process({'hook_event_name': event, field: value}, config)
+        print(json.dumps({'event': event, 'structured': isinstance(value, dict), 'workers': worker.call_count, 'response': response, 'log_exists': log.exists()}))
+    rule = h.STARTER_RULES[0]
+    response = h.process({'hook_event_name': 'PostToolUse', 'session_id': 'probe-session', 'tool_use_id': 'probe-tool', 'tool_response': rule.examples_positive[0]}, config, [rule])
+    row = json.loads(log.read_text())
+    print(json.dumps({'record_match_response': response, 'log_event_keys': sorted(row), 'finding_keys': sorted(row['records'][0])}))
+    with patch.object(h, 'scan', return_value=e.ScanResult((), 0, 1, 0, False)):
+        response = h.process({'hook_event_name': 'PostToolUse', 'tool_response': 'ordinary'}, config, [rule])
+    print(json.dumps({'record_incomplete_response': response}))
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+Outcome: exit 0. Both events are registered although all starter rules are OUT. Starter Pre starts **0 workers**, scalar Post **1**, and two-leaf Post **2**. All three clean cases return `{}` and create no log. A completed RECORD match returns `{}`; its log has neither session nor tool-call identity even when supplied. An injected incomplete result returns both model context and a user warning in RECORD. Matching used real workers; the incomplete-result case deliberately substituted a result to exercise response policy.
+
+4. Validate and replace the review from a temporary file in the repository root:
+
+~~~powershell
+@'
+import os
+from pathlib import Path
+root = Path('C:/Users/yuezh/PycharmProjects/agent-defs').resolve()
+temporary = root / '.Review-Codex-design-round2.tmp'
+target = root / 'Review-Codex.md'
+data = temporary.read_bytes()
+review = data.decode('utf-8')
+assert review.startswith('<!-- Design round 2 -->\n\nVerification notes:\n')
+assert review.splitlines().count('Verification status: VERIFIED') == 1
+assert review.splitlines().count('Commit verdict: BLOCK') == 1
+assert temporary.parent.resolve() == target.parent.resolve() == root
+os.replace(temporary, target)
+assert target.read_bytes() == data
+assert not temporary.exists()
+print('Review format checks passed; same-directory replacement and exact readback passed.')
+'@ | & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -
+~~~
+
+Outcome: exit 0; format checks, same-directory replacement, and exact readback passed.
+
+The official Claude Code hooks reference was fetched on 2026-09-06; relevant links appear beside the documentation claims below. Neither root instruction file exists, so the supplied baseline instructions apply. The cited 2,833-file inventory and its plan were not located in this checkout; its count is treated as your supplied premise, not independently verified evidence. No original latency run, full corpus calibration, or live asynchronous harness session was repeated. Initial `git status --short` showed only ` M Review-Codex.md`. This review changes that file only; no installed settings, commit, push, or destructive Git operation was performed.
 
 Verification status: VERIFIED
 
 Commit verdict: BLOCK
 
-Scope and review lens: the 49-file staged change against `49f11a5`, emphasizing security-library correctness, admission safety, and whether measured evidence covers the executable pattern. Close review covered the hazard table reader/builder, ATR flat and CFG admission, CFG matching and decoding, calibration preparation/scoring, model/lane changes, packaging, and the changed tests. Fixture source excerpts were read where they define the behavior being ported; every YAML payload was not individually audited. The unchanged scan worker was inspected to trace runtime validation. Neither root `AGENTS.md` nor `AGENTS.local.md` exists; the supplied instructions apply. Product source and the index were not modified.
+This verdict applies to the round 2 design **as worded**, specifically the directional inference in disagreement 1 and the inference from present admission limits to performance irrelevance in disagreement 3. There is no implementation diff to approve or reject. I endorse the revised sequence below.
 
-**New findings**
+**1. I reject the direction argument; I accept the descriptive affine-fit claim.**
 
-1. **High: a rule-level fast verdict certifies untimed derived patterns and can override an exact slow verdict.** `src/agent_defs/loaders/atr.py:361` and `:401` pass the raw rule's measurement to ported conditions and a newly composed alternation. At `src/agent_defs/evaluate.py:479`, supplying that measurement skips the exact-pattern lookup. The synthetic builder probe produced an `inferred-fast` row that direct screening refused as unmeasured, but `_predicate` returned `REGEX` with no refusal. A separate probe supplied a fast override for a real pattern recorded slow and screening admitted it.
+Upward drift means later measurements become more expensive. Superlinearity means their marginal cost increases with rule count. The first does not imply the second. In `observed_cost(n) = true_cost(n) + drift(time(n))`, drift proportional to `n` adds to the slope and leaves an affine relationship exactly affine. Even drift linear in run index need not be convex in `n`: your tested counts are very unevenly spaced.
 
-   Timing independent raw searches does not time their composition. Timing an unported surrogate expression in Python is especially poor evidence for its port: the raw expression can be fast simply because it cannot match well-formed text. The checked-in table still contains only `fast` and `slow`; the builder edit has not corrected existing inferred entries.
+The counterexample uses your actual 0 KB observations. Suppose true cost is `0.100 + 0.000300*n` seconds. Add drift of `[0.0017, 0.0176, 0.0464, 0.0718, 0.1676, 0.2697, 0.4469]` seconds at the seven successive measurements. That drift is strictly increasing and accounts for about 78% of the observed fitted slope, while reproducing the same R² of 0.996. It requires no pattern-mix explanation. It is a possible decomposition, not a diagnosis of the experiment.
 
-   Exact replacements at `src/agent_defs/loaders/atr.py:361` and `:401`, using the signature and resolution rewrite under Previously raised 4:
+An affine fit could count against a *specified* drift model that predicts detectable positive curvature, given assumptions about baseline cost, time spacing, noise, and pattern mix. Those assumptions are absent here. Monotone upward drift as a class does not predict that curvature. Therefore I would not record even the proposed weak directional conclusion from ordering alone. The problem is identifiability, not a claim that a large confound certainly exists.
 
-   ```python
-   evaluate.screen_pattern(pattern, require_measurement=True)
-   ```
+I accept this replacement:
 
-   ```python
-   evaluate.screen_pattern(predicate, require_measurement=True)
-   ```
+> An affine model fits the observed timings well over the tested bundles of 1 to 427 rules at three payload sizes; no knee is apparent in those observations. Sizes were tested in monotone order and bundles were prefixes, so the count effect is confounded with time and pattern composition. An interleaved, randomized, blocked rerun is needed to estimate scaling. The fit alone does not rule out substantial upward drift contributing to the slope.
 
-   Retain the existing independent-branch fallback when a composed expression lacks its own measurement. Emit raw fast rows from content-verified measurements; keep untimed ports/compositions distinguishable and unmeasured. Regenerate the table with replay evidence preserved. A fast rule override must never defeat an exact slow row; the resolution rewrite below enforces this.
+Round 1 already said local approximate linearity was supported. Calling the descriptive fit unsupported would be too strong; interpreting it as an identified scaling law would also be too strong. Your proposed rerun addresses the right defects.
 
-2. **High: the builder can attach old timings to changed text while manufacturing a matching digest.** `scripts/build_hazards.py:90` checks only the number of distinct patterns, then hashes the current corpus strings. Replacing a condition while preserving the count creates a matching rule-level fast row for text the report need not have measured. The probe successfully built such a row from a report containing no pattern identity, and the loader admitted it. This differs from a lookup miss: it creates a misleading lookup hit.
+**2. I accept guarded removal of the unused Pre registration as the first implementation change, ahead of A.**
 
-   Exact insertion before the existing count check at `scripts/build_hazards.py:90`, after extending the measurement producer to record the identities it actually timed:
+I placed it too late in round 1. Healthy starter Pre invocations evaluate no IN rule and record no scan. Removing their process launches has a clear rationale without first building a corpus artifact or rerunning the latency experiment. A dedicated measurement is unnecessary to justify the removal.
 
-   ```python
-   expected = sorted({_fingerprint(pattern) for pattern in patterns})
-   if row.get("pattern_digests") != expected:
-       raise SystemExit(f"{source_id}: measurement pattern digests do not match corpus")
-   ```
+The approximately 0.099 s remains a reported measurement for the measured environment, not a guaranteed reduction in every installation's elapsed tool latency. Other matching hooks can overlap this work, and machines differ. Claude documents that matching hooks run in parallel, so a slower parallel handler can determine the wait. This qualifies the claimed saving, not the priority of removing redundant work. [Claude Code hook execution](https://code.claude.com/docs/en/hooks#hook-handler-fields).
 
-   A legacy report lacking that field must fail validation. Preserve flags and runtime/method information with the evidence as well. The declared corpus pin must come from a verified input tree rather than the default `--source-rev` string.
+Approve it as a small installer change with an explicit invariant: **an enabled executable IN bundle cannot become active until its required Pre registration is effective in that harness**. This applies to RECORD IN rules too; the absence of blocking authority does not excuse missing promised observation. An activation failure must leave the candidate inactive and report unavailable coverage, not silently claim it was enabled.
 
-   Neither `measured_at` nor `provenance.corpora.atr` is compared with the loaded revision. Exact pattern lookup and the rule-content digest detect many edits, but their misses currently fall open, and the builder can stamp stale evidence with a new matching digest. An age cutoff is not a substitute for content identity. Reusing an unchanged measured pattern across revisions is reasonable; changed executable text must require its own evidence, and a provenance mismatch should be reported explicitly.
+The guard must execute in installation, update, or bundle activation. Putting it only in the Pre handler that is absent cannot work. A future IN activation should establish registration and any required trust/reload first, confirm the harness can invoke it, and then activate the bundle generation. If activation fails partway, retain the prior active bundle. On removal, disable IN before removing its registration. A settings file containing an entry is weaker evidence than a harness that has actually loaded it.
 
-3. **High for consumer release: there is no usable bounded CFG entry point.** `src/agent_defs/cfg.py:224` executes regexes in-process without a deadline; `scan_cfg_isolated` raises `NotImplementedError` at staged `:355` (working-tree `:363`). The offline-only documentation is candid, but this is not safe for the hostile documents the configuration channel is intended to inspect. Flat `scan()` does not protect this function.
+For today's fixed starter release, this can remain narrow: omit its owned Pre entry and require the future corpus-enabling release to implement the guarded transition. Keep the existing settings preview, backup, ownership, and preservation behavior. Acceptance cases should cover fresh install, upgrade from the two-hook starter, reinstall/uninstall, preservation of other handlers, and attempted IN activation with absent or ineffective Pre registration. These are proposed checks; the passing current tests do not certify that future change.
 
-   The corpus probe found 133 eligible CFG rules and 474 distinct surviving conditions, including **207 unmeasured conditions**. Of the eligible rules, 59 have slow whole-rule verdicts and **39**, not 59, are marked over 60 seconds. No surviving condition has an exact slow row. Therefore these counts do not prove that the known offending condition survives; the missing deadline and unmeasured survivors are the actual exposure.
+The future registration/bundle coupling is a reason for this guard, not a reason to postpone the starter fix until all of A exists. No live settings mutation is part of this design review.
 
-   Implement a killable CFG worker before releasing that consumer capability. A concrete safe interim rewrite at `src/agent_defs/cfg.py:224` is to rename the existing implementation to `scan_cfg_trusted`, update offline callers/exports accordingly, and expose:
+**3. I accept deciding the target behavior before substantial latency optimization. I reject both “RECORD can only ever be the lane” and “therefore performance does not bind.”**
 
-   ```python
-   def scan_cfg(document: str, rules: Iterable[Rule], *,
-                budget_s: float = 1.0,
-                max_bytes: int = DEFAULT_MAX_BYTES) -> "CfgScanResult":
-       return scan_cfg_isolated(document, rules, budget_s=budget_s,
-                                max_bytes=max_bytes)
-   ```
+There is no inherent requirement to finish detection synchronously merely because the system records events. Synchronous capture or durable acceptance can be separated from asynchronous matching. Conversely, the lane name alone does not determine timing. The deciding question is when the promised result must be available:
 
-   Until isolation exists, this fails immediately on consumer use. The eventual worker must preserve condition order, suppression, decoded origin, partial findings, and incomplete status. It should return `CfgScanResult`; the placeholder's `ScanResult` annotation cannot express all that information. Keeping an explicitly trusted research API is acceptable; presenting it as the available consumer scan path is not.
+| Promised behavior | Required timing |
+|---|---|
+| DENY the current input or withhold output before model consumption | Matching must finish at the relevant interception boundary. |
+| ADVISE before the model acts on this event | Advice must be available before that next action; this imposes a synchronous dependency. |
+| Advisory report for later inspection | Matching may be asynchronous; it does not provide same-event protection. |
+| RECORD with eventual findings and explicit pending/lost coverage | Matching may be asynchronous after capture. |
+| Completed scan or audit certificate required before continuation | Completion is synchronous by the product contract, even if the lane is RECORD. |
 
-4. **Medium: regeneration discards the manually added replay refusal.** `src/agent_defs/hazards.json:18` discloses the separate evidence for `atr:ATR-2026-02351`, but `scripts/build_hazards.py` has no input or merge step for it. Rebuilding from the described original sweep restores that rule's non-crossing row and loses the correction.
+“After the response is emitted” is too imprecise for IN/OUT design: distinguish before tool execution, before the result reaches the model, and before a user-facing answer. A later warning cannot retroactively prevent an earlier action. I recommend **eventual RECORD with explicit coverage status for the initial non-intervening release**, while preserving a synchronous evaluation interface for a future admitted enforcement bundle. The main tradeoff is delayed knowledge and additional delivery bookkeeping.
 
-   A hand-transcribed slow result is acceptable as a temporary conservative refusal if its origin is stated honestly. It is not yet reproducible measured evidence. Preserve the replay as machine-readable input with pattern identity, flags, witness bytes or generator/digest, command, runtime, and whether timing completed or timed out. Merge it with slow taking precedence. Retaining the known refusal does not require waiting for a full cross-pattern sweep.
+Your corpus argument does not establish a permanent RECORD ceiling. With 2,833 qualifying independent zero-hit trials, the upper bound is 0.105688%: insufficient for DENY but sufficient for ADVISE's 0.5% threshold. Thus the arithmetic alone does not even force RECORD on that larger corpus. The 466-trial result does force RECORD under these thresholds, but it is CFG evidence and establishes no runtime IN/OUT ceiling. Today's missing runtime evidence prevents promotion today; it does not prove runtime promotion impossible. Additional representative independent evidence is a valid task. Adding 162 files is not automatically sufficient: duplication, dependence, domain mismatch, hits, bundle changes, and selection on the same data can all defeat that arithmetic. The current hook also refuses positive-hit measurements. See [lane admission](src/agent_defs/lanes.py) and [runtime evidence validation](src/agent_defs/hooks/_claude_code_impl.py).
 
-5. **Medium: shared patterns can crash table generation.** At `scripts/build_hazards.py:105`, `prior` can be a one-element fast/inferred-fast row inserted for an earlier rule. The two-rule probe reproduced `IndexError: list index out of range` at `length < prior[1]`. The contradiction checks below the loop cannot repair this. Replace the condition with:
+There is also a concrete qualification to “RECORD observes and never intervenes.” Completed RECORD findings do not advise or deny, but **incomplete RECORD scans currently inject model context and a user warning**. The fresh probe verifies that behavior. Moving matching off the path changes when those warnings can arrive. If warning the model before it consumes incompletely checked content is a requirement, that requirement retains a synchronous completion dependency. If eventual coverage reporting is acceptable, change that contract explicitly; simply setting an async flag does not preserve it.
 
-   ```python
-   if prior is None or prior[0] != "slow" or length < prior[1]:
-   ```
+Pairing and exit loss are delivery problems, not proofs that the matcher must block. Capture immutable event data at the boundary, including session/tool-call identity, event type, sequence or attempt identity where needed, field structure, and bundle/evaluator generation. Preserve missing results as missing; do not assume every Pre has a Post. Durable acceptance before continuation can support eventual processing after process or session exit. A volatile queue supports a weaker claim. Capturing at the boundary also avoids reconstructing different or truncated text later from a transcript.
 
-6. **Medium: UTF-16 limits still use Python code points outside the ratio.** At `src/agent_defs/cfg.py:278`, a document with 91,000 code points but 102,000 UTF-16 units reports `over_source_eval_limit=False` and `complete=True`. This contradicts the policy of marking input beyond Node's 100,000-unit evaluation limit incomplete. Use `len(document.encode("utf-16-le", "surrogatepass")) // 2` for that comparison.
+The current log is not a complete audit ledger even with synchronous scans: clean events produce no record, supplied session/tool-call IDs are discarded, and finding writes do not request a durability flush. The probe verifies the first two; [_log and process](src/agent_defs/hooks/_claude_code_impl.py) show the third. Consequently “retain synchronous scanning to preserve today's complete session audit” would defend a guarantee the implementation does not provide. Durable replay would also require retaining the needed input bytes somewhere; today's hashes cannot reconstruct them. That adds a payload-retention decision to an asynchronous audit design.
 
-   At `src/agent_defs/cfg.py:159`, decoded text is also sliced by code points. The differential case containing 79,999 ASCII characters, 10,000 emoji, and `needle` retains the entire word in Python, while Node's slice retains only its first character. Slice encoded UTF-16 to `2 * BASE64_MAX_DECODED_CHARS` bytes and decode with `surrogatepass` to preserve Node's boundary behavior, including a possible terminal lone surrogate. Add focused boundary assertions.
+For a complete audit, maintain capture and completion records, report gaps and pending work, bound the queue, and make overflow, shutdown, and restart behavior explicit. Publish a final coverage statement only after reconciling the expected events and completed work. Sampling is a valid cheaper product, but it cannot support a complete-session coverage claim. Even exhaustive completed matching supports only “no findings under this bundle on these captured surfaces,” not “this session contained no attack.”
 
-7. **Medium: the Windows opt-in accepts the value `0`.** The mocked probe confirmed that `AGENT_DEFS_ALLOW_MALICIOUS_EXTRACT=0` reaches the archive call. At `scripts/calibration_gate.py:723`, replace the condition with:
+Native background hooks illustrate both feasibility and limitations. Claude's documentation says async command hooks receive the same JSON input, cannot veto the completed action, and deliver context on a later turn. It also says outstanding async hooks are killed at non-interactive teardown, and ordinary async hooks no longer receive the harness timeout after backgrounding. Therefore retain the evaluator's external deadline and test delivery/lifecycle behavior on each supported harness. These are documented capabilities, not live tests performed here. [Claude Code asynchronous hooks](https://code.claude.com/docs/en/hooks#run-hooks-in-the-background).
 
-   ```python
-   if (platform.system() == "Windows"
-           and os.environ.get("AGENT_DEFS_ALLOW_MALICIOUS_EXTRACT") != "1"):
-   ```
+Asynchronous matching removes its service time from the direct wait for that event; it does not remove its CPU, memory, storage, or scheduling costs. If arrivals outrun processing capacity, the backlog grows until some combination of delay, backpressure, dropped work, or sampling occurs. A record required by tomorrow's audit has a completion deadline too. Measure capture/acknowledgment latency, throughput, queue age, completion/loss rates, and interference with foreground work. Expensive matching can still justify batching or admission caching, but those choices would answer a throughput or audit-delay problem instead of a per-event interception budget.
 
-   The current guard is early enough to prevent extraction: it precedes `git archive` and `extractall`. It follows workdir creation, a possible blobless `--no-checkout` clone, and history/tree checks. Moving it to function entry would avoid unnecessary work and make rejection deterministic. An explicit environment opt-in is proportionate here; this is an operator-controlled preparation tool, not a security boundary against that operator.
+Thus **the target lane together with its timing and coverage contract gates the expensive latency work**. A small feasibility measurement still belongs in making that decision. Under eventual RECORD, defer the full synchronous scaling campaign and evaluate capture/delivery plus sustained processing cost. Under same-event ADVISE or DENY, event-shaped latency and completion remain required. For mixed bundles, the admitted rules requiring immediate action can define the synchronous subset while RECORD-only work runs later, provided the action bundle is calibrated as deployed. Merely requesting a higher lane must never promote asynchronous results into authority over an event that already proceeded.
 
-**Previously raised**
+**The revised order I recommend is:**
 
-1. **Fixed in working tree; Still open in index: empty-bundle exception completeness.** The fresh probe reports working-tree `IncompleteScanError.result.complete=False`, one error; staged `complete=True`, zero errors. The unstaged fix works. Exact insertion immediately before constructing the exception at staged `src/agent_defs/cfg.py:319`:
+1. Specify the initial lane, action deadline, audit completeness, and event-loss contract; run only the small capability checks needed to make that choice credible.
+2. Make guarded starter Pre omission the first implementation change.
+3. Implement minimal A: a pinned normalized bundle and a verified path from that bundle to the selected adapter's result. For eventual RECORD, acceptance means attributable capture, completed findings, and explicit gaps; enforcement canaries become required before an enforcement release.
+4. Pursue IN/OUT selection and evaluation against the chosen objective. Measure synchronous event latency/completion for immediate intervention, or capture latency and processing capacity for eventual recording. Keep selection separate from final admission evidence.
+5. Choose D, admission caching, a resident matcher, or a smaller bundle only when the relevant measurements justify it. Expanding calibration evidence can proceed independently.
 
-   ```python
-   if self.empty_bundle:
-       errors += (RuleError("", "no executable binding in the bundle; "
-                                "a zero-rule scan is not a clean document"),)
-   ```
+**What you conceded too readily:** none of the concrete corrections about worker dispatch, starter Pre, the unisolated slope, cold pickle reconstruction, or the CFG/runtime evidence mismatch needs reversal. The concession **A before C** needs a scope limit. It is sensible for deployment claims and selection intended to represent the actual runtime path; it is not a prohibition on exploratory C before A, nor does it require enforcement integration before deciding whether enforcement is the product. Round 1 explicitly allowed exploratory C, but my statement that the entire proposed integration work was necessary under every viable outcome was too broad. An eventual recorder needs a different acceptance contract. You also should not surrender the descriptive affine fit along with the unsupported causal attribution; those remain separate claims.
 
-   Include the existing reviewed working-tree fix in the index before committing and assert the exception result itself is incomplete. The current suite does not catch the staged defect.
-
-2. **Fixed in working tree; Still open in index: CFG surrogate port.** The tag-payload probe reports two usable conditions and an `ATR-2026-00129` finding in the working tree; one condition and no finding with the staged loader. Exact rewrite of the screening block inside `else`, beginning at staged `src/agent_defs/loaders/atr.py:554`:
-
-   ```python
-   ported, _notes = evaluate.port_utf16_surrogates(condition["value"])
-   try:
-       evaluate.screen_pattern(ported)
-   except evaluate.UnsafePattern as exc:
-       reason = str(exc)
-   ```
-
-   Replace staged `src/agent_defs/loaders/atr.py:561`, `usable.append(condition["value"])`, with `usable.append(ported)`. The existing working-tree fix implements this. Combine it with the stricter call below and retain a CFG-specific tag regression assertion.
-
-3. **Still open end to end: inferred-fast rows.** The two working-tree replacements at `scripts/build_hazards.py:115` and `:117` correctly write `inferred-fast`; staged code still writes `fast`. `_measurement_from_row` ignores an inferred row and direct lookup returns `None`, as intended. However, that merely invokes the shape screen. A simple shape is still admitted, and the probe's nested shape is admitted by ATR through the raw-rule fast override described in New 1. Thus "refused as unmeasured" is true for the direct nested-pattern probe, not the entire loading path. Correct the override, strict admission policy, and existing JSON as well as the builder labels.
-
-4. **Still open, High: require measurement on the ATR corpus path before shipping.** Scoped fail-closed is required for the claimed measurement-based admission policy. Appending `(?:)` to the measured-slow pattern from `ATR-2026-00040` preserves its matching behavior but produces no lookup row and is admitted. Worker revalidation repeats the same decision. The deadline bounds flat-scan resource exposure, but still lets a slow rule consume the event's scan budget and prevent later detections. It provides containment, not measurement coverage.
-
-   Exact signature at `src/agent_defs/evaluate.py:454`:
-
-   ```python
-   def screen_pattern(pattern: str, flags: int = re.IGNORECASE, *,
-                      measurement: "Measurement | None" = None,
-                      require_measurement: bool = False) -> None:
-   ```
-
-   Replace the measurement-resolution/slow-refusal block at `src/agent_defs/evaluate.py:479` through the existing slow refusal, leaving the subsequent shape fallback intact:
-
-   ```python
-   recorded = measurement_for_pattern(pattern)
-   if recorded is not None and recorded.slow:
-       raise UnsafePattern(recorded.refusal())
-   if measurement is not None and measurement.slow:
-       raise UnsafePattern(measurement.refusal())
-   if require_measurement and recorded is None:
-       raise UnsafePattern("pattern has no exact measurement; unmeasured")
-   measurement = recorded if recorded is not None else measurement
-   ```
-
-   The strict check deliberately requires the exact lookup, even if a caller supplies a fast override. Other callers retain the default behavior. Apply these exact call-site replacements together:
-
-   | File:line | Replacement |
-   |---|---|
-   | `src/agent_defs/loaders/atr.py:361` | `evaluate.screen_pattern(pattern, require_measurement=True)` |
-   | `src/agent_defs/loaders/atr.py:401` | `evaluate.screen_pattern(predicate, require_measurement=True)` |
-   | `src/agent_defs/loaders/atr.py:555` staged, `:561` after recovered port fix | `evaluate.screen_pattern(ported, require_measurement=True)` |
-   | `src/agent_defs/evaluate.py:572` | `screen_pattern(rule.predicate, flags, require_measurement=(rule.source == "atr"))` |
-   | `src/agent_defs/evaluate.py:577` | `screen_pattern(pattern, flags, require_measurement=(rule.source == "atr"))` |
-   | `src/agent_defs/cfg.py:175` | `screen_pattern(pattern, re.IGNORECASE, require_measurement=(rule.source == "atr"))` |
-
-   Runtime enforcement also requires preserving source identity, which the current worker discards. Exact replacement of the return at `src/agent_defs/evaluate.py:637`:
-
-   ```python
-   return dict(id=rule.id, source=rule.source, kind=kind.value, predicate=pred,
-               case_sensitive=rule.case_sensitive, surface=rule.surface.value)
-   ```
-
-   At `src/agent_defs/_scan_worker.py:19`, replace the first line of the `Rule` construction, retaining its remaining arguments:
-
-   ```python
-   rule = Rule(id=item["id"], source=item["source"], source_id="", source_rev="",
-   ```
-
-   Netzilo, AgentShield, and direct synthetic screening calls retain the default. Tests constructing ATR rules must explicitly provide measurement evidence where they test strict admission. The fresh corpus probe confirms zero missing rows among **444 distinct executable regex strings, counting structured branches individually, in 427 runnable rules**. This supports no flat-bundle cost from missing-row refusal today. It does not establish that every existing fast row came from timing that exact string. Correcting inferred data may cost additional rules, and CFG's 207 unmeasured surviving strings make its tradeoff real and reportable.
-
-**Other requested assessments**
-
-The printable-ratio edit itself is correct. Both implementations count ASCII 32 through 126 in the numerator, UTF-16 units in the denominator, and require a strict ratio greater than 0.7. It cannot by itself drop a block Node keeps. The short differential cases covered astral characters, threshold boundaries, malformed UTF-8, padding fragments, and multiple blocks, with no discrepancies. The remaining `len(decoded) >= 10` difference cannot lose a qualifying block under the current 32-character base64 minimum: the only shorter-than-ten-code-point string with at least ten UTF-16 units and enough ASCII is eight ASCII characters plus one astral character, whose UTF-8 encoding produces only 16 base64 characters. The actual remaining boundary defects are New 6. This is targeted verification, not exhaustive decoder equivalence.
-
-The five edited tests retain some useful properties, but two now ask less:
-
-- `tests/test_cfg.py:66`: the Apify/00111 replacement still explicitly requires the flat false positive and zero CFG findings. It preserves the intended comparison.
-- `tests/test_cfg.py:242`: the dropped-condition carrier still requires one refusal, a recorded screen gate, and three survivors. It preserves that property. Correct the docstring's `00440` to the actual `00162` carrier.
-- `tests/test_cfg.py:224`: the six-survivor update still pins CFG eligibility, flat refusal, and the survivor count. This does not hide loss of the assertion, although the composition-based explanation should be updated for the measurement refusal.
-- `tests/test_hazard_screen.py:123`: deriving slow/fast counts now tests internal consistency rather than preserving an independent measurement total. The explicit `02351` check protects that correction, but other accidental fast relabels can pass if counts change with them. Validate against reproducible evidence; another hard-coded total is not sufficient evidence either.
-- `tests/test_cfg.py:380`: deriving the condition index proves the reported condition matches somewhere, but does not require the first matching condition or its reported span. The present payload matches only condition 1, and the probe reports 1, so it still pins this fixture's index. Strengthen it by deriving the first match with `re.IGNORECASE` and comparing both index and span. A future fixture with several matches could otherwise conceal an ordering regression.
-
-These test files are newly added relative to HEAD, so their pre-edit forms are not available as a separate staged comparison. The assessment uses their current assertions and documented former purpose. The `test_atr.py` fixture replacements also retain separate runnable/refused semantic-fallback checks and a runnable breadth witness.
-
-The calibration source-pin premise needs correction: `_SRC_TREE` has one entry, but two figures share it. `self_test` and `external_pint` both have checked source trees; `skill_md` and `concentration` do not. Only `self_test` substitutes an executed revision for the measured revision, and `prepare` checks both rules and source trees for both revisions there. The other figures execute their specified measured revisions, while scoring verifies rule and corpus content digests. Missing redundant source-tree pins for those two figures are not independently a release blocker. Report absent checks explicitly, as the `_SRC_TREE` comment promises, and require source equivalence whenever a substitution is introduced.
-
-The calibration gate still routes every sample through `scan_trusted`, including skill samples; it does not yet validate the new CFG path. Its reported FAIL 0 of 4 can be an honest flat-path calibration result, as intended, but cannot be cited as an end-to-end CFG reproduction. The full figure result was not rerun in this review; the suite's optional prepared-corpus test was skipped.

@@ -322,3 +322,72 @@ def test_malicious_sample_paths_are_never_written_to_disk():
     ]
     for path in allowed:
         assert not _is_excluded(Path(path).parts), path
+
+
+#: An archive shaped like the real corpus: rules beside sample directories, one
+#: of which the deny-list did not know about until it reached a scanner.
+SAMPLE_BEARING = [
+    ("repo/rules/test.json", b'{"id":"fixture-1"}\n', None),
+    ("repo/LICENSE", b"MIT\n", None),
+    ("repo/data/skill-benchmark/benign/ordinary.md", b"an ordinary skill\n", None),
+    ("repo/data/skill-benchmark/malicious/dropper.md", b"PAYLOAD\n", None),
+    ("repo/data/test-corpora/advbench/x.yaml", b"PAYLOAD\n", None),
+    ("repo/conformance/v1.0/fixtures/tp/ATR-2026-00080/input.md", b"PAYLOAD\n", None),
+    ("repo/conformance/v1.0/fixtures/tn/ATR-2026-00080/input.md", b"benign\n", None),
+    ("repo/spec/conformance/baseline/fixtures/a.md", b"PAYLOAD\n", None),
+    ("repo/tests/fixtures/b.md", b"PAYLOAD\n", None),
+]
+
+
+@pytest.fixture
+def sample_bearing(tmp_path, monkeypatch):
+    archive = tarball(SAMPLE_BEARING)
+    entries = json.loads(FIXTURE_LOCK.read_text(encoding="utf-8"))
+    entries[0]["archive_sha256"] = hashlib.sha256(archive).hexdigest()
+    path = tmp_path / "sources.lock"
+    path.write_text(json.dumps(entries), encoding="utf-8")
+    monkeypatch.setattr(sources, "DEFAULT_LOCK", path)
+    return path, archive, tmp_path / "cache"
+
+
+def test_the_conformance_suite_never_reaches_disk(sample_bearing, monkeypatch):
+    """The directory that set the antivirus off on 2026-09-06.
+
+    The two original prefixes held that day. What landed was the corpus's
+    conformance suite, whose tp directory is one true-positive attack document
+    per rule, and which the deny-list did not name.
+    """
+    path, archive, cache = sample_bearing
+    fake_download(monkeypatch, archive)
+    tree = sources.fetch("atr", cache, lock_path=path)
+
+    written = {p.relative_to(tree).as_posix() for p in tree.rglob("*") if p.is_file()}
+    assert written == {"rules/test.json", "LICENSE",
+                       "data/skill-benchmark/benign/ordinary.md"}
+    for gone in ("conformance", "spec/conformance", "tests/fixtures"):
+        assert not (tree / gone).exists(), f"{gone} was extracted"
+    # An excluded directory is not created either, so the tree stops carrying
+    # empty folders named after the samples it refused. A parent that is not
+    # itself excluded, such as "spec", may survive empty; that holds no sample.
+    assert not list(tree.rglob("ATR-2026-00080"))
+    assert not [p for p in tree.rglob("*") if p.is_file() and b"PAYLOAD" in p.read_bytes()]
+    assert (tree.parent / "EXCLUDED").read_text(encoding="utf-8").startswith("6 members")
+
+
+def test_a_cache_with_excluded_members_verifies_and_is_reused(sample_bearing, monkeypatch):
+    """The bug that made every run re-extract, which is how samples recur.
+
+    The extractor skipped excluded members while the verifier compared the tree
+    against every member the archive declares, so the first cache entry failed
+    its own check and the next call downloaded and extracted the corpus again.
+    """
+    path, archive, cache = sample_bearing
+    calls = fake_download(monkeypatch, archive)
+    tree = sources.fetch("atr", cache, lock_path=path)
+    assert len(calls) == 1
+
+    before = {p: p.stat().st_mtime_ns for p in cache.rglob("*")}
+    assert sources.fetch("atr", cache, lock_path=path) == tree
+    assert len(calls) == 1, "the cache did not hit, so the corpus was extracted twice"
+    assert before == {p: p.stat().st_mtime_ns for p in cache.rglob("*")}
+    assert sources.verify(cache, lock_path=path)["atr"]["status"] == "verified"

@@ -44,15 +44,52 @@ _REPO = re.compile(r"https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\Z")
 #: Nothing in this package needs them on disk. A rule's reachability is checked at
 #: build time against examples read from the archive in memory, and ATR's own npm
 #: artifact already excludes ``data/test-corpora`` from what it publishes.
+#: **This list has been outrun once already.** On 2026-09-06 a fetch on the
+#: Windows host set the antivirus off again, and the two prefixes below were not
+#: at fault: they held. What landed was ``conformance/v1.0/fixtures/tp``, the
+#: corpus's conformance suite, whose ``tp`` directory is one true-positive
+#: attack document per rule. The list did not know that directory existed,
+#: because a deny-list cannot know where a corpus will put its samples next.
+#:
+#: Treat additions here as evidence that the shape is wrong rather than as the
+#: fix. What is actually needed from a corpus is ``rules/`` and the licence;
+#: everything else is extracted because nothing says not to. Until a caller can
+#: declare what it needs, the entries below are the guard, and a new upstream
+#: directory of samples will beat them the same way.
 NEVER_EXTRACT = (
     ("data", "skill-benchmark", "malicious"),
     ("data", "test-corpora"),
+    ("conformance",),
+    ("spec", "conformance"),
+    ("tests", "fixtures"),
 )
 
 
 def _is_excluded(parts):
     """True when an archive member sits under a NEVER_EXTRACT prefix."""
     return any(tuple(parts[:len(prefix)]) == prefix for prefix in NEVER_EXTRACT)
+
+
+def _kept(files, directories):
+    """The members that belong on disk, given :data:`NEVER_EXTRACT`.
+
+    Both the extractor and the cache verifier read the layout through this, and
+    that is the point rather than tidiness. They used to disagree: the writer
+    skipped excluded members while the verifier compared the tree against every
+    member the archive declares, so a cache built for a corpus with excluded
+    paths failed its own check on the next call. The cache could then never hit,
+    and every run re-extracted the corpus, which is the thing that keeps putting
+    samples in front of a scanner.
+
+    A directory is kept when it is not itself excluded. An excluded directory
+    is not created either, so the tree stops carrying empty folders named after
+    the samples that were refused.
+    """
+    kept_files = {relative: member for relative, member in files.items()
+                  if not _is_excluded(PurePosixPath(relative).parts)}
+    kept_dirs = {relative for relative in directories
+                 if not _is_excluded(PurePosixPath(relative).parts)}
+    return kept_files, kept_dirs
 
 
 class SourceError(RuntimeError):
@@ -235,7 +272,10 @@ def _check(entry, cached):
         if tree.is_symlink() or not tree.is_dir():
             raise ValueError("cached tree is missing or is a link")
         with tarfile.open(archive_path, "r:gz") as archive:
-            files, directories = _layout(archive)
+            # Through the same filter the extractor used. Comparing against
+            # every declared member instead made a cache with excluded paths
+            # fail verification, so it never hit and every call re-extracted.
+            files, directories = _kept(*_layout(archive))
             observed_files, observed_dirs = set(), set()
             for parent, dirs, names in os.walk(tree, followlinks=False):
                 for child in dirs + names:
@@ -291,15 +331,13 @@ def fetch(name, cache_dir=DEFAULT_CACHE, *, lock_path=None, timeout=30):
                 raise SourceError(name, f"archive digest mismatch: expected {entry['archive_sha256']}, got {actual}")
             tree = stage / "tree"
             with tarfile.open(archive_path, "r:gz") as archive:
-                files, directories = _layout(archive)
+                declared, all_directories = _layout(archive)
+                files, directories = _kept(declared, all_directories)
                 tree.mkdir()
                 for relative in sorted(directories):
                     (tree / relative).mkdir(parents=True, exist_ok=True)
-                skipped = 0
+                skipped = len(declared) - len(files)
                 for relative, member in files.items():
-                    if _is_excluded(Path(relative).parts):
-                        skipped += 1
-                        continue
                     with archive.extractfile(member) as source, (tree / relative).open("xb") as target:
                         shutil.copyfileobj(source, target)
                 if skipped:

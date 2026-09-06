@@ -57,6 +57,35 @@ must record how many manifest entries were present when they ran.
 5. **Ship a self-check.** Before publishing a bundle, scan the built artifact with whatever scanner
    is available and record the result. A detection on our own release is a release blocker.
 
+## It happened a third time, and the guard was the thing that failed
+
+2026-09-06. A `sources.fetch("atr")` on the Windows host to count something unrelated set the
+antivirus off again. The two `NEVER_EXTRACT` prefixes held: `data/skill-benchmark/malicious` and
+`data/test-corpora` were skipped, 1,133 members in total. What landed was
+`conformance/v1.0/fixtures/tp/`, the corpus's own conformance suite, which carries one
+true-positive attack document per rule in 74 directories. The deny-list did not name it, and the
+fetch then failed during cleanup because the scanner was holding a file open.
+
+**A deny-list cannot know where a corpus will put its samples next.** That is the finding, and
+adding the missing prefixes is not the fix. Three things changed:
+
+1. `conformance`, `spec/conformance` and `tests/fixtures` were added to `NEVER_EXTRACT`, with a note
+   at the definition saying plainly that the list has been outrun and will be again.
+2. An excluded directory is no longer created, so a refused tree stops leaving behind empty folders
+   named after the samples it refused.
+3. A real defect behind the recurrence: the extractor skipped excluded members while the cache
+   verifier compared the tree against **every** member the archive declares. A cache built for a
+   corpus with excluded paths therefore failed its own verification, never hit, and every call
+   re-downloaded and re-extracted the corpus. That is a mechanism for putting samples in front of a
+   scanner over and over, and it was never tested because the test fixture archive has no excluded
+   members. Both are now regression-tested in `tests/test_sources.py`.
+
+The count that prompted the fetch was then taken a different way, and that way is the shape the rule
+1 asks for: the tarball is streamed into memory, never written, and an **allow-list** extracts
+`rules/**` and the licence only. 793 rule files out, 18,611 members refused. A sample cannot reach
+disk under that shape whatever upstream grows, which is what a deny-list cannot promise. Moving
+`fetch` to an allow-list is the outstanding work.
+
 ## It happened again, which is why it is now a guard rather than a rule
 
 2026-09-04, later the same day. Real-time protection fired repeatedly during the second build round.

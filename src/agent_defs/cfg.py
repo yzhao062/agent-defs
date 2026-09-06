@@ -44,7 +44,6 @@ from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 from .evaluate import (
-    DEFAULT_BUDGET_S,
     DEFAULT_MAX_BYTES,
     Finding,
     IncompleteScanError,
@@ -70,6 +69,25 @@ BASE64_MIN_DECODED_CHARS = 10
 BASE64_MIN_PRINTABLE_RATIO = 0.7
 BASE64_MAX_DECODED_CHARS = 100_000
 SOURCE_MAX_EVAL_CHARS = 100_000
+
+#: Deadline for one configuration document, and it is not ``evaluate``'s.
+#:
+#: A tool-call scan runs on every turn, so 0.25 s there is a per-turn tax. This
+#: channel runs once, when someone installs or edits a configuration file, and
+#: the unit of work is the whole eligible bundle rather than one predicate.
+#: Measured on the slowest host available, a loaded Windows laptop, against all
+#: 133 eligible rules of the pinned corpus: 0.11 s for the worker and one rule,
+#: 0.43 s for a real 12.9 KB benign skill document, 0.64 s for the largest
+#: document in ATR's own benchmark at 44,684 characters, and 1.02 s at 100,000,
+#: which is where the source stops evaluating anything at all.
+#:
+#: 0.25 s therefore fails every one of those. A deadline a correct document
+#: cannot meet does not report a slow document, it reports a broken tool, and a
+#: caller who sees ``complete=False`` on ordinary input learns to reach for
+#: ``scan_cfg_trusted``, which is the one call this module exists to discourage.
+#: 2.0 s clears the worst measured case by roughly a factor of two and still
+#: bounds a catastrophic pattern that would otherwise run for 60 seconds or more.
+CFG_DEFAULT_BUDGET_S = 2.0
 
 
 @dataclass(frozen=True)
@@ -370,7 +388,7 @@ def scan_cfg_isolated(
     document: str,
     rules: Iterable[Rule],
     *,
-    budget_s: float = DEFAULT_BUDGET_S,
+    budget_s: float = CFG_DEFAULT_BUDGET_S,
     decode_base64: bool = True,
     suppress_code_blocks: bool = True,
     max_bytes: int = DEFAULT_MAX_BYTES,
@@ -478,6 +496,7 @@ scan_cfg = scan_cfg_isolated
 
 __all__ = [
     "BASE64_MAX_BLOCKS",
+    "CFG_DEFAULT_BUDGET_S",
     "SOURCE_MAX_EVAL_CHARS",
     "CfgFinding",
     "CfgScanResult",

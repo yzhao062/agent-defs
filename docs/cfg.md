@@ -164,6 +164,29 @@ document. The same call through `scan_cfg_trusted` does not return. On ordinary 
 two paths agree finding for finding, span for span, including which condition
 matched and whether it came from the document or a decoded block.
 
+### What it costs
+
+The deadline is a ceiling, not a duration: a correct document finishes well
+inside it. Measured on the slowest host available, a loaded Windows laptop,
+against all 133 eligible rules of the pinned corpus.
+
+| Input | Isolated | In process |
+|---|---|---|
+| the worker and one rule | 0.11 s | -- |
+| a real 12.9 KB benign skill document | 0.43 s | 0.21 s |
+| the largest document in ATR's benchmark, 44,684 characters | 0.64 s | -- |
+| 100,000 characters, where the source stops evaluating at all | 1.02 s | -- |
+
+Isolation costs about 0.1 s to start the worker plus the cost of screening and
+compiling the bundle again in a cold process, which is deliberate: revalidating
+inside the worker is what stops stale or unscreened data from bypassing the
+screen. `CFG_DEFAULT_BUDGET_S` is 2.0 s rather than `evaluate`'s 0.25 s, because
+this channel runs once when someone installs or edits a file rather than on every
+turn, and because 0.25 s fails every row in that table. A deadline a correct
+document cannot meet does not report a slow document, it reports a broken tool,
+and a caller who sees `complete=False` on ordinary input learns to reach for
+`scan_cfg_trusted`.
+
 The plain name is the bounded one. `scan_cfg` is `scan_cfg_isolated`, and the
 in-process path is `scan_cfg_trusted`: no isolation, no deadline, for measurement
 and for material the caller wrote. `evaluate` already spelled the unprotected

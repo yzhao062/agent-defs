@@ -96,10 +96,16 @@ def binomial_u95(trials: int, hits: int) -> float:
     **This value is for reporting, and is not the thing to compare against a
     lane ceiling.** Inverting the CDF concentrates the coefficient's rounding
     error into the returned rate, and near a ceiling that error decides the
-    lane: at 4,907 hits in 5,023,741 trials this returns 0.0009999999999418658
-    while the exact bound is above 0.001, so a direct comparison reads DENY
-    where the arithmetic does not support it. :func:`bound_within` answers the
-    comparison without inverting, and refuses when it cannot.
+    lane. At 4,907 hits in 5,023,741 trials the exact bound is above 0.001,
+    while this returns 0.0009999999999418658 on glibc and on Windows, so a
+    direct comparison reads DENY where the arithmetic does not support it.
+
+    It is worse than one wrong answer. The same call returns
+    0.001000000000146392 on macOS, above the ceiling, so **which side of a
+    ceiling this value falls on depends on the host's libm** and a lane decided
+    by comparing it is a lane decided by the machine. :func:`bound_within`
+    answers the comparison without inverting, and refuses when it cannot, which
+    is the same refusal on every platform.
 
     No domain is enforced here, because a reported rate that is wrong in its
     last digits is a display problem rather than an admission one. The accuracy

@@ -106,10 +106,16 @@ rate is at or below a ceiling is the same question as whether
 `P[Binomial(trials, ceiling) <= hits] <= 0.05`, which takes one evaluation at
 the ceiling; inverting instead concentrates the coefficient's rounding into the
 returned rate, and near a ceiling that rounding decides the lane. At 4,907 hits
-in 5,023,741 trials the inverted value is 0.0009999999999418658 while the exact
-bound is above 0.001, so a float comparison reads `DENY` where the arithmetic
-does not support it. `lanes.bound_within` answers True, False, or **neither**,
-and every caller takes the stricter lane on neither.
+in 5,023,741 trials the exact bound is above 0.001, while the inverted value is
+0.0009999999999418658 on glibc and on Windows, so a float comparison reads
+`DENY` where the arithmetic does not support it.
+
+The same call returns 0.001000000000146392 on macOS, above the ceiling. **Which
+side of a ceiling that value falls on depends on the host's libm**, so a lane
+decided by comparing it is a lane decided by the machine that ran the import.
+CI caught this by disagreeing with itself across runners.
+`lanes.bound_within` answers True, False, or **neither**, every caller takes the
+stricter lane on neither, and that refusal is the same on every platform.
 
 ## Two gates, and the one this uses
 

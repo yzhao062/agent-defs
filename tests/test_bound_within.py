@@ -46,10 +46,27 @@ def rule_with(measurement):
 
 
 @pytest.mark.parametrize("trials,hits,ceiling", NEAR_CEILING)
-def test_the_inverted_bound_reads_the_wrong_side_of_the_ceiling(trials, hits, ceiling):
-    """The defect this exists for, stated as a fact about the reported value."""
-    assert binomial_u95(trials, hits) <= ceiling
-    assert exact_cdf(trials, hits, ceiling) > Decimal("0.05")
+def test_the_inverted_bound_lands_on_the_ceiling_and_the_side_is_not_portable(
+        trials, hits, ceiling):
+    """The defect this exists for, stated so it holds on every platform.
+
+    The truth is portable: the exact bound is above the ceiling, computed from
+    an exact ``math.comb`` and ``Decimal``, which share no arithmetic with the
+    code under test. Which side the *inverted* value lands on is not portable,
+    because it inherits its platform's ``lgamma``. An earlier version of this
+    test asserted the side and passed on Linux and Windows while failing on
+    macOS 3.14, where two of these three come back at 0.001000000000146392 and
+    0.0050000000002336864 instead, above the ceilings rather than below.
+
+    That is a sharper statement of the problem than the original, so it is
+    asserted rather than merely noted: a lane decided by comparing this value
+    to a ceiling is a lane decided by the host's libm.
+    """
+    value = binomial_u95(trials, hits)
+    assert abs(value - ceiling) < 1e-8 * ceiling, (
+        "the case no longer sits on the ceiling, so it no longer witnesses anything")
+    assert exact_cdf(trials, hits, ceiling) > Decimal("0.05"), (
+        "the exact bound must be above the ceiling for this to be a wrong-side case")
 
 
 @pytest.mark.parametrize("trials,hits,ceiling", NEAR_CEILING)

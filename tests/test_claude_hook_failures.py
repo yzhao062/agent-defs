@@ -227,7 +227,33 @@ def test_partial_log_write_warns_without_discarding_redaction(config, monkeypatc
     rule = STARTER_RULES[0]
     config["sources"]["builtin"] = "DENY"
     evidence(config, [rule])
-    monkeypatch.setattr(hook.os, "write", lambda fd, data: 1)
+    # Cripple the write to the diagnostic log and nothing else. Patching
+    # os.write outright also reached subprocess.communicate, which sends the
+    # scan worker its request with os.write on POSIX and through a file object
+    # on Windows. The worker was handed one byte of its request on every
+    # platform but Windows, returned no findings, and the redaction this test
+    # exists to check was never attempted. It passed on Windows because the
+    # patch missed, which is the shape of a test that asks nothing at all.
+    log_path = str(Path(config["log_path"]).expanduser())
+    real_open, real_write = hook.os.open, hook.os.write
+    log_fds = set()
+
+    def track_open(path, *args, **kwargs):
+        fd = real_open(path, *args, **kwargs)
+        if str(path) == log_path:
+            log_fds.add(fd)
+        return fd
+
+    def short_write(fd, data):
+        # Discard on use, so a later reuse of the same descriptor number by an
+        # unrelated open is not crippled too.
+        if fd in log_fds:
+            log_fds.discard(fd)
+            return 1
+        return real_write(fd, data)
+
+    monkeypatch.setattr(hook.os, "open", track_open)
+    monkeypatch.setattr(hook.os, "write", short_write)
     response = hook.process(payload("PostToolUse", rule.examples_positive[0]), config, [rule])
     assert response["hookSpecificOutput"]["updatedToolOutput"] == hook.WITHHELD
     assert "log could not be written" in response["systemMessage"]

@@ -28,10 +28,17 @@ def by_id(loaded, number):
 
 def test_imports_need_no_yaml_or_other_third_party_dependency():
     script = """
-import sys
+import os, sys, sysconfig
+# sys.stdlib_module_names arrived in 3.10, and this package still supports 3.9.
+# The names sitting directly in the stdlib directory are the same set for this
+# purpose: site-packages is a directory inside it rather than a module, so an
+# installed third-party distribution is not listed and cannot slip through.
+STDLIB = getattr(sys, 'stdlib_module_names', None) or (
+    frozenset(sys.builtin_module_names)
+    | frozenset(n.split('.')[0] for n in os.listdir(sysconfig.get_paths()['stdlib'])))
 class NoThirdParty:
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] not in sys.stdlib_module_names | {'agent_defs'}:
+        if fullname.split('.')[0] not in STDLIB | {'agent_defs'}:
             raise AssertionError(fullname)
 sys.meta_path.insert(0, NoThirdParty())
 import agent_defs

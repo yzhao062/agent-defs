@@ -111,16 +111,25 @@ def test_digest_mismatch_never_extracts_or_publishes(fixture, monkeypatch):
     assert list(cache.iterdir()) == []
 
 
-# The ids are spelled out because one value cannot be introspected safely. On
-# 3.9 urllib's HTTPError inherits tempfile._TemporaryFileWrapper through
-# addbase, and constructing it with fp=None leaves the wrapper uninitialised, so
-# its __getattr__ raises KeyError rather than AttributeError for any missing
-# name. pytest reads __name__ off each value to build an id, which turned that
-# into a collection error that stopped the whole 3.9 run. Naming the cases skips
-# the lookup and reads better besides.
+def http_error(url, code, msg):
+    """An HTTPError shaped the way urllib actually raises one.
+
+    The fifth argument is the response body, and urllib always has one. Passing
+    None instead leaves the object half-built: on 3.9 HTTPError reaches
+    tempfile._TemporaryFileWrapper through urllib.response.addbase, whose
+    __init__ only runs when fp is not None, so its __getattr__ raises KeyError
+    rather than AttributeError for any name it does not carry. That reached the
+    suite twice. pytest reads __name__ off each parametrize value to build an
+    id, which made collection of this module fail outright and ended the whole
+    3.9 run; and sources.py's own attribute reads then returned None instead of
+    a status. Handing it a real body fixes both, and models the real error.
+    """
+    return HTTPError(url, code, msg, {}, io.BytesIO(b""))
+
+
 @pytest.mark.parametrize("failure,status", [
     (URLError("offline"), None),
-    (HTTPError("https://example.invalid", 404, "not found", {}, None), 404),
+    (http_error("https://example.invalid", 404, "not found"), 404),
     (TimeoutError("timed out"), None),
 ], ids=["urlerror", "http-404", "timeout"])
 def test_network_failure_names_source_and_never_falls_back(fixture, monkeypatch, failure, status):
@@ -238,7 +247,7 @@ def test_drift_three_states_and_current_default_branch(fixture, monkeypatch):
         url = request.full_url
         calls.append(url)
         if "agentshield" in url:
-            raise HTTPError(url, 503, "unavailable", {}, None)
+            raise http_error(url, 503, "unavailable")
         if "/commits/" not in url:
             return Response(b'{"default_branch":"release/new"}')
         assert url.endswith("/commits/release%2Fnew")
@@ -262,9 +271,9 @@ def test_drift_three_states_and_current_default_branch(fixture, monkeypatch):
     (b"invalid json", 200), (b'{"sha":"main"}', 200),
     (b"{}", 200), (b"null", 200),
     (URLError("offline"), None),
-    (HTTPError("https://example.invalid", 403, "rate limited", {}, None), 403),
+    (http_error("https://example.invalid", 403, "rate limited"), 403),
 ], ids=["invalid-json", "sha-is-a-branch-name", "empty-object", "null",
-        "urlerror", "http-403"])  # ids spelled out for the reason given above
+        "urlerror", "http-403"])
 def test_bad_head_is_unreachable_even_after_metadata_success(fixture, monkeypatch, head, status):
     def open_url(request, *, timeout):
         if "/commits/" not in request.full_url:

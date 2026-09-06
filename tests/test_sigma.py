@@ -179,11 +179,16 @@ def test_agentshield_port_uses_id_and_author_despite_changed_title():
 
 def test_imports_work_when_all_third_party_imports_are_blocked():
     script = '''
-import sys, importlib.abc
+import os, sys, sysconfig, importlib.abc
+# See the note in test_atr.py: 3.9 has no sys.stdlib_module_names, and the
+# names directly under the stdlib directory stand in for it.
+STDLIB = getattr(sys, 'stdlib_module_names', None) or (
+    frozenset(sys.builtin_module_names)
+    | frozenset(n.split('.')[0] for n in os.listdir(sysconfig.get_paths()['stdlib'])))
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
         name = fullname.split('.')[0]
-        if name not in sys.stdlib_module_names and name != 'agent_defs':
+        if name not in STDLIB and name != 'agent_defs':
             raise AssertionError('third-party import: ' + fullname)
 sys.meta_path.insert(0, Block())
 import agent_defs

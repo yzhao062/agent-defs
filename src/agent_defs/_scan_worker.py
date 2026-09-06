@@ -16,7 +16,7 @@ def main():
     payload = request["payload"]
     for index, item in enumerate(request["rules"]):
         try:
-            rule = Rule(id=item["id"], source="", source_id="", source_rev="",
+            rule = Rule(id=item["id"], source=item.get("source", ""), source_id="", source_rev="",
                         source_path="", upstream_url="", surface=Surface(item["surface"]),
                         predicate_kind=PredicateKind(item["kind"]), predicate=item["predicate"],
                         case_sensitive=item["case_sensitive"])

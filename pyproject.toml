@@ -44,5 +44,10 @@ license-files = ["LICENSE", "THIRD-PARTY-NOTICES"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# The refusal screen consults measured timings, so the measurement ships with
+# the code that reads it. Without it the screen falls back to shape.
+agent_defs = ["hazards.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -54,6 +54,7 @@ artifact and does not belong in this package.
 | `predicate` | the condition, in the shape `predicate_kind` names |
 | `not_runnable_reason` | required whenever `predicate_kind` is `NONE` |
 | `case_sensitive` | defaults to `False` |
+| `bindings` | `ChannelBinding` per channel the source's own dispatcher routes this rule to |
 
 The surfaces are the four places a person's agent offers, plus `PROMPT` for rules about the user's own
 text and `NONE` for reference material with no interception point. Measured distribution across the
@@ -71,13 +72,45 @@ this deliberately and record why in `extra`.
 a condition to make it runnable manufactures exactly the noise this project exists to avoid. A
 condition that cannot be carried faithfully gets `predicate_kind=NONE` and a reason, and is counted.
 
-The supported `STRUCTURED` form is `{"regex_all": [pattern, ...]}`: 1 to 64 regexes that must
-each match the same text payload. Each leaf passes `screen_pattern` and is searched independently;
-the loader adds no regex syntax and the runtime does not retry one leaf in response to another.
-The rule's case mode applies to each leaf, including its original inline flags. Findings show the
-first leaf's match span only after every leaf matches, as with `SUBSTRING_ALL`. Other structured
-forms, mixed payload fields, mixed case modes and backreferences remain unsupported. `scan()`
-screens and searches the entire conjunction in its worker under the same scan deadline.
+The supported `STRUCTURED` forms are `{"regex_all": [pattern, ...]}` and
+`{"regex_any": [pattern, ...]}`: 1 to 64 regexes that must all match the same text payload, or of
+which any one may. Each leaf passes `screen_pattern` and is searched independently; the loader adds
+no regex syntax and the runtime does not retry one leaf in response to another. The rule's case mode
+applies to each leaf, including its original inline flags. `regex_all` findings show the first
+leaf's match span only after every leaf matches, as with `SUBSTRING_ALL`; `regex_any` reports the
+leftmost hit, breaking a tie toward the earlier leaf, which is where an alternation of the same
+branches would have matched. Other structured forms, mixed payload fields, mixed case modes and
+backreferences remain unsupported. `scan()` screens and searches every leaf in its worker under the
+same scan deadline.
+
+`regex_any` exists so that a limit on pattern length cannot decide whether a rule ships. A source's
+disjunction is normally carried as one scoped alternation, which is this package's own rewrite of
+what the source published. Two ATR rules join to more than the 4,096-character limit that bounds a
+single pattern, and the limit has real headroom against upstream text: the longest pattern any of
+the six corpora publishes is 2,213 characters and the largest condition count is 46. When the join
+does not fit, the branches are carried instead, and `extra["execution"]["composition"]` records why.
+
+**`bindings` carries the source's own dispatcher, and it is part of the rule.** A pattern lifted out
+of the engine that decides when it runs is a different artifact from what its authors shipped. On
+ATR's skill benchmark the same patterns matched flat flag 155 of 466 benign documents and, run
+through ATR's own admission gates, flag the 1 that ATR itself flags. A `ChannelBinding` names the
+channel, the source's entry point, whether that entry point admits the rule, and every gate consulted
+with its verdict and the upstream file and line the gate value was read from. A refused rule keeps
+its binding, so a rule this package dropped stays distinguishable from a rule its own author excluded.
+
+A binding is a second execution model, not a view of `predicate_kind`, and the two refuse different
+things. ATR's skill path resolves every condition field to the whole document, so a rule the flat
+predicate refuses for naming two fields runs there unchanged; it never composes an `any` rule's
+conditions, so a rule refused because the composed alternation trips the pattern screen runs there on
+the conditions that pass individually. 42 of the 793 pinned ATR rules have no flat predicate and an
+executable binding, and such a rule is admissible: `admit()` reads `bindings` as well as
+`predicate_kind`.
+
+Direction matters when a condition is refused on safety. Dropping one branch of an `any` rule can
+only lose matches, so the branch is dropped and recorded on the binding. Dropping one branch of an
+`all` rule would fire it on less evidence than its author required, so the rule loses its binding
+instead. A loader that cannot read its source's dispatcher emits no binding at all rather than a flat
+predicate wearing the dispatcher's name.
 
 ## What the source says about itself
 
@@ -119,9 +152,20 @@ instructions. These corpora carry jailbreak payloads, so writing them into `AGEN
 or an equivalent would be an injection channel rather than a defence.
 
 **Patterns are screened before they ship and executed behind a process deadline.**
-`evaluate.screen_pattern` uses Python's parsed regex syntax to reject nested repetition, alternation
-under repetition, backreferences, and invalid patterns. This is conservative screening, not a proof
-of linear runtime. Python's `re` offers no timeout. `scan()` therefore validates, compiles, and matches
+`evaluate.screen_pattern` refuses a pattern on measurement where one exists and on shape where none
+does. The measurement is build-time data in `src/agent_defs/hazards.json`: for every rule in the
+pinned ATR corpus, whether an adversarial witness held one `re.search` past the one-second hook
+budget, the smallest crossing input, and the time there. A recorded crossing refuses and carries its
+numbers into the reason. A recorded non-crossing admits, and overrides the shape screen, because a
+measurement of the property beats a proxy for it: across that corpus the shape screen refused 86
+rules for a nested quantifier of which 44 never crossed, while 220 rules that did cross shipped. A
+pattern with no record keeps the shape screen, which rejects nested repetition and alternation under
+repetition, and its refusal says the pattern was unmeasured. Backreferences, conditional references,
+unpaired UTF-16 surrogates and invalid patterns are refused whatever their timing.
+
+Neither route is a proof of linear runtime, and the two verdicts are not symmetric: a witness that
+crossed is proof, while a search that found none is evidence. Python's `re` offers no timeout, so the
+runtime deadline stays the backstop for both. `scan()` therefore validates, compiles, and matches
 inside a disposable standard-library subprocess that the parent kills at the scan deadline. Worker
 validation also protects against stale or unscreened bundles. Process creation and pipe I/O run in a
 bounded supervisor thread so a slow OS launch cannot hold the caller. Late launches are cancelled

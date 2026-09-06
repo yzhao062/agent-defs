@@ -31,7 +31,7 @@ def test_regex_all_screens_each_original_leaf_with_the_rule_case_mode(monkeypatc
     screened = []
     original = evaluate.screen_pattern
 
-    def screen(pattern, flags):
+    def screen(pattern, flags=None, *, measurement=None, require_measurement=False):
         screened.append((pattern, flags))
         original(pattern, flags)
 

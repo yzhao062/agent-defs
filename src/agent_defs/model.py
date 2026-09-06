@@ -79,6 +79,53 @@ class Lineage:
 
 
 @dataclass(frozen=True)
+class Gate:
+    """One admission test a source's own dispatcher applies before a rule runs.
+
+    ``verdict`` is ``pass``, ``block``, or ``declared-not-applied`` when the
+    source declares a gate that its shipped engine never consults. ``read_from``
+    names the file and line the gate was read from, so a reader can check the
+    claim against the source rather than against us.
+    """
+
+    name: str
+    verdict: str
+    detail: str = ""
+    read_from: str = ""
+
+
+@dataclass(frozen=True)
+class ChannelBinding:
+    """How a source's own dispatcher admits one rule on one channel.
+
+    A pattern lifted out of its dispatcher is a different artifact from the rule
+    its authors shipped: ATR's 608 runnable patterns fire on 155 of 466 benign
+    skill documents when matched flat, and on the 1 of 466 that ATR itself fires
+    on when run through its dispatcher. The binding is therefore part of the
+    rule, not a runtime setting, and it travels on the record.
+
+    ``conditions`` holds the source's condition patterns in the source's own
+    order, because a dispatcher that walks conditions one at a time and
+    suppresses some of them cannot be reproduced from a flattened predicate.
+    ``eligible`` is False for a rule the dispatcher can never admit on this
+    channel; ``reason`` says which gate refused it.
+    """
+
+    channel: str
+    entry_point: str
+    eligible: bool
+    reason: str
+    gates: Sequence[Gate] = ()
+    condition_logic: str = ""
+    conditions: Sequence[str] = ()
+    suppress_in_code_blocks: bool = False
+
+    @property
+    def executable(self) -> bool:
+        return self.eligible and bool(self.conditions)
+
+
+@dataclass(frozen=True)
 class BenignFiring:
     """The measured firing rate on benign material.
 
@@ -132,6 +179,8 @@ class Rule:
     predicate: object = None
     not_runnable_reason: str = ""
     case_sensitive: bool = False
+    #: The source's own dispatch, one entry per channel it routes this rule to.
+    bindings: Sequence[ChannelBinding] = ()
 
     # The source's own evidence about itself
     examples_positive: Sequence[str] = ()
@@ -156,6 +205,21 @@ class Rule:
     @property
     def runnable(self) -> bool:
         return self.predicate_kind is not PredicateKind.NONE
+
+    def binding(self, channel: "str | Surface") -> ChannelBinding | None:
+        """The source's dispatch for one channel, or None when it routes none.
+
+        A rule can carry an executable binding while ``runnable`` is False: the
+        flat predicate and the source's own dispatcher are different execution
+        models, and a construct one refuses the other can express. ATR's skill
+        path resolves every condition field to the whole document, so a rule our
+        flat predicate refuses for naming two fields runs there unchanged.
+        """
+        wanted = channel.value if isinstance(channel, Surface) else str(channel)
+        for bound in self.bindings:
+            if bound.channel == wanted:
+                return bound
+        return None
 
     @property
     def interrupting(self) -> bool:

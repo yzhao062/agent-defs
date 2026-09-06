@@ -43,10 +43,10 @@ assert 'yaml' not in sys.modules
 
 
 def test_identity_verbatim_values_and_loss_accounting(loaded):
-    assert loaded.delta.entries_read == loaded.delta.rules_emitted == 12
+    assert loaded.delta.entries_read == loaded.delta.rules_emitted == 17
     assert loaded.delta.entry_errors == []
     assert loaded.delta.dropped_fields == {}
-    assert loaded.delta.source_rev == "66c7c1573e202b83ac526b70275244c50000068a"
+    assert loaded.delta.source_rev == "faf743fee8a5018467959ec8ea7ccdb1a1aab333"
     json.dumps(asdict(loaded.delta))
     for r in loaded.rules:
         upstream = r.extra["upstream"]
@@ -102,10 +102,19 @@ def test_screening_disables_the_entire_rule_and_lists_every_rejection(loaded):
     assert r.extra["upstream"]["detection"]["conditions"]
 
 
-def test_model_fallback_is_explicit_and_broad_witnesses_are_not_admission(loaded):
-    r = by_id(loaded, "01756")
+def test_model_fallback_is_explicit_whether_or_not_the_rule_survives_screening(loaded):
+    runnable = by_id(loaded, "01025")
+    assert runnable.runnable
+    assert runnable.extra["execution"]["fallback"] == "detection.semantic.fallback_method=pattern"
+    refused = by_id(loaded, "01756")
+    assert refused.extra["execution"]["fallback"] == "detection.semantic.fallback_method=pattern"
+    assert not refused.runnable
+    assert "refused on measurement" in refused.not_runnable_reason
+
+
+def test_broad_witnesses_are_recorded_and_are_not_admission(loaded):
+    r = by_id(loaded, "00110")
     assert r.runnable
-    assert r.extra["execution"]["fallback"] == "detection.semantic.fallback_method=pattern"
     assert r.breadth is Breadth.BROAD
     assert r.lane is Lane.RECORD
     assert r.benign is None
@@ -204,8 +213,8 @@ def test_unknown_condition_modifier_fails_closed_and_malformed_entry_is_counted(
     manifest["files"][bad.name] = {"source_path": "rules/bad.yaml", "sha256": hashlib.sha256(bad.read_bytes()).hexdigest()}
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     result = load(tmp_path)
-    assert result.delta.entries_read == 13
-    assert result.delta.rules_emitted == 12
+    assert result.delta.entries_read == 18
+    assert result.delta.rules_emitted == 17
     assert len(result.delta.entry_errors) == 1
     assert result.delta.dropped_fields == {"entry.parse_or_identity": 1}
     assert not by_id(result, "01756").runnable

@@ -1,0 +1,114 @@
+{
+  "working_empty_exception": {
+    "complete": false,
+    "errors": 1
+  },
+  "staged_empty_exception": {
+    "complete": true,
+    "errors": 0
+  },
+  "working_tag_payload": {
+    "conditions": 2,
+    "findings": [
+      "atr:ATR-2026-00129"
+    ]
+  },
+  "staged_tag_payload": {
+    "conditions": 1,
+    "findings": []
+  },
+  "semantics_preserving_edit": {
+    "rule": "atr:ATR-2026-00040",
+    "before": "slow",
+    "after_measurement": null,
+    "after_screen": "admitted"
+  },
+  "inferred_row": {
+    "row": [
+      "inferred-fast"
+    ],
+    "direct_lookup": null,
+    "direct_screen": "quantified group under an outer quantifier, unmeasured",
+    "loader_kind": "REGEX",
+    "loader_reasons": [],
+    "input_report_has_pattern_identity": false
+  },
+  "builder_shared_fast_slow": "IndexError: list index out of range",
+  "node_differential": {
+    "cases": 122,
+    "small_cases": 121,
+    "small_mismatches": [],
+    "python_dropped_node_kept": [],
+    "long_case_lengths": {
+      "python_codepoints": 90005,
+      "node_codepoints": 90000
+    }
+  },
+  "edited_index_test": {
+    "matching_conditions": [
+      1
+    ],
+    "reported": 1
+  },
+  "source_utf16_limit": {
+    "codepoints": 91000,
+    "utf16_units": 102000,
+    "over_source_eval_limit": false,
+    "complete": true
+  },
+  "fast_override_exact_slow": "admitted",
+  "corpus_coverage": {
+    "rules": 793,
+    "runnable": 427,
+    "raw_patterns": 3320,
+    "raw_without_measurement": 1203,
+    "runnable_predicate_objects": 425,
+    "runnable_patterns": 444,
+    "runnable_without_measurement": 0,
+    "cfg_rules": 133,
+    "cfg_patterns": 474,
+    "cfg_without_measurement": 207,
+    "cfg_exact_slow_patterns": 0,
+    "cfg_rule_slow": 59,
+    "cfg_rule_over60": 39
+  },
+  "calibration_src_pins": {
+    "self_test": {
+      "checked": true,
+      "substitution": true
+    },
+    "external_pint": {
+      "checked": true,
+      "substitution": false
+    },
+    "skill_md": {
+      "checked": false,
+      "substitution": false
+    },
+    "concentration": {
+      "checked": false,
+      "substitution": false
+    }
+  },
+  "windows_guard_None": {
+    "calls": [
+      "merge-base",
+      "rev-parse",
+      "rev-parse",
+      "rev-parse",
+      "rev-parse"
+    ],
+    "outcome": "prepare extracts data/skill-benchmark/malicious and refuses to run on Windows. Run it on a Linux host, or set AGENT_DEFS_ALLOW_MALICIOUS_EXTRACT=1 if this host has no real-time scanner."
+  },
+  "windows_guard_0": {
+    "calls": [
+      "merge-base",
+      "rev-parse",
+      "rev-parse",
+      "rev-parse",
+      "rev-parse",
+      "ls-tree"
+    ],
+    "outcome": "archive reached; mocked, no extraction"
+  }
+}

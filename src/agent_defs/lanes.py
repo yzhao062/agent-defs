@@ -49,7 +49,12 @@ def admit(rule: Rule, *, bundle_ok: bool = False) -> tuple[Lane, str]:
     ``bundle_ok`` records that the whole enabled bundle passed its noise test
     together. One quiet rule inside a loud bundle still produces a loud tool.
     """
-    if not rule.runnable:
+    # A rule with no flat predicate can still run through its source's own
+    # dispatcher: ATR's skill path resolves every condition field to the whole
+    # document and never composes conditions, so constructs the flat predicate
+    # refuses are expressible there. Such a rule is measurable, and therefore
+    # admissible, on the channel that binding names.
+    if not rule.runnable and not any(bound.executable for bound in rule.bindings):
         return Lane.DO_NOT_SHIP, f"not mechanically runnable: {rule.not_runnable_reason}"
     if rule.benign is None:
         return Lane.RECORD, "no benign measurement"

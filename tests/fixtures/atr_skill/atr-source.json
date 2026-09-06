@@ -1,0 +1,45 @@
+{
+  "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+  "files": {
+    "00120.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-00120-skill-instruction-injection.yaml",
+      "sha256": "123c390de23bbff5fa2fea5bfff8c8472a25f5bcd51179c397edc27eb2c57a35",
+      "why": "a scan_target: skill rule the dispatcher admits"
+    },
+    "00121.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-00121-skill-dangerous-script.yaml",
+      "sha256": "245e80d7a2386e4b635b61ab2f17247e21ff4cf7b46f285d570e5c1a1079d482",
+      "why": "a skill rule whose composed alternation the flat screen refuses"
+    },
+    "00123.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-00123-skill-overreach-permissions.yaml",
+      "sha256": "57f6e53c8f2a1aa0db5836a8e4e5bb6ffa2bc30ccb018a2f4c76e8aaf339338c",
+      "why": "the one denylisted rule the pinned engine still runs"
+    },
+    "00162.yaml": {
+      "source_path": "rules/context-exfiltration/ATR-2026-00162-skill-credential-exfil-combo.yaml",
+      "sha256": "ab3a5a47732bf8cea47a321d9e3df1fa052ca4dc208c539e94cc7adfdc8e1f39",
+      "why": "a skill rule carrying tags.suppress_in_code_blocks"
+    },
+    "00111.yaml": {
+      "source_path": "rules/privilege-escalation/ATR-2026-00111-shell-escape.yaml",
+      "sha256": "c07c6e700e6573b5ec24702f13b3f8c89ce13a5143be3508434d9bc2c033a275",
+      "why": "a denylisted mcp rule the compound gate already excludes"
+    },
+    "02377.yaml": {
+      "source_path": "rules/prompt-injection/ATR-2026-02377-novel-persona-jailbreak-cosignal.yaml",
+      "sha256": "cbc7ec86e527b8e98a7ca7b50c0ac209eeba255fe39a35d803a70afff964853c",
+      "why": "a condition: all rule with two conditions, admitted without a skill target"
+    },
+    "00040.yaml": {
+      "source_path": "rules/privilege-escalation/ATR-2026-00040-privilege-escalation.yaml",
+      "sha256": "3ed87fee327583b04ae49e06f0904aea115282fb9ba609a0736c0b19175b1db4",
+      "why": "an mcp any-logic rule the compound gate refuses"
+    },
+    "00276.yaml": {
+      "source_path": "rules/prompt-injection/ATR-2026-00276-invisible-unicode-bidi-injection.yaml",
+      "sha256": "140fed76882126e7c6005b57b5a7f4a0345803e7df0d1d3c4824ffc8d7aadbfb",
+      "why": "a skill rule with two conditions refused on safety"
+    }
+  }
+}

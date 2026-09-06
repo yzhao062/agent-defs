@@ -1,13 +1,28 @@
 """Bounded, dependency-free evaluation of normalized predicates.
 
-Screening rejects known hazards, not every superlinear expression. All compilation
-and matching for scan() runs in a disposable process killed at the scan deadline.
+Screening refuses a pattern on measurement where a measurement exists and on
+shape where none does; neither is a linearity proof. All compilation and
+matching for scan() runs in a disposable process killed at the scan deadline.
 Results distinguish completed checks, rejected rules, unfinished work and worker
 failure. OS scheduling and cleanup are not real-time operations.
+
+**Why measurement outranks shape.** The shape screen recognises two AST forms.
+Round three timed all 3,320 patterns in the pinned ATR corpus and found 296 of
+793 rules crossing one second, 220 of them shipped, against 86 refused for a
+nested quantifier of which 44 never crossed at any length up to 1 MiB. A test
+that is wrong in both directions is not evidence, and where a direct measurement
+of the same property exists it decides. The two directions are not symmetric: a
+found witness proves slowness, so a slow verdict refuses; a search that found no
+witness is evidence rather than proof, so a fast verdict admits and leaves the
+runtime deadline as the backstop. Nothing here removes that backstop. Python's
+``re`` cannot be interrupted mid-match, so ``scan`` still kills its worker at the
+deadline, and a pattern nobody measured is still screened on shape and says so
+in its refusal.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -19,12 +34,18 @@ import threading
 import time
 from dataclasses import dataclass
 from itertools import islice
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 
 from .model import PredicateKind, Rule
 
 DEFAULT_MAX_BYTES = 4 * 1024 * 1024
 DEFAULT_BUDGET_S = 0.25
+# Bounds one upstream-authored pattern, never a string this package composes.
+# The longest pattern any of the six pinned corpora publishes is 2,213
+# characters (ATR-2026-02502) and the largest condition count is 46
+# (ATR-2026-00001), so both limits carry real headroom over the input. A
+# composition that would exceed them is split, never dropped: a length limit is
+# a representability filter and may not decide whether a rule ships.
 _MAX_PATTERN_LEN = 4096
 _MAX_RULES = 4096
 _MAX_NEEDLES = 64
@@ -32,6 +53,10 @@ _MAX_BUNDLE_CHARS = 1024 * 1024
 _MAX_INPUT_BYTES = 4 * 1024 * 1024
 _CLEANUP_S = 0.1
 _SUPERVISORS = threading.BoundedSemaphore(4)
+HAZARD_TABLE_PATH = Path(__file__).with_name("hazards.json")
+_HIGH_SURROGATES = (0xD800, 0xDBFF)
+_LOW_SURROGATES = (0xDC00, 0xDFFF)
+_MAX_PORTED_RANGES = 64
 
 
 @dataclass(frozen=True)
@@ -89,6 +114,267 @@ class UnsafePattern(ValueError):
     """A pattern failed syntax validation or conservative hazard screening."""
 
 
+@dataclass(frozen=True)
+class Measurement:
+    """One pattern's timed backtracking behaviour, carried as build-time data.
+
+    ``verdict`` is ``"slow"`` when a witness was found that held a single
+    ``re.search`` past ``budget_s``, and ``"fast"`` when the search found no such
+    witness at any tested length. ``crossing_bytes`` and ``wall_s`` describe the
+    smallest crossing found, so a caller that caps its input below
+    ``crossing_bytes`` can see the headroom it has.
+    """
+
+    verdict: str
+    budget_s: float
+    crossing_bytes: int | None = None
+    wall_s: float | None = None
+    over_60s: bool = False
+    method: str = ""
+    measured_at: str = ""
+    label: str = ""
+
+    @property
+    def slow(self) -> bool:
+        return self.verdict == "slow"
+
+    def refusal(self) -> str:
+        """A one-line reason. ``method`` stays in the record rather than the message."""
+        return (f"measured {self.wall_s:.2f} s on {self.crossing_bytes} bytes against a "
+                f"{self.budget_s:g} s budget"
+                + (" and still running at 60 s" if self.over_60s else "")
+                + (f" ({self.label})" if self.label else ""))
+
+
+_HAZARD_CACHE: dict | None = None
+
+
+def _hazard_table() -> Mapping[str, object]:
+    """Load the measurement table once. A missing or broken table screens on shape."""
+    global _HAZARD_CACHE
+    if _HAZARD_CACHE is None:
+        try:
+            data = json.loads(HAZARD_TABLE_PATH.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("hazard table must be an object")
+            for key in ("patterns", "rules"):
+                if not isinstance(data.get(key), dict):
+                    data[key] = {}
+            data["budget_s"] = float(data.get("budget_s", 1.0))
+        except (OSError, ValueError, TypeError):
+            data = {"patterns": {}, "rules": {}, "budget_s": 1.0, "method": "", "measured_at": ""}
+        _HAZARD_CACHE = data
+    return _HAZARD_CACHE
+
+
+def hazard_table() -> Mapping[str, object]:
+    """The loaded measurement table, for reporting and tests."""
+    return _hazard_table()
+
+
+def _fingerprint(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8", "surrogatepass")).hexdigest()[:16]
+
+
+def _measurement_from_row(row, table) -> Measurement | None:
+    if not isinstance(row, (list, tuple)) or not row:
+        return None
+    verdict = row[0]
+    if verdict not in ("slow", "fast"):
+        return None
+    crossing = row[1] if len(row) > 1 else None
+    wall = row[2] if len(row) > 2 else None
+    over = bool(row[3]) if len(row) > 3 else False
+    if verdict == "slow" and not (isinstance(crossing, int) and isinstance(wall, (int, float))):
+        return None
+    return Measurement(verdict=verdict, budget_s=float(table.get("budget_s", 1.0)),
+                       crossing_bytes=crossing, wall_s=wall, over_60s=over,
+                       method=str(table.get("method", "")),
+                       measured_at=str(table.get("measured_at", "")),
+                       label=str(table.get("measurement_id", "")))
+
+
+def measurement_for_pattern(pattern: str) -> Measurement | None:
+    """The recorded verdict for this exact pattern text, or None if unmeasured."""
+    if not isinstance(pattern, str):
+        return None
+    table = _hazard_table()
+    return _measurement_from_row(table["patterns"].get(_fingerprint(pattern)), table)
+
+
+def measurement_for_rule(source: str, source_id: str, patterns: Sequence[str]) -> Measurement | None:
+    """The recorded verdict for a whole rule, keyed by identity and content.
+
+    The identity alone is not enough: a source can edit a rule's conditions
+    without changing its id, and the stale verdict would then decide a pattern
+    nobody timed. The stored digest covers the rule's own condition texts in
+    order, so an edited rule falls back to shape screening.
+    """
+    table = _hazard_table()
+    row = table["rules"].get(f"{source}:{source_id}")
+    if not isinstance(row, (list, tuple)) or len(row) < 2:
+        return None
+    if row[0] != _fingerprint("\n".join(patterns)):
+        return None
+    return _measurement_from_row(row[1:], table)
+
+
+def _surrogate_class_items(body: str):
+    """Ranges in a class body written only as ``\\uXXXX`` literals and ranges."""
+    if body.startswith("^"):
+        return None
+    items, index, size = [], 0, len(body)
+    while index < size:
+        if body[index:index + 2] != "\\u" or not re.fullmatch(r"[0-9a-fA-F]{4}", body[index + 2:index + 6]):
+            return None
+        low = high = int(body[index + 2:index + 6], 16)
+        index += 6
+        if (body[index:index + 1] == "-" and body[index + 1:index + 3] == "\\u"
+                and re.fullmatch(r"[0-9a-fA-F]{4}", body[index + 3:index + 7])):
+            high = int(body[index + 3:index + 7], 16)
+            index += 7
+        if high < low:
+            return None
+        items.append((low, high))
+    return items or None
+
+
+def _scan_regex_tokens(pattern: str):
+    """Split a pattern into ``\\uXXXX`` escapes, character classes and everything else."""
+    tokens, index, size = [], 0, len(pattern)
+    while index < size:
+        char = pattern[index]
+        if char == "\\":
+            if (pattern[index + 1:index + 2] == "u"
+                    and re.fullmatch(r"[0-9a-fA-F]{4}", pattern[index + 2:index + 6])):
+                tokens.append({"kind": "u", "raw": pattern[index:index + 6],
+                               "items": [(int(pattern[index + 2:index + 6], 16),) * 2]})
+                index += 6
+                continue
+            tokens.append({"kind": "raw", "raw": pattern[index:index + 2]})
+            index += 2
+            continue
+        if char == "[":
+            cursor = index + 1
+            if pattern[cursor:cursor + 1] == "^":
+                cursor += 1
+            if pattern[cursor:cursor + 1] == "]":
+                cursor += 1
+            while cursor < size and pattern[cursor] != "]":
+                cursor += 2 if pattern[cursor] == "\\" else 1
+            if cursor >= size:  # unterminated; leave it for re to report
+                tokens.append({"kind": "raw", "raw": pattern[index:]})
+                break
+            body = pattern[index + 1:cursor]
+            tokens.append({"kind": "class", "raw": pattern[index:cursor + 1],
+                           "items": _surrogate_class_items(body)})
+            index = cursor + 1
+            continue
+        tokens.append({"kind": "raw", "raw": char})
+        index += 1
+    return tokens
+
+
+def _within(items, bounds) -> bool:
+    return bool(items) and all(bounds[0] <= low and high <= bounds[1] for low, high in items)
+
+
+def _surrogate_escapes(text: str) -> list[str]:
+    """Every ``\\uXXXX`` escape naming a surrogate, class bodies included.
+
+    Walks the source with the same backslash parity a regex engine uses, so an
+    escaped backslash before ``uDB40`` stays the two characters it is.
+    """
+    found, index, size = [], 0, len(text)
+    while index < size:
+        if text[index] != "\\":
+            index += 1
+            continue
+        if text[index + 1:index + 2] == "u" and re.fullmatch(r"[0-9a-fA-F]{4}", text[index + 2:index + 6]):
+            code = int(text[index + 2:index + 6], 16)
+            if _HIGH_SURROGATES[0] <= code <= _LOW_SURROGATES[1]:
+                found.append(text[index:index + 6])
+            index += 6
+            continue
+        index += 2
+    return found
+
+
+def _combine_surrogates(highs, lows):
+    """Code-point ranges for every high/low pair, or None when it would explode."""
+    ranges = []
+    for high_low, high_high in highs:
+        for low_low, low_high in lows:
+            if (low_low, low_high) == _LOW_SURROGATES:
+                ranges.append((0x10000 + (high_low - 0xD800) * 0x400,
+                               0x10000 + (high_high - 0xD800) * 0x400 + 0x3FF))
+                continue
+            if high_high - high_low + len(ranges) >= _MAX_PORTED_RANGES:
+                return None
+            for high in range(high_low, high_high + 1):
+                base = 0x10000 + (high - 0xD800) * 0x400
+                ranges.append((base + low_low - 0xDC00, base + low_high - 0xDC00))
+    return ranges if len(ranges) <= _MAX_PORTED_RANGES else None
+
+
+def _render_ranges(ranges) -> str:
+    if len(ranges) == 1 and ranges[0][0] == ranges[0][1]:
+        return "\\U%08X" % ranges[0][0]
+    body = "".join("\\U%08X" % low if low == high else "\\U%08X-\\U%08X" % (low, high)
+                   for low, high in ranges)
+    return f"[{body}]"
+
+
+def port_utf16_surrogates(pattern: str) -> tuple[str, list[dict]]:
+    """Rewrite UTF-16 surrogate pairs as the code points they encode.
+
+    A regex authored against a JavaScript engine matches UTF-16 code units, so
+    ``\\uDB40[\\uDC00-\\uDC7F]`` there means the Unicode tag block. Python matches
+    code points and sees two unpaired surrogates, which no well-formed text
+    contains, so the same pattern silently returns nothing. This is a dialect
+    port and it belongs to the loader that knows which engine wrote the rule;
+    it changes what the pattern is written in, never what it means.
+
+    A quantifier immediately after a pair is left alone. ``\\uD83D\\uDE00+`` means
+    one high surrogate and one or more low ones, which no sequence of code points
+    says, so folding the pair would quietly change the pattern. The surrogates
+    then stay unpaired and are refused, which is the fail-closed direction.
+
+    Returns the ported pattern and one note per rewrite. Surrogates left unpaired
+    afterwards are reported in a final note with ``"unpaired": True``; those are a
+    representability limit rather than a defect this function can fix, and
+    ``screen_pattern`` refuses them rather than shipping a pattern that cannot match.
+    """
+    if not isinstance(pattern, str) or "\\u" not in pattern.lower():
+        return pattern, []
+    tokens = _scan_regex_tokens(pattern)
+    out, notes, index = [], [], 0
+    while index < len(tokens):
+        token = tokens[index]
+        nxt = tokens[index + 1] if index + 1 < len(tokens) else None
+        after = tokens[index + 2] if index + 2 < len(tokens) else None
+        highs = token.get("items")
+        lows = nxt.get("items") if nxt else None
+        quantified = bool(after) and after["raw"][:1] in ("*", "+", "?", "{")
+        if not quantified and _within(highs, _HIGH_SURROGATES) and _within(lows, _LOW_SURROGATES):
+            ranges = _combine_surrogates(highs, lows)
+            if ranges is not None:
+                ported = _render_ranges(ranges)
+                notes.append({"from": token["raw"] + nxt["raw"], "to": ported,
+                              "reason": "UTF-16 surrogate pair read as one code point"})
+                out.append(ported)
+                index += 2
+                continue
+        out.append(token["raw"])
+        index += 1
+    result = "".join(out)
+    leftover = _surrogate_escapes(result)
+    if leftover:
+        notes.append({"unpaired": True, "escapes": sorted(set(leftover)),
+                      "reason": "unpaired UTF-16 surrogate has no code-point image"})
+    return result, notes
+
+
 def _parse_pattern(pattern: str, flags: int):
     if not isinstance(pattern, str):
         raise UnsafePattern("pattern must be a string")
@@ -139,33 +425,114 @@ def _has_nested_quantifier(pattern: str, flags: int = 0) -> bool:
     return _hazards(_parse_pattern(pattern, flags))[0]
 
 
-def screen_pattern(pattern: str, flags: int = re.IGNORECASE) -> None:
-    """Reject known hazards at bundle build time; this is not a linearity proof.
+def _has_surrogate_literal(tree) -> bool:
+    pending = [tree]
+    while pending:
+        for op, arg in pending.pop():
+            name = str(op)
+            if name in ("LITERAL", "NOT_LITERAL"):
+                if _HIGH_SURROGATES[0] <= arg <= _LOW_SURROGATES[1]:
+                    return True
+            elif name == "RANGE":
+                if arg[0] <= _LOW_SURROGATES[1] and arg[1] >= _HIGH_SURROGATES[0]:
+                    return True
+            elif name == "IN":
+                pending.append(arg)
+            elif name in ("MAX_REPEAT", "MIN_REPEAT", "POSSESSIVE_REPEAT"):
+                pending.append(arg[-1])
+            elif name == "SUBPATTERN":
+                pending.append(arg[-1])
+            elif name == "BRANCH":
+                pending.extend(arg[1])
+            elif name in ("ASSERT", "ASSERT_NOT"):
+                pending.append(arg[1])
+            elif name == "ATOMIC_GROUP":
+                pending.append(arg)
+    return False
 
-    scan() also validates inside its isolated worker so stale or unscreened data
-    cannot bypass validation. Matching must still be isolated after this passes.
+
+def screen_pattern(pattern: str, flags: int = re.IGNORECASE, *,
+                   measurement: "Measurement | None" = None,
+                   require_measurement: bool = False) -> None:
+    """Refuse a pattern on measurement first, on shape only where none exists.
+
+    ``measurement`` lets a loader supply the verdict recorded for the whole rule
+    this pattern belongs to; without it the pattern's own text is looked up in
+    the shipped table. A slow verdict refuses, because a witness that crossed the
+    budget is proof. A fast verdict admits, because a search that found no
+    witness is evidence and the runtime deadline still bounds the cost of being
+    wrong; it therefore overrides the shape screen, whose refusals reproduce at
+    49% precision against this corpus. Unmeasured patterns keep the shape screen
+    and say so in the refusal, so a reader can tell a measured refusal from a
+    guessed one.
+
+    Neither path is a linearity proof. scan() validates again inside its isolated
+    worker so stale or unscreened data cannot bypass this, and matching must
+    still be isolated after this passes.
     """
-    nested, branching, reference = _hazards(_parse_pattern(pattern, flags))
-    if nested:
-        raise UnsafePattern("quantified group under an outer quantifier")
-    if branching:
-        raise UnsafePattern("alternation under repetition")
+    tree = _parse_pattern(pattern, flags)
+    nested, branching, reference = _hazards(tree)
+    # The unconditional capability limits are reported first. A backreference is
+    # refused whatever it costs, so naming its timing instead would tell a reader
+    # less; a caller that also wants the timing reads it from the measurement.
     if reference:
         raise UnsafePattern("backreferences and conditional references are not supported")
+    # The exact row for this pattern text is consulted first and always. A caller
+    # may supply the verdict recorded for the whole rule, but timing independent
+    # branches does not time their composition, and timing an unported surrogate
+    # expression says little about its port, so a supplied fast verdict must never
+    # defeat an exact slow one.
+    recorded = measurement_for_pattern(pattern)
+    if recorded is not None and recorded.slow:
+        raise UnsafePattern(recorded.refusal())
+    if measurement is not None and measurement.slow:
+        raise UnsafePattern(measurement.refusal())
+    if require_measurement and recorded is None:
+        raise UnsafePattern("pattern has no exact measurement; unmeasured")
+    measurement = recorded if recorded is not None else measurement
+    if measurement is None:
+        if nested:
+            raise UnsafePattern("quantified group under an outer quantifier, unmeasured")
+        if branching:
+            raise UnsafePattern("alternation under repetition, unmeasured")
+    if _has_surrogate_literal(tree):
+        raise UnsafePattern("unpaired UTF-16 surrogate cannot match well-formed text; "
+                            "port the source dialect's surrogate pairs first")
     try:
         re.compile(pattern, flags)
     except (re.error, OverflowError, RecursionError, ValueError) as exc:
         raise UnsafePattern(f"does not compile: {exc}") from exc
 
 
-def _regex_all_patterns(predicate) -> Sequence[str]:
-    if not isinstance(predicate, dict) or set(predicate) != {"regex_all"}:
-        raise ValueError("STRUCTURED requires exactly a regex_all list")
-    patterns = predicate["regex_all"]
+_STRUCTURED_MODES = ("regex_all", "regex_any")
+MAX_STRUCTURED_PATTERNS = _MAX_NEEDLES
+
+
+def _structured_patterns(predicate) -> tuple[str, Sequence[str]]:
+    """Read a STRUCTURED predicate: one ``regex_all`` or ``regex_any`` list.
+
+    ``regex_any`` exists so that a source's disjunction of conditions stays a
+    disjunction of the conditions its authors wrote. Joining them into one
+    alternation is this package's own rewrite, and when the join no longer fits a
+    limit that bounds upstream text the branches are kept instead of the rule
+    being dropped.
+    """
+    if not isinstance(predicate, dict) or len(predicate) != 1 or set(predicate) - set(_STRUCTURED_MODES):
+        raise ValueError("STRUCTURED requires exactly one regex_all or regex_any list")
+    mode = next(iter(predicate))
+    patterns = predicate[mode]
     if not isinstance(patterns, (list, tuple)) or not 1 <= len(patterns) <= _MAX_NEEDLES:
-        raise ValueError(f"regex_all requires 1 to {_MAX_NEEDLES} patterns")
+        raise ValueError(f"{mode} requires 1 to {_MAX_NEEDLES} patterns")
     if any(not isinstance(p, str) or len(p) > _MAX_PATTERN_LEN for p in patterns):
-        raise ValueError("regex_all patterns must be strings of at most 4096 characters")
+        raise ValueError(f"{mode} patterns must be strings of at most {_MAX_PATTERN_LEN} characters")
+    return mode, patterns
+
+
+def _regex_all_patterns(predicate) -> Sequence[str]:
+    """Back-compatible accessor for the conjunction form."""
+    mode, patterns = _structured_patterns(predicate)
+    if mode != "regex_all":
+        raise ValueError("STRUCTURED requires exactly a regex_all list")
     return patterns
 
 
@@ -184,6 +551,23 @@ class _RegexAll:
         return first
 
 
+@dataclass(frozen=True)
+class _RegexAny:
+    """Alternation semantics without the alternation: leftmost hit, earliest branch."""
+
+    patterns: Sequence[re.Pattern]
+
+    def search(self, payload: str):
+        best = None
+        for pattern in self.patterns:
+            hit = pattern.search(payload)
+            if hit is not None and (best is None or hit.start() < best.start()):
+                best = hit
+                if best.start() == 0:
+                    break
+        return best
+
+
 def compile_rule(rule: Rule) -> object:
     """Build a runtime predicate. Call at build time or inside the scan worker.
 
@@ -195,13 +579,16 @@ def compile_rule(rule: Rule) -> object:
         return None
     flags = 0 if rule.case_sensitive else re.IGNORECASE
     if rule.predicate_kind is PredicateKind.REGEX:
-        screen_pattern(rule.predicate, flags)
+        screen_pattern(rule.predicate, flags,
+                       require_measurement=(rule.source == "atr"))
         return re.compile(rule.predicate, flags)
     if rule.predicate_kind is PredicateKind.STRUCTURED:
-        patterns = _regex_all_patterns(rule.predicate)
+        mode, patterns = _structured_patterns(rule.predicate)
         for pattern in patterns:
-            screen_pattern(pattern, flags)
-        return _RegexAll(tuple(re.compile(pattern, flags) for pattern in patterns))
+            screen_pattern(pattern, flags,
+                           require_measurement=(rule.source == "atr"))
+        compiled = tuple(re.compile(pattern, flags) for pattern in patterns)
+        return _RegexAll(compiled) if mode == "regex_all" else _RegexAny(compiled)
     if rule.predicate_kind in (PredicateKind.SUBSTRING_ANY, PredicateKind.SUBSTRING_ALL):
         if not isinstance(rule.predicate, (list, tuple)) or not 1 <= len(rule.predicate) <= _MAX_NEEDLES:
             raise ValueError(f"substrings require 1 to {_MAX_NEEDLES} needles")
@@ -247,7 +634,8 @@ def _wire_rule(rule: Rule) -> dict:
         if not isinstance(pred, str) or len(pred) > _MAX_PATTERN_LEN:
             raise ValueError("regex must be a string of at most 4096 characters")
     elif kind is PredicateKind.STRUCTURED:
-        pred = {"regex_all": list(_regex_all_patterns(pred))}
+        mode, patterns = _structured_patterns(pred)
+        pred = {mode: list(patterns)}
     elif kind in (PredicateKind.SUBSTRING_ANY, PredicateKind.SUBSTRING_ALL):
         if not isinstance(pred, (list, tuple)) or not 1 <= len(pred) <= _MAX_NEEDLES:
             raise ValueError(f"substrings require 1 to {_MAX_NEEDLES} needles")
@@ -258,15 +646,19 @@ def _wire_rule(rule: Rule) -> dict:
         raise ValueError(f"{kind} has no runtime yet")
     if not isinstance(rule.id, str) or len(rule.id) > 512:
         raise ValueError("rule id must be a string of at most 512 characters")
-    return dict(id=rule.id, kind=kind.value, predicate=pred,
+    # source travels because the isolated worker re-screens, and the strict
+    # measurement policy is keyed on it. Dropping it made the worker's second
+    # look weaker than the loader's first.
+    return dict(id=rule.id, source=rule.source, kind=kind.value, predicate=pred,
                 case_sensitive=rule.case_sensitive, surface=rule.surface.value)
 
 
 def _schedule_key(item: dict) -> tuple:
     pred = item["predicate"]
     if item["kind"] == PredicateKind.STRUCTURED.value:
-        patterns = pred["regex_all"]
-        return (2, sum(map(len, patterns)), item["id"], tuple(patterns),
+        mode = next(iter(pred))
+        patterns = pred[mode]
+        return (2, sum(map(len, patterns)), item["id"], mode, tuple(patterns),
                 item["case_sensitive"], item["surface"])
     if item["kind"] == PredicateKind.REGEX.value:
         # A reproducible cost hint, never a safety claim or severity ranking.
@@ -424,7 +816,7 @@ def scan(
             continue
         pred = item["predicate"]
         if item["kind"] == PredicateKind.STRUCTURED.value:
-            pred = pred["regex_all"]
+            pred = next(iter(pred.values()))
         chars += len(pred) if isinstance(pred, str) else sum(map(len, pred))
         if chars > _MAX_BUNDLE_CHARS:
             worker_error = f"bundle exceeds {_MAX_BUNDLE_CHARS} predicate characters"

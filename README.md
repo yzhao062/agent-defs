@@ -38,8 +38,21 @@ only on a measured benign firing rate with an exact binomial bound behind it. Th
 |---|---|
 | `src/agent_defs/model.py` | the normalized record every loader emits |
 | `src/agent_defs/evaluate.py` | bounded predicate evaluation, with build-time pattern screening |
+| `src/agent_defs/hazards.json` | the measured regex timings the screen refuses on |
+| `src/agent_defs/cfg.py` | the configuration channel: a rule run the way its source runs it |
 | `src/agent_defs/lanes.py` | the four admission lanes and the binomial bound behind them |
 | `SCHEMA.md` | the loader contract |
+| `docs/hazards.md` | why the screen refuses on measurement rather than on shape |
+
+## The rule is the pattern plus its dispatcher
+
+A pattern lifted out of the engine that dispatches it is a different artifact from
+the rule its authors shipped. Measured on ATR's own skill benchmark: the same
+patterns matched flat against a skill document flag 155 of 466 benign documents,
+and run through ATR's own admission gates they flag 1, which is what ATR itself
+flags. Each record therefore carries its source's dispatch beside its pattern.
+[`docs/cfg.md`](docs/cfg.md) has the gates, where each was read from, and the
+before-and-after numbers.
 
 ## Sources
 

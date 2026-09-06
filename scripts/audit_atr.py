@@ -15,6 +15,42 @@ import re
 
 from agent_defs.evaluate import UnsafePattern, compile_rule, scan, screen_pattern
 from agent_defs.loaders.atr import BREADTH_PROBES, load
+from agent_defs.model import Surface
+
+
+def cfg_channel_report(rules) -> dict:
+    """Which rules ATR's own skill dispatcher admits, and which gate refused each.
+
+    Reported beside the flat inventory rather than folded into it, because the two
+    execution models refuse different things and averaging them would hide the
+    rules that only one of them can run.
+    """
+    admitted, refused, partial = [], Counter(), []
+    for rule in rules:
+        binding = rule.binding(Surface.CFG)
+        if binding is None:
+            continue
+        declared = len(rule.extra["upstream"]["detection"].get("conditions") or [])
+        if binding.executable:
+            admitted.append({"id": rule.source_id, "flat_runnable": rule.runnable,
+                             "conditions": len(binding.conditions), "declared": declared,
+                             "logic": binding.condition_logic,
+                             "suppress_in_code_blocks": binding.suppress_in_code_blocks})
+            if len(binding.conditions) != declared:
+                partial.append({"id": rule.source_id, "executing": len(binding.conditions),
+                                "declared": declared,
+                                "screen": next((g.detail for g in binding.gates
+                                                if g.name == "screen"), "")})
+        else:
+            blocked = [g.name for g in binding.gates if g.verdict == "block"]
+            refused[",".join(blocked) or "unrecorded"] += 1
+    return {
+        "admitted": len(admitted),
+        "admitted_without_a_flat_predicate": sum(1 for r in admitted if not r["flat_runnable"]),
+        "refused_by_gate": dict(refused),
+        "partial_bindings": partial,
+        "rules": admitted,
+    }
 
 
 def audit(root: Path) -> dict:
@@ -119,11 +155,14 @@ def audit(root: Path) -> dict:
         "emitted_negative_strings": sum(len(r.examples_negative) for r in rules),
         "reachability": dict(reach), "misses": misses, "non_runnable_rules": blocked,
         "pattern_port_parity": {"comparisons": parity_trials, "mismatching_rule_ids": parity_misses},
+        "cfg_channel": cfg_channel_report(rules),
         "limitations": [
             "Reachability compares raw published regex paths, not ATR's complete engine policies.",
             "Rejected and non-runnable rules are never evaluated; they are not positive misses.",
             "BROAD has a common-text witness; MEDIUM is unmeasured, not evidence of specificity.",
             "The single surface is an adapter decision; input field mappings remain in extra.",
+            "The CFG binding is ATR's own skill dispatch, read from its engine sources; it "
+            "admits and refuses different rules from the flat predicate above.",
         ],
     }
 

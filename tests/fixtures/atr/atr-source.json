@@ -1,17 +1,9 @@
 {
-  "source_rev": "66c7c1573e202b83ac526b70275244c50000068a",
+  "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
   "files": {
-    "00383.yaml": {
-      "source_path": "rules/agent-manipulation/ATR-2026-00383-cynical-sarcasm-ai-persona-bypass.yaml",
-      "sha256": "551394b945925973f7de32741fd918ef18398160376ab5e8b57e9b0ab359723c"
-    },
-    "00120.yaml": {
-      "source_path": "rules/skill-compromise/ATR-2026-00120-skill-instruction-injection.yaml",
-      "sha256": "123c390de23bbff5fa2fea5bfff8c8472a25f5bcd51179c397edc27eb2c57a35"
-    },
-    "00290.yaml": {
-      "source_path": "rules/context-exfiltration/ATR-2026-00290-divergence-repeat-word-training-extraction.yaml",
-      "sha256": "dba6b4bd97ffb6c0b8b128e386d5fce9eab90a077a4c69995a4a8d7f3fb31956"
+    "00005.yaml": {
+      "source_path": "rules/prompt-injection/ATR-2026-00005-multi-turn-injection.yaml",
+      "sha256": "354236efd5acb2ef0f1eb8db465fafa70c54c470b438a674e1065162f569b8ea"
     },
     "00040.yaml": {
       "source_path": "rules/privilege-escalation/ATR-2026-00040-privilege-escalation.yaml",
@@ -21,17 +13,25 @@
       "source_path": "rules/data-poisoning/ATR-2026-00070-data-poisoning.yaml",
       "sha256": "fef156630208a6062e964d54f77d49a08004e66ddeee00df53460679929817ca"
     },
-    "00552.yaml": {
-      "source_path": "rules/agent-manipulation/ATR-2026-00552-goal-drift-after-pressure-injection.yaml",
-      "sha256": "92a907054412747d1ce7f3ba2b3e918276da4998bf3daa24d7af5f9e73700580"
+    "00110.yaml": {
+      "source_path": "rules/privilege-escalation/ATR-2026-00110-eval-injection.yaml",
+      "sha256": "b7e27d1b2b3b2e9d73ab7ed48208b0ca01a5c2b108c8d91c1719c6c58243176a"
     },
-    "02377.yaml": {
-      "source_path": "rules/prompt-injection/ATR-2026-02377-novel-persona-jailbreak-cosignal.yaml",
-      "sha256": "cbc7ec86e527b8e98a7ca7b50c0ac209eeba255fe39a35d803a70afff964853c"
+    "00120.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-00120-skill-instruction-injection.yaml",
+      "sha256": "123c390de23bbff5fa2fea5bfff8c8472a25f5bcd51179c397edc27eb2c57a35"
     },
-    "02261.yaml": {
-      "source_path": "rules/skill-compromise/ATR-2026-02261-code-credential-exfil-chain.yaml",
-      "sha256": "db3f89aef17c7a4d47f651f152c2f8c8883a570b6d9054747fec6ec1199d46bc"
+    "00129.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-00129-unicode-smuggling.yaml",
+      "sha256": "be8df6881efdf3962926790c3669e69fd9be53c2c95e23eb5839dcf5638563a3"
+    },
+    "00290.yaml": {
+      "source_path": "rules/context-exfiltration/ATR-2026-00290-divergence-repeat-word-training-extraction.yaml",
+      "sha256": "dba6b4bd97ffb6c0b8b128e386d5fce9eab90a077a4c69995a4a8d7f3fb31956"
+    },
+    "00383.yaml": {
+      "source_path": "rules/agent-manipulation/ATR-2026-00383-cynical-sarcasm-ai-persona-bypass.yaml",
+      "sha256": "551394b945925973f7de32741fd918ef18398160376ab5e8b57e9b0ab359723c"
     },
     "00405.yaml": {
       "source_path": "rules/context-exfiltration/ATR-2026-00405-markdown-image-url-exfiltration-xss.yaml",
@@ -41,13 +41,33 @@
       "source_path": "rules/context-exfiltration/ATR-2026-00421-nl-covert-conversation-exfiltration.yaml",
       "sha256": "858241ca4c0a8041ee36a0c7e9223c62649014ad3d509ceab30cf0dbd891aa7f"
     },
-    "02260.yaml": {
-      "source_path": "rules/tool-poisoning/ATR-2026-02260-agentjacking-remediation-framed-execution.yaml",
-      "sha256": "a9baca7dbe5513b39af729e13b8e016d7cb1872f7090cf1ae2a825383dd10ca2"
+    "00552.yaml": {
+      "source_path": "rules/agent-manipulation/ATR-2026-00552-goal-drift-after-pressure-injection.yaml",
+      "sha256": "92a907054412747d1ce7f3ba2b3e918276da4998bf3daa24d7af5f9e73700580"
+    },
+    "00570.yaml": {
+      "source_path": "rules/data-poisoning/ATR-2026-00570-sql-injection-in-agent-tool-query.yaml",
+      "sha256": "000e298af56a7c991bfaa49263c402ef33fb5c4b4e4f9cfd1abd6c42133e388f"
+    },
+    "01025.yaml": {
+      "source_path": "rules/prompt-injection/ATR-2026-01025-evasion-hypothetical-fictional-execution-framing.yaml",
+      "sha256": "07b6e5fa7a7cbbe91e1566911c110b4c943d92d616cd52b52df4251b3b438d8e"
     },
     "01756.yaml": {
       "source_path": "rules/skill-compromise/ATR-2026-01756-backdoor-pot-symbol-emoticon-trigger.yaml",
       "sha256": "0f1c98ce23c5cdcffd8326e4c8deef4f7e1149aa61c4674ef98e1138c0f2a8aa"
+    },
+    "02260.yaml": {
+      "source_path": "rules/tool-poisoning/ATR-2026-02260-agentjacking-remediation-framed-execution.yaml",
+      "sha256": "a9baca7dbe5513b39af729e13b8e016d7cb1872f7090cf1ae2a825383dd10ca2"
+    },
+    "02261.yaml": {
+      "source_path": "rules/skill-compromise/ATR-2026-02261-code-credential-exfil-chain.yaml",
+      "sha256": "db3f89aef17c7a4d47f651f152c2f8c8883a570b6d9054747fec6ec1199d46bc"
+    },
+    "02377.yaml": {
+      "source_path": "rules/prompt-injection/ATR-2026-02377-novel-persona-jailbreak-cosignal.yaml",
+      "sha256": "cbc7ec86e527b8e98a7ca7b50c0ac209eeba255fe39a35d803a70afff964853c"
     }
   }
 }

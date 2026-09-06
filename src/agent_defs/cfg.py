@@ -24,11 +24,12 @@ comes back incomplete instead. Nothing in the benchmark reaches the limit, so th
 divergence costs no measured recall, and reading an empty result as a clean file
 is the failure this package is built to make impossible.
 
-Nothing here is bounded against a hostile payload. The document being scanned is
-usually one a person is about to install, so it is exactly as hostile as the
-thing it is being checked for. Use :func:`scan_cfg_isolated` when the caller did
-not write the file; :func:`scan_cfg` is the offline entry point, like
-``evaluate.scan_trusted``.
+The document being scanned is usually one a person is about to install, so it is
+exactly as hostile as the thing it is being checked for. :func:`scan_cfg` runs it
+in a killable worker under a deadline. :func:`scan_cfg_trusted` runs it here with
+neither, for offline measurement and for material the caller wrote. The plain
+name is the bounded one, as it is in :mod:`agent_defs.evaluate`, so reaching for
+the obvious function does not hand a caller the unprotected path.
 """
 
 from __future__ import annotations
@@ -242,7 +243,7 @@ def cfg_bindings(rules: Iterable[Rule]) -> list[tuple[Rule, ChannelBinding]]:
     return out
 
 
-def scan_cfg(
+def scan_cfg_trusted(
     document: str,
     rules: Iterable[Rule],
     *,
@@ -254,8 +255,9 @@ def scan_cfg(
 
     Like ``evaluate.scan_trusted``, this pays neither the process-isolation cost
     nor the protection it buys, and it is for offline measurement and for
-    material the caller controls. A hostile skill document is not that; route it
-    through :func:`scan_cfg_isolated`.
+    material the caller controls. A hostile skill document is not that; that is
+    what :func:`scan_cfg` is, and the name carries the difference: reaching for
+    the plain name gets the bounded path, exactly as it does in ``evaluate``.
 
     The two keyword arguments turn off parts of the source's own behavior and
     exist so a measurement can price each one; leaving either off is a departure
@@ -469,6 +471,11 @@ def scan_cfg_isolated(
     return result(worker_error, completed)
 
 
+#: The bounded path under its plain name. ``evaluate`` spells the unprotected
+#: entry point ``scan_trusted`` and this module spells it ``scan_cfg_trusted``,
+#: so the same reflex reaches the same kind of function in both.
+scan_cfg = scan_cfg_isolated
+
 __all__ = [
     "BASE64_MAX_BLOCKS",
     "SOURCE_MAX_EVAL_CHARS",
@@ -477,4 +484,5 @@ __all__ = [
     "cfg_bindings",
     "scan_cfg",
     "scan_cfg_isolated",
+    "scan_cfg_trusted",
 ]

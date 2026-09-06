@@ -107,8 +107,12 @@ def main() -> int:
             "rules": {source_id: [_fingerprint(text) for text in patterns]
                       for source_id, (patterns, _) in sorted(rules.items())},
         }
-        args.manifest.write_text(json.dumps(manifest, indent=1, sort_keys=False) + "\n",
-                                 encoding="utf-8", newline="\n")
+        # write_bytes, because write_text translates newlines to the platform's,
+        # and its newline= argument arrived in 3.10 while this package supports
+        # 3.9. A file two machines produce differently is a file whose diff
+        # nobody reads.
+        args.manifest.write_bytes(
+            (json.dumps(manifest, indent=1, sort_keys=False) + "\n").encode("utf-8"))
         print(f"wrote {args.manifest} ({len(manifest['rules'])} rules)")
         return 0
 
@@ -238,7 +242,7 @@ def main() -> int:
         "rules": dict(sorted(rule_rows.items())),
         "patterns": dict(sorted(pattern_rows.items())),
     }
-    args.out.write_text(json.dumps(table, indent=1, sort_keys=False) + "\n", encoding="utf-8")
+    args.out.write_bytes((json.dumps(table, indent=1, sort_keys=False) + "\n").encode("utf-8"))
     print(json.dumps(table["counts"], indent=2))
     print(f"wrote {args.out} ({args.out.stat().st_size} bytes)")
     return 0

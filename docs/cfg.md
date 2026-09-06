@@ -139,8 +139,9 @@ The scoring scripts and their outputs are preserved at
 unmodified `scanSkill()` through `tsx` to produce the reference,
 `measure-cfg.py` produces the five steps in the table, `compare-upstream.py`
 diffs the two document by document, and `crosscheck-a8a4146.py` reproduces round
-three's 445-of-466 figure on the June snapshot. All of it used
-`agent_defs.evaluate.scan_trusted` and `agent_defs.cfg.scan_cfg`, never `scan()`.
+three's 445-of-466 figure on the June snapshot. All of it matched in process,
+through `agent_defs.evaluate.scan_trusted` and the function now called
+`agent_defs.cfg.scan_cfg_trusted`, never through an isolated path.
 
 ## The isolated path
 
@@ -159,12 +160,17 @@ Measured on a pattern the shape screen admits and the table has never timed,
 `a*a*a*a*a*a*b` against 200 characters: budgets of 0.25 s, 1.0 s and 2.0 s return
 in 0.27 s, 1.01 s and 2.02 s, each reporting `complete=False` with `worker
 deadline exceeded`, and `findings` raises so a timeout cannot be read as a clean
-document. The same call through `scan_cfg` does not return. On ordinary input the
+document. The same call through `scan_cfg_trusted` does not return. On ordinary input the
 two paths agree finding for finding, span for span, including which condition
 matched and whether it came from the document or a decoded block.
 
-`scan_cfg` remains the offline entry point, like `evaluate.scan_trusted`: no
-isolation, no deadline, for measurement and for material the caller wrote.
+The plain name is the bounded one. `scan_cfg` is `scan_cfg_isolated`, and the
+in-process path is `scan_cfg_trusted`: no isolation, no deadline, for measurement
+and for material the caller wrote. `evaluate` already spelled the unprotected
+entry point `scan_trusted`, so this module spelling the plain name the other way
+round was a trap: a caller reaching for the obvious function by analogy got the
+one with no deadline, on the channel whose whole input is written by someone
+else.
 
 ## What is not built
 

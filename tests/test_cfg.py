@@ -20,6 +20,7 @@ from agent_defs.cfg import (
     cfg_bindings,
     scan_cfg,
     scan_cfg_isolated,
+    scan_cfg_trusted,
 )
 from agent_defs.evaluate import IncompleteScanError, scan_trusted
 from agent_defs.lanes import admit
@@ -52,7 +53,7 @@ def rule(loaded, number):
 
 
 def cfg_ids(document, rules, **kw):
-    result = scan_cfg(document, rules, **kw)
+    result = scan_cfg_trusted(document, rules, **kw)
     assert result.complete, result.errors
     return set(result.rule_ids)
 
@@ -175,7 +176,7 @@ def test_a_document_over_the_source_limit_is_unfinished_not_clean(loaded):
     payload = carrier.examples_positive[2]
     document = payload + "\n" + "filler text. " * 9000
     assert len(document) > cfg_module.SOURCE_MAX_EVAL_CHARS
-    result = scan_cfg(document, [carrier])
+    result = scan_cfg_trusted(document, [carrier])
     assert result.over_source_eval_limit is True
     assert result.complete is False
     assert [f.rule_id for f in result.partial_findings] == ["atr:ATR-2026-00120"]
@@ -382,7 +383,7 @@ def test_a_payload_hidden_in_base64_is_read(loaded):
     encoded = base64.b64encode(payload.encode("utf-8")).decode("ascii")
     document = f"# Helper\n\nRun the setup blob:\n\n{encoded}\n"
     assert cfg_ids(document, [carrier], decode_base64=False) == set()
-    result = scan_cfg(document, [carrier])
+    result = scan_cfg_trusted(document, [carrier])
     assert result.rule_ids == ("atr:ATR-2026-00120",)
     assert [f.origin for f in result.findings] == ["base64"]
 
@@ -402,7 +403,7 @@ def test_base64_decoding_keeps_the_source_bounds():
 def test_findings_carry_the_condition_that_matched(loaded):
     carrier = rule(loaded, "00120")
     payload = carrier.examples_positive[2]
-    result = scan_cfg(payload, [carrier])
+    result = scan_cfg_trusted(payload, [carrier])
     finding, = result.findings
     # Derived: the index addresses the binding's condition list, and that list
     # shortens whenever a condition is refused. Pinning the literal made this
@@ -423,9 +424,9 @@ def test_the_isolated_path_decides_what_the_in_process_path_decides(loaded):
     """Isolation must not change the verdict, only who pays if it runs away."""
     flagged = rule(loaded, "00421")
     payload = next(text for text in flagged.examples_positive
-                   if scan_cfg(text, [flagged]).findings)
+                   if scan_cfg_trusted(text, [flagged]).findings)
     for rules in ([flagged], loaded.rules):
-        here = scan_cfg(payload, rules)
+        here = scan_cfg_trusted(payload, rules)
         there = scan_cfg_isolated(payload, rules, budget_s=20.0)
         assert here.complete and there.complete
         assert _spans(here) == _spans(there)
@@ -442,7 +443,7 @@ def test_the_isolated_path_kills_a_match_the_deadline_outlives(loaded):
     ``a*a*a*a*a*a*b`` carries no group under a quantifier and no alternation
     under repetition, so the shape screen admits it, and no measurement has ever
     timed it. Against 200 characters it does not finish in any time a person
-    waits. Through ``scan_cfg`` this call does not return; here it returns at the
+    waits. Through ``scan_cfg_trusted`` this call does not return; here it returns at the
     deadline, says it is incomplete, and refuses to hand over findings.
     """
     binding = ChannelBinding(channel="CFG", entry_point="test", eligible=True, reason="",
@@ -466,7 +467,7 @@ def test_the_isolated_path_kills_a_match_the_deadline_outlives(loaded):
 
 def test_scan_cfg_rejects_a_non_string_document(loaded):
     with pytest.raises(TypeError):
-        scan_cfg(b"bytes", loaded.rules)
+        scan_cfg_trusted(b"bytes", loaded.rules)
 
 
 def test_a_truncated_document_is_not_a_clean_one(loaded):
@@ -474,7 +475,7 @@ def test_a_truncated_document_is_not_a_clean_one(loaded):
     carrier = rule(loaded, "00120")
     payload = carrier.examples_positive[2]
     document = "x" * 4096 + payload
-    result = scan_cfg(document, [carrier], max_bytes=64)
+    result = scan_cfg_trusted(document, [carrier], max_bytes=64)
     assert result.truncated_input is True
     assert result.complete is False
     assert result.partial_findings == ()

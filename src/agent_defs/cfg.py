@@ -35,17 +35,25 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
+import math
 import re
+import time
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 from .evaluate import (
+    DEFAULT_BUDGET_S,
     DEFAULT_MAX_BYTES,
     Finding,
     IncompleteScanError,
     RuleError,
     ScanResult,
+    _MAX_BUNDLE_CHARS,
+    _MAX_INPUT_BYTES,
+    _MAX_RULES,
     _cap_payload,
+    _run_worker,
     screen_pattern,
 )
 from .model import ChannelBinding, Rule, Surface
@@ -360,23 +368,105 @@ def scan_cfg_isolated(
     document: str,
     rules: Iterable[Rule],
     *,
-    budget_s: float = 1.0,
-    max_bytes: int = 4 * 1024 * 1024,
-) -> ScanResult:
-    """Placeholder for the isolated CFG path, deliberately not yet implemented.
+    budget_s: float = DEFAULT_BUDGET_S,
+    decode_base64: bool = True,
+    suppress_code_blocks: bool = True,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> "CfgScanResult":
+    """Scan one configuration document in a killable worker, under a deadline.
 
     ``evaluate.scan`` isolates because a regex that backtracks cannot be
     interrupted once it starts, and the skill document a person is about to
-    install is written by whoever wrote the attack. The same isolation is needed
-    here and is not built: the worker protocol carries a flat predicate, and this
-    channel needs a rule's conditions in order together with its suppression
-    flag. Refusing loudly is better than handing a caller a hook that can freeze
-    their session.
+    install was written by whoever wrote the attack. The same isolation applies
+    here, over the same worker and the same supervisor, with the channel's own
+    execution model carried across: each rule's conditions in the source's order,
+    its condition logic, and its code-block suppression flag.
+
+    The document crosses raw. Splitting base64 blocks out and locating code
+    fences both read attacker text, so they run inside the process that can be
+    killed rather than in the caller's.
+
+    The deadline covers preparation, startup, screening, compilation and
+    matching. A rule the worker never reached is unfinished rather than clean,
+    and ``findings`` raises for the whole result, so a timeout cannot be read as
+    a document with nothing in it.
     """
-    raise NotImplementedError(
-        "the isolated CFG path is not built; scan_cfg is offline-only and the "
-        "scan worker protocol does not yet carry per-condition bindings"
-    )
+    if not isinstance(document, str):
+        raise TypeError("document must be a string")
+    if not isinstance(max_bytes, int) or not 0 <= max_bytes <= _MAX_INPUT_BYTES:
+        raise ValueError(f"max_bytes must be between 0 and {_MAX_INPUT_BYTES}")
+    if not math.isfinite(budget_s) or budget_s < 0:
+        raise ValueError("budget_s must be finite and nonnegative")
+    deadline = time.perf_counter() + budget_s
+    document, truncated = _cap_payload(document, max_bytes)
+    over_limit = _utf16_len(document) > SOURCE_MAX_EVAL_CHARS
+    findings: list[CfgFinding] = []
+    errors: list[RuleError] = []
+
+    bindings = list(cfg_bindings(rules))
+
+    def result(worker_error=None, evaluated=0):
+        errors.sort(key=lambda error: (error.rule_id, error.reason))
+        if worker_error is not None:
+            errors.append(RuleError("", worker_error))
+        return CfgScanResult(tuple(findings), evaluated, tuple(errors), truncated,
+                             over_limit, empty_bundle=not bindings)
+
+    if not bindings:
+        return result()
+    if len(bindings) > _MAX_RULES:
+        return result(f"bundle exceeds {_MAX_RULES} rules")
+    wire = []
+    chars = 0
+    for rule, binding in bindings:
+        chars += sum(len(condition) for condition in binding.conditions)
+        if chars > _MAX_BUNDLE_CHARS:
+            return result(f"bundle exceeds {_MAX_BUNDLE_CHARS} predicate characters")
+        wire.append({"id": rule.id, "source": rule.source, "surface": binding.channel,
+                     "conditions": list(binding.conditions),
+                     "logic": binding.condition_logic,
+                     "suppress": bool(binding.suppress_in_code_blocks)})
+    request = json.dumps(dict(mode="cfg", payload=document, rules=wire,
+                              decode_base64=bool(decode_base64),
+                              suppress_code_blocks=bool(suppress_code_blocks)),
+                         ensure_ascii=False).encode("utf-8", "surrogatepass")
+    if time.perf_counter() >= deadline:
+        return result("worker deadline exceeded before dispatch")
+    output, timed_out, returncode, worker_error = _run_worker(request, deadline)
+
+    completed = 0
+    for line in output.splitlines(keepends=True):
+        if not line.endswith(b"\n"):
+            break
+        try:
+            status, index, detail = json.loads(line)
+            if not isinstance(index, int) or index != completed or index >= len(wire):
+                raise ValueError("invalid completion index")
+            item = wire[index]
+            if status == "error" and isinstance(detail, str):
+                errors.append(RuleError(item["id"], detail))
+            elif status == "ok":
+                if detail is not None:
+                    condition, start, end, origin = detail
+                    if not (isinstance(condition, int) and isinstance(start, int)
+                            and isinstance(end, int) and 0 <= start <= end
+                            and 0 <= condition < len(item["conditions"])
+                            and origin in ("document", "base64")):
+                        raise ValueError("invalid match span")
+                    findings.append(CfgFinding(item["id"], item["surface"], start, end,
+                                               condition, origin))
+            else:
+                raise ValueError("invalid completion status")
+            completed += 1
+        except (ValueError, TypeError, IndexError):
+            worker_error = "invalid worker response"
+            break
+    if timed_out:
+        worker_error = worker_error or "worker deadline exceeded"
+    elif returncode != 0 or completed != len(wire):
+        worker_error = worker_error or (f"worker failed (exit {returncode}; "
+                                        f"{completed}/{len(wire)} completed)")
+    return result(worker_error, completed)
 
 
 __all__ = [

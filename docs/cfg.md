@@ -142,17 +142,33 @@ diffs the two document by document, and `crosscheck-a8a4146.py` reproduces round
 three's 445-of-466 figure on the June snapshot. All of it used
 `agent_defs.evaluate.scan_trusted` and `agent_defs.cfg.scan_cfg`, never `scan()`.
 
+## The isolated path
+
+`evaluate.scan` runs a flat predicate in a disposable worker because a regex that
+backtracks cannot be interrupted once it starts, and the skill document a person
+is about to install was written by whoever wrote the attack. `scan_cfg_isolated`
+now gives this channel the same treatment over the same worker and supervisor.
+
+The worker protocol carries a `cfg` mode: each rule's conditions in the source's
+order, its condition logic and its code-block suppression flag, which a flat
+predicate cannot express. The document crosses raw, so the base64 decode and the
+code-fence scan run inside the process that can be killed rather than in the
+caller's; both read attacker text and neither is free.
+
+Measured on a pattern the shape screen admits and the table has never timed,
+`a*a*a*a*a*a*b` against 200 characters: budgets of 0.25 s, 1.0 s and 2.0 s return
+in 0.27 s, 1.01 s and 2.02 s, each reporting `complete=False` with `worker
+deadline exceeded`, and `findings` raises so a timeout cannot be read as a clean
+document. The same call through `scan_cfg` does not return. On ordinary input the
+two paths agree finding for finding, span for span, including which condition
+matched and whether it came from the document or a decoded block.
+
+`scan_cfg` remains the offline entry point, like `evaluate.scan_trusted`: no
+isolation, no deadline, for measurement and for material the caller wrote.
+
 ## What is not built
 
-The isolated path. `evaluate.scan` runs a flat predicate in a disposable worker
-because a regex that backtracks cannot be interrupted once it starts, and the
-skill document a person is about to install is written by whoever wrote the
-attack. `scan_cfg` has no such isolation, and the worker protocol carries a flat
-predicate rather than a rule's conditions in order with its suppression flag.
-`scan_cfg_isolated` raises `NotImplementedError` rather than handing a caller a
-hook that can freeze their session.
-
-Unicode normalization is also absent. Upstream tests each pattern against
+Unicode normalization. Upstream tests each pattern against
 `foldConfusables(normalizeUnicode(text))` and then against the raw text, so
 omitting it moves verdicts in both directions. Upstream builds its code-block ranges on the
 normalized text, so a fence written with U+FF40 FULLWIDTH GRAVE ACCENT folds to a backtick

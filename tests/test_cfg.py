@@ -9,6 +9,7 @@ nothing once the rule runs the way ATR runs it. That single document is the whol
 from pathlib import Path
 import json
 import re
+import time
 
 import pytest
 
@@ -28,7 +29,7 @@ from agent_defs.loaders.atr_skill_gates import (
     gate_summary,
     read_skill_gates,
 )
-from agent_defs.model import Lane, PredicateKind, Surface
+from agent_defs.model import ChannelBinding, Lane, PredicateKind, Rule, Surface
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SKILL = FIXTURES / "atr_skill"
@@ -414,9 +415,53 @@ def test_findings_carry_the_condition_that_matched(loaded):
     assert finding.as_finding().rule_id == "atr:ATR-2026-00120"
 
 
-def test_the_isolated_path_refuses_rather_than_pretending(loaded):
-    with pytest.raises(NotImplementedError, match="per-condition bindings"):
-        scan_cfg_isolated("anything", loaded.rules)
+def _spans(result):
+    return [(f.rule_id, f.start, f.end, f.condition_index, f.origin) for f in result.findings]
+
+
+def test_the_isolated_path_decides_what_the_in_process_path_decides(loaded):
+    """Isolation must not change the verdict, only who pays if it runs away."""
+    flagged = rule(loaded, "00421")
+    payload = next(text for text in flagged.examples_positive
+                   if scan_cfg(text, [flagged]).findings)
+    for rules in ([flagged], loaded.rules):
+        here = scan_cfg(payload, rules)
+        there = scan_cfg_isolated(payload, rules, budget_s=20.0)
+        assert here.complete and there.complete
+        assert _spans(here) == _spans(there)
+        assert here.rules_evaluated == there.rules_evaluated
+    fenced = f"```\n{payload}\n```\n"
+    assert scan_cfg_isolated(fenced, [flagged], budget_s=20.0).findings == ()
+    empty = scan_cfg_isolated(payload, [], budget_s=20.0)
+    assert empty.empty_bundle and not empty.complete
+
+
+def test_the_isolated_path_kills_a_match_the_deadline_outlives(loaded):
+    """The reason this path exists, on a pattern the screen cannot catch.
+
+    ``a*a*a*a*a*a*b`` carries no group under a quantifier and no alternation
+    under repetition, so the shape screen admits it, and no measurement has ever
+    timed it. Against 200 characters it does not finish in any time a person
+    waits. Through ``scan_cfg`` this call does not return; here it returns at the
+    deadline, says it is incomplete, and refuses to hand over findings.
+    """
+    binding = ChannelBinding(channel="CFG", entry_point="test", eligible=True, reason="",
+                             condition_logic="any", conditions=("a*a*a*a*a*a*b",),
+                             suppress_in_code_blocks=False)
+    runaway = Rule(id="test:redos", source="test", source_id="redos", source_rev="0",
+                   source_path="", upstream_url="", surface=Surface.CFG,
+                   predicate_kind=PredicateKind.NONE, predicate=None, case_sensitive=False,
+                   not_runnable_reason="dispatcher only", bindings=(binding,),
+                   lane=Lane.RECORD, lane_reason="test")
+    started = time.perf_counter()
+    result = scan_cfg_isolated("a" * 200, [runaway], budget_s=1.0)
+    elapsed = time.perf_counter() - started
+    assert elapsed < 5.0, "the deadline did not bound the call"
+    assert not result.complete
+    assert any("deadline" in error.reason for error in result.errors)
+    assert result.partial_findings == ()
+    with pytest.raises(IncompleteScanError):
+        result.findings
 
 
 def test_scan_cfg_rejects_a_non_string_document(loaded):

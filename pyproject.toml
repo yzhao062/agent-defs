@@ -46,8 +46,10 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 # The refusal screen consults measured timings, so the measurement ships with
-# the code that reads it. Without it the screen falls back to shape.
-agent_defs = ["hazards.json"]
+# the code that reads it. Without it the screen falls back to shape. The bundle
+# ships for the same reason: the machine running the hook has neither the
+# corpus nor a YAML parser, so a bundle it cannot find is four starter rules.
+agent_defs = ["hazards.json", "bundle.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

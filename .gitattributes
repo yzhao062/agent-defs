@@ -1,3 +1,9 @@
 tests/fixtures/atr/*.yaml text eol=lf
 tests/fixtures/bench/corpus/* text eol=lf
 tests/fixtures/atr_skill/**  text eol=lf
+
+# Build outputs, written by scripts/build_hazards.py and scripts/build_bundle.py.
+# Both write LF on every platform, so pin the checkout to match and keep a
+# rebuild from showing as a whole-file diff on one OS and not the other.
+src/agent_defs/hazards.json text eol=lf
+src/agent_defs/bundle.json text eol=lf

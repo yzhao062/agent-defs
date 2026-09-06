@@ -1,6 +1,8 @@
 include sources.lock
 include src/agent_defs/hazards.json
+include src/agent_defs/bundle.json
 include scripts/audit_distribution.py
+include scripts/build_bundle.py
 include scripts/build_hazards.py
 include docs/distribution.md
 include docs/distribution-audit.json

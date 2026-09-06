@@ -41,8 +41,24 @@ only on a measured benign firing rate with an exact binomial bound behind it. Th
 | `src/agent_defs/hazards.json` | the measured regex timings the screen refuses on |
 | `src/agent_defs/cfg.py` | the configuration channel: a rule run the way its source runs it |
 | `src/agent_defs/lanes.py` | the four admission lanes and the binomial bound behind them |
+| `src/agent_defs/bundle.py` | the distribution format: normalized records frozen into one file |
+| `src/agent_defs/bundle.json` | the pinned rules the hook loads, written by `scripts/build_bundle.py` |
+| `src/agent_defs/cli.py` | the `agent-defs` command: install, calibrate, report state |
 | `SCHEMA.md` | the loader contract |
 | `docs/hazards.md` | why the screen refuses on measurement rather than on shape |
+
+## Seeing what an install is doing
+
+`agent-defs status` answers it without guesswork: which bundle loaded, how many
+rules that leaves enabled on each surface, the lane each of them can reach on
+today's measurement, and whether a harness is registered to call any of it.
+`agent-defs install` prints the settings diff and writes nothing until it is
+rerun with `--yes`.
+
+The hook reads `bundle.json` and never a loader, because the machine running it
+has neither the pinned corpora nor a YAML parser, and a corpus fetched from
+inside a tool-call hook would be a network request on the critical path of
+every tool call.
 
 ## The rule is the pattern plus its dispatcher
 

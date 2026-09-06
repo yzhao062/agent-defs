@@ -23,6 +23,11 @@ def config(tmp_path, monkeypatch):
     monkeypatch.setattr(hook, "SCAN_BUDGET_S", 2)
     config = hook.default_config()
     config["log_path"] = str(tmp_path / "log.jsonl")
+    # This file exercises the protocol over the starter set, and ``measured``
+    # below builds its evidence from that set. A subprocess that also loaded the
+    # shipped bundle would be running rules the evidence never covered, which is
+    # its own behaviour and has its own test.
+    config["bundle"] = ""
     return config
 
 
@@ -184,6 +189,31 @@ def test_log_failure_preserves_measured_decision_in_subprocess(config, tmp_path)
     response = json.loads(result.stdout)
     assert response["hookSpecificOutput"]["updatedToolOutput"] == hook.WITHHELD
     assert "systemMessage" in response and "log could not be written" in result.stderr
+
+
+def test_a_bundle_the_evidence_never_covered_cannot_interrupt(config, tmp_path):
+    # Loading rules is not the same as being allowed to act on them. The
+    # evidence is fingerprinted over the enabled set, so widening that set
+    # invalidates it, and every rule falls back to RECORD until somebody
+    # measures the set that is actually installed.
+    measured(config)
+    config["sources"]["builtin"] = "DENY"
+    carried = [replace(rule, id=rule.id.replace("builtin:", "atr:"), source="atr")
+               for rule in STARTER_RULES]
+    from agent_defs import bundle
+
+    elsewhere = tmp_path / "bundle.json"
+    bundle.write(elsewhere, carried)
+    config["bundle"] = str(elsewhere)
+
+    lanes = hook.effective_lanes(config, hook.active_rules(config, hook.hook_rules(config)[0]))
+    assert {lane.value for lane, _ in lanes.values()} == {"RECORD"}
+    assert hook.process(payload(attack()), config, hook.hook_rules(config)[0]) == {}
+
+    # Pinning the bundle back out restores the decision the evidence covers.
+    config["bundle"] = ""
+    assert hook.process(payload(attack()), config,
+                        hook.hook_rules(config)[0])["hookSpecificOutput"]["updatedToolOutput"] == hook.WITHHELD
 
 
 def test_log_failure_fails_open_in_subprocess(config, tmp_path):

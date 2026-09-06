@@ -34,10 +34,16 @@ SOURCES = ("builtin", "atr", "netzilo", "agentshield", "agent_audit_kit", "ave",
 DEGRADED = "agent-defs: security scan coverage is incomplete or unavailable. Review the local diagnostic log."
 
 
+#: The pinned bundle shipped beside the package. ``None`` in a config means
+#: this path; a string names another file; an empty string runs the starter
+#: rules alone, which is the only way to ask for four rules on purpose.
+BUNDLE_PATH = Path(__file__).resolve().parents[1] / "bundle.json"
+
+
 def default_config():
     return {"version": 1, "sources": {source: "RECORD" for source in SOURCES},
             "surfaces": ["IN", "OUT"], "log_path": "~/.claude/agent-defs/findings.jsonl",
-            "evidence": None}
+            "bundle": None, "evidence": None}
 
 
 def config_path():
@@ -58,7 +64,34 @@ def read_config(path):
         raise ValueError("only IN and OUT are supported by this hook")
     if not isinstance(value.get("log_path"), str) or not value["log_path"]:
         raise ValueError("log_path is required")
+    if value.get("bundle") is not None and not isinstance(value["bundle"], str):
+        raise ValueError("bundle must be a path, or null for the shipped one")
     return value
+
+
+def hook_rules(config):
+    """The rules this hook evaluates: the starter set plus the pinned bundle.
+
+    A bundle that is absent leaves the starter set alone, because a starter-only
+    install is a supported state. A bundle that is present and unreadable raises,
+    because the alternative is running four rules while a config names seven
+    sources, and silent coverage loss is the failure this package exists to
+    prevent.
+    """
+    setting = config.get("bundle")
+    if setting == "":
+        return tuple(STARTER_RULES), {"bundle": "starter_only"}
+    path = BUNDLE_PATH if setting is None else Path(setting).expanduser()
+    if not path.exists():
+        return tuple(STARTER_RULES), {"bundle": "absent", "path": str(path)}
+    from ..bundle import read
+
+    rules, metadata = read(path)
+    status = {"bundle": "loaded", "rules": len(rules)}
+    for key in ("built_at", "source_rev"):
+        if isinstance(metadata.get(key), str):
+            status[key] = metadata[key]
+    return tuple(STARTER_RULES) + tuple(rules), status
 
 
 def active_rules(config, rules=STARTER_RULES):
@@ -180,6 +213,14 @@ def process(payload, config, rules=STARTER_RULES):
             incomplete = True
             return value
         if isinstance(value, str):
+            # An empty string carries no attack text, and every rule that could
+            # match one matches every other leaf too, so nothing is hidden by
+            # skipping it. What is saved is real: one worker process and one
+            # screen-and-compile pass over the whole bundle, measured at 0.44 s
+            # for 231 rules, which the common ``{"stdout": ..., "stderr": ""}``
+            # tool result would otherwise pay twice.
+            if not value:
+                return value
             if remaining <= 0:
                 incomplete = True
                 return value
@@ -259,11 +300,18 @@ def run(path):
         payload = json.loads(raw)
         if isinstance(payload, dict):
             event = payload.get("hook_event_name")
+        rules, bundle_status = hook_rules(config)
         if event == "PreToolUse":
-            enabled = active_rules(config)
+            enabled = active_rules(config, rules)
             lanes = effective_lanes(config, enabled)
             can_ask = any(r.surface == Surface.IN and lanes[r.id][0] == Lane.DENY for r in enabled)
-        return process(payload, config)
+        response = process(payload, config, rules)
+        # ``starter_only`` is a choice and stays quiet. A bundle the config
+        # expects and cannot find is a defect, and a defect that reports once
+        # per tool call is a defect somebody fixes.
+        if bundle_status["bundle"] == "absent":
+            log_status(config, [dict(bundle_status, event=event)])
+        return response
     except BaseException as exc:
         log_status(config, [{"event": event, "status": "internal_error", "kind": type(exc).__name__}])
         return degraded_response(event, ask=can_ask)

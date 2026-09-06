@@ -20,6 +20,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Sequence
 
+from . import bundle
 from .evaluate import compile_rule, scan, scan_trusted
 from .lanes import ADVISE_MAX_U95, DENY_MAX_U95, admit, trials_needed, u95_zero_hits
 from .model import BenignFiring, Breadth, Lane, Lineage, PredicateKind, Rule, Surface
@@ -84,24 +85,11 @@ def load_rules(path: Path | str) -> list[Rule]:
     """Read a JSON array of normalized records, or an object with ``rules``.
 
     Stored lanes and measurements are intentionally discarded for remeasurement.
-    No Python module or source text is executed to load a bundle.
+    No Python module or source text is executed to load a bundle. The format is
+    :mod:`agent_defs.bundle`, which the shipped hook reads through the same
+    reader, so a bundle this benchmark measured is a bundle the hook can run.
     """
-    data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
-    records = data["rules"] if isinstance(data, dict) else data
-    if not isinstance(records, list):
-        raise ValueError("bundle rules must be an array")
-    rules = []
-    for original in records:
-        row = dict(original)
-        for key, enum_type in (("surface", Surface), ("breadth", Breadth), ("predicate_kind", PredicateKind)):
-            if key in row:
-                row[key] = enum_type(row[key])
-        row["lineage"] = tuple(Lineage(**entry) for entry in row.get("lineage", ()))
-        row.update(benign=None, lane=Lane.RECORD, lane_reason="")
-        rules.append(Rule(**row))
-    if len({r.id for r in rules}) != len(rules):
-        raise ValueError("duplicate rule IDs in bundle")
-    return rules
+    return bundle.load(path)
 
 
 @dataclass(frozen=True)

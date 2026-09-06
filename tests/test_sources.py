@@ -111,11 +111,18 @@ def test_digest_mismatch_never_extracts_or_publishes(fixture, monkeypatch):
     assert list(cache.iterdir()) == []
 
 
+# The ids are spelled out because one value cannot be introspected safely. On
+# 3.9 urllib's HTTPError inherits tempfile._TemporaryFileWrapper through
+# addbase, and constructing it with fp=None leaves the wrapper uninitialised, so
+# its __getattr__ raises KeyError rather than AttributeError for any missing
+# name. pytest reads __name__ off each value to build an id, which turned that
+# into a collection error that stopped the whole 3.9 run. Naming the cases skips
+# the lookup and reads better besides.
 @pytest.mark.parametrize("failure,status", [
     (URLError("offline"), None),
     (HTTPError("https://example.invalid", 404, "not found", {}, None), 404),
     (TimeoutError("timed out"), None),
-])
+], ids=["urlerror", "http-404", "timeout"])
 def test_network_failure_names_source_and_never_falls_back(fixture, monkeypatch, failure, status):
     _, _, _, cache = fixture
     calls = []
@@ -256,7 +263,8 @@ def test_drift_three_states_and_current_default_branch(fixture, monkeypatch):
     (b"{}", 200), (b"null", 200),
     (URLError("offline"), None),
     (HTTPError("https://example.invalid", 403, "rate limited", {}, None), 403),
-])
+], ids=["invalid-json", "sha-is-a-branch-name", "empty-object", "null",
+        "urlerror", "http-403"])  # ids spelled out for the reason given above
 def test_bad_head_is_unreachable_even_after_metadata_success(fixture, monkeypatch, head, status):
     def open_url(request, *, timeout):
         if "/commits/" not in request.full_url:

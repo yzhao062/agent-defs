@@ -11,11 +11,16 @@ jobs:
         python: ['3.9', '3.12', '3.14']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install pytest
+      # The core declares no dependencies on purpose, so each loader's needs sit
+      # in an extra. Installing only pytest left PyYAML absent, and every test
+      # that loads ATR raised the optional-extra guard instead of running: 31
+      # errors that said nothing about the code under test. Install from the
+      # extras so they stay the one place a dependency is declared.
+      - run: python -m pip install -e ".[atr,sigma,dev]"
       - run: python -m pytest tests -q
         env:
           PYTHONPATH: src

@@ -30,16 +30,41 @@ def test_imports_need_no_yaml_or_other_third_party_dependency():
     script = """
 import os, sys, sysconfig
 # sys.stdlib_module_names arrived in 3.10, and this package still supports 3.9.
-# The names sitting directly in the stdlib directory are the same set for this
-# purpose: site-packages is a directory inside it rather than a module, so an
-# installed third-party distribution is not listed and cannot slip through.
-STDLIB = getattr(sys, 'stdlib_module_names', None) or (
-    frozenset(sys.builtin_module_names)
-    | frozenset(n.split('.')[0] for n in os.listdir(sysconfig.get_paths()['stdlib'])))
+# Below that, the set is rebuilt from where the standard library actually lives.
+# Reading the stdlib directory alone is not enough: C extensions sit in
+# lib-dynload on POSIX and DLLs on Windows, so posix, fcntl and _hashlib are
+# missing from it and the finder rejects them as third-party. Third-party code
+# still cannot slip in, because site-packages is a directory inside the stdlib
+# path rather than a module name listed in it.
+def _stdlib_names():
+    names = set(sys.builtin_module_names)
+    paths = {sysconfig.get_paths()[key] for key in ('stdlib', 'platstdlib')}
+    paths |= {os.path.join(base, 'lib-dynload') for base in tuple(paths)}
+    paths |= {os.path.join(sys.base_prefix, 'DLLs'), os.path.join(sys.prefix, 'DLLs')}
+    for path in paths:
+        try:
+            names |= {entry.split('.')[0] for entry in os.listdir(path)}
+        except OSError:
+            pass
+    return frozenset(names)
+STDLIB = getattr(sys, 'stdlib_module_names', None) or _stdlib_names()
 class NoThirdParty:
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] not in STDLIB | {'agent_defs'}:
-            raise AssertionError(fullname)
+        if fullname.split('.')[0] in STDLIB | {'agent_defs'}:
+            return None
+        # A name outside the set is not yet proof of a third-party import.
+        # sys.stdlib_module_names is one static list for every platform, so it
+        # holds msvcrt and _winapi on Linux as well; the 3.9 fallback reads
+        # directories and cannot. Ask the remaining finders: only a name one of
+        # them resolves is really being imported. Anything else is absent here
+        # and raises ImportError on its own, which is the honest error.
+        for finder in sys.meta_path[1:]:
+            try:
+                if finder.find_spec(fullname, path, target) is not None:
+                    raise AssertionError(fullname)
+            except (AttributeError, ImportError):
+                continue
+        return None
 sys.meta_path.insert(0, NoThirdParty())
 import agent_defs
 assert 'agent_defs.loaders.atr' not in sys.modules

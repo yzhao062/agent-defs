@@ -180,16 +180,34 @@ def test_agentshield_port_uses_id_and_author_despite_changed_title():
 def test_imports_work_when_all_third_party_imports_are_blocked():
     script = '''
 import os, sys, sysconfig, importlib.abc
-# See the note in test_atr.py: 3.9 has no sys.stdlib_module_names, and the
-# names directly under the stdlib directory stand in for it.
-STDLIB = getattr(sys, 'stdlib_module_names', None) or (
-    frozenset(sys.builtin_module_names)
-    | frozenset(n.split('.')[0] for n in os.listdir(sysconfig.get_paths()['stdlib'])))
+# See the note in test_atr.py: 3.9 has no sys.stdlib_module_names, so the set is
+# rebuilt from the stdlib path plus the directories C extensions live in.
+def _stdlib_names():
+    names = set(sys.builtin_module_names)
+    paths = {sysconfig.get_paths()[key] for key in ('stdlib', 'platstdlib')}
+    paths |= {os.path.join(base, 'lib-dynload') for base in tuple(paths)}
+    paths |= {os.path.join(sys.base_prefix, 'DLLs'), os.path.join(sys.prefix, 'DLLs')}
+    for path in paths:
+        try:
+            names |= {entry.split('.')[0] for entry in os.listdir(path)}
+        except OSError:
+            pass
+    return frozenset(names)
+STDLIB = getattr(sys, 'stdlib_module_names', None) or _stdlib_names()
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
         name = fullname.split('.')[0]
-        if name not in STDLIB and name != 'agent_defs':
-            raise AssertionError('third-party import: ' + fullname)
+        if name in STDLIB or name == 'agent_defs':
+            return None
+        # See test_atr.py: only a name another finder can resolve is really an
+        # import. A platform-absent stdlib name raises ImportError by itself.
+        for finder in sys.meta_path[1:]:
+            try:
+                if finder.find_spec(fullname, path, target) is not None:
+                    raise AssertionError('third-party import: ' + fullname)
+            except (AttributeError, ImportError):
+                continue
+        return None
 sys.meta_path.insert(0, Block())
 import agent_defs
 assert not any(n.startswith('agent_defs.loaders') for n in sys.modules)

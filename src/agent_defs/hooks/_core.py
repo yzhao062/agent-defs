@@ -68,7 +68,16 @@ class Outcome:
 
     @property
     def changed(self) -> bool:
-        """Whether anything was withheld, which is what a caller sends back."""
+        """Whether the payload compares unequal, which is what a caller sends back.
+
+        Inequality rather than "something was withheld", and the two can differ.
+        ``json.loads`` accepts the nonstandard ``NaN`` token, and a NaN is
+        unequal to itself, so a payload carrying one reports changed with
+        nothing redacted. That is the old behaviour, kept rather than tightened:
+        resending an unmodified payload is the safe direction, and the
+        alternative is to track withholding separately for a token no conforming
+        producer emits.
+        """
         return self.updated != self.original
 
 

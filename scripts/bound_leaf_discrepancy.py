@@ -58,10 +58,17 @@ with each rule's own flags and its own ``regex_all`` conjunction. Read it as
 
 **substring-leaf** removes every zero-width assertion and matches the remainder
 against the joined text. For a pattern free of the :data:`UNSUPPORTED`
-constructs the rewrite only widens what matches, so a match on any contiguous
-substring implies a match of the remainder on the whole; a pattern carrying one
-is counted as a candidate on every unit instead of being rewritten. Loose by
-construction.
+constructs *and of backreferences* the rewrite only widens what matches, so a
+match on any contiguous substring implies a match of the remainder on the
+whole; a pattern carrying one is counted as a candidate on every unit instead
+of being rewritten. Loose by construction.
+
+The backreference clause is not hypothetical: removing the lookahead from
+``^(a)(?=(b))(bc)\\2$`` renumbers the groups, and the rewrite stops matching
+``abcb``. It is excluded here rather than detected because the evaluator
+rejects backreferences outright, so no accepted rule can carry one. That makes
+the exclusion a property of what this runs on rather than of the rewrite, and a
+caller reusing this helper on unscreened patterns has to check for itself.
 
 Neither number covers content the corpus does not hold. The corpus records
 ``tool_result.content``; the hook walks ``tool_response``, whose other string
@@ -176,6 +183,31 @@ UNSUPPORTED = ("atomic group or possessive quantifier", "conditional",
                "quantified lookaround")
 
 
+def after_inert(pattern: str, index: int) -> int:
+    """Skip forward over what the parser may drop before a quantifier.
+
+    Verbose mode ignores unescaped whitespace and ``#`` to end of line, and
+    ``(?#...)`` is a comment under any flags. Whether whitespace is dropped
+    depends on a flag this scan does not have, so it is skipped either way.
+    In a pattern that is not verbose that only mistakes a widening rewrite for
+    a narrowing one, and the cost of that is a rule probed without being pruned.
+    """
+    while index < len(pattern):
+        if pattern[index].isspace():
+            index += 1
+        elif pattern.startswith("(?#", index):
+            end = pattern.find(")", index)
+            if end < 0:
+                return index
+            index = end + 1
+        elif pattern[index] == "#":
+            end = pattern.find("\n", index)
+            index = len(pattern) if end < 0 else end + 1
+        else:
+            break
+    return index
+
+
 def unsupported_constructs(pattern: str) -> set:
     """Which :data:`UNSUPPORTED` constructs this pattern carries, if any.
 
@@ -186,6 +218,12 @@ def unsupported_constructs(pattern: str) -> set:
     A quantifier cannot follow ``^``, ``$``, ``\\b`` or ``\\A`` in a pattern
     that compiles at all, so the quantified case only has to be checked for
     lookaround groups.
+
+    The quantifier need not be adjacent to the group. Round 4 of the review
+    reached past an adjacency check with ``(?x)^ab(?=x) {0} c$`` and
+    ``^ab(?=x)(?#comment){0}c$``, both of which compile, match the leaf ``abc``,
+    and lose that match in the joined text. :func:`after_inert` skips what the
+    parser may drop in between.
     """
     found, index = set(), 0
     while index < len(pattern):
@@ -211,7 +249,8 @@ def unsupported_constructs(pattern: str) -> set:
                 end = close_paren(pattern, index)
                 if end is None:
                     return {"unbalanced group"}
-                if end < len(pattern) and pattern[end] in "*+?{":
+                quantifier = after_inert(pattern, end)
+                if quantifier < len(pattern) and pattern[quantifier] in "*+?{":
                     found.add(UNSUPPORTED[2])
                 index = end
                 continue

@@ -43,8 +43,11 @@ must record how many manifest entries were present when they ran.
 
 ## The rules that follow
 
-1. **Never extract known-malicious sample paths to disk.** Read them from the archive in memory. The
-   loader reads members by name out of the pinned tarball; nothing writes them out.
+1. **Extract the inputs a loader declares, and nothing else.** "Known-malicious paths" is the wrong
+   unit, because a corpus does not tell you where it will put its samples next; the deny-list that
+   tried was outrun twice. `sources.DECLARED_INPUTS` names what each loader reads and `fetch`
+   writes only that. Anything else is read from the archive in memory, never written. A source with
+   no declaration is still on the deny-list and still carries that risk.
 2. **Never vendor sample text into the wheel or the npm package.** `examples_positive` is a
    build-time input, not a shipped field.
 3. **Ship the result of the reachability check, not its input.** For each rule: whether it matched
@@ -67,24 +70,49 @@ true-positive attack document per rule in 74 directories. The deny-list did not 
 fetch then failed during cleanup because the scanner was holding a file open.
 
 **A deny-list cannot know where a corpus will put its samples next.** That is the finding, and
-adding the missing prefixes is not the fix. Three things changed:
+adding the missing prefixes was not the fix. `fetch` now extracts by **allow-list**: a source listed
+in `sources.DECLARED_INPUTS` gets the inputs its loader reads and nothing else. For ATR that is
+`rules/`, the licence, and the four engine sources `atr_skill_gates` parses to establish which rules
+the skill entry point admits. Measured against the pinned archive in memory: **798 members selected,
+18,607 refused**, no `data/` member among them. The deny-list alone would have selected 17,803.
 
-1. `conformance`, `spec/conformance` and `tests/fixtures` were added to `NEVER_EXTRACT`, with a note
-   at the definition saying plainly that the list has been outrun and will be again.
-2. An excluded directory is no longer created, so a refused tree stops leaving behind empty folders
-   named after the samples it refused.
-3. A real defect behind the recurrence: the extractor skipped excluded members while the cache
+Naming the missed prefixes would not have been enough, and this is what settles it. At that same
+revision the deny-list also did not name `data/autoresearch/adversarial-samples.json` (1,054 payload
+records), `data/autoresearch/missed-payloads.json` (895), `data/evasion-payloads.json` (64),
+`data/semantic-validation/attacks.json` (20), or the 850-record `data/pint-benchmark/pint-corpus.json`.
+Adding those five would have left a sixth to be found the same way, by a scanner.
+
+This bounds what is extracted to a declared set. It does not certify the contents of an allowed file:
+upstream can add a sample under `rules/`, and rule YAML carries positive examples by design. The
+promise is a bounded selection of declared inputs, not a clean corpus.
+
+A cache built before this change holds paths the allow-list no longer selects, so it fails
+verification with "cached tree has missing or extra paths" and `fetch` raises rather than hitting.
+Delete the entry and refetch. That is the fail-closed direction, and on this host the cache is empty.
+
+Three further changes:
+
+1. Each file is admitted on both the path it is written to and the path its bytes come from. A link
+   is stored under its own name while carrying its target's content, so `rules/x -> ../data/test-corpora/payload`
+   copied an excluded file into an admitted directory under both policies. Symlinks and hardlinks
+   are regression-tested in both directions.
+2. Under an allow-list a directory exists only because an admitted file needs it, so a refused tree
+   no longer leaves behind empty folders named after the samples it refused.
+3. A real defect found while fixing the first: the extractor skipped excluded members while the cache
    verifier compared the tree against **every** member the archive declares. A cache built for a
-   corpus with excluded paths therefore failed its own verification, never hit, and every call
-   re-downloaded and re-extracted the corpus. That is a mechanism for putting samples in front of a
-   scanner over and over, and it was never tested because the test fixture archive has no excluded
-   members. Both are now regression-tested in `tests/test_sources.py`.
+   corpus with excluded paths therefore failed its own verification, so it could never hit again and
+   later calls raised `SourceError` until the cache state changed. Sharing one filter fixes that
+   disagreement. It was never tested because the fixture archive has no excluded members; it is now.
 
-The count that prompted the fetch was then taken a different way, and that way is the shape the rule
-1 asks for: the tarball is streamed into memory, never written, and an **allow-list** extracts
-`rules/**` and the licence only. 793 rule files out, 18,611 members refused. A sample cannot reach
-disk under that shape whatever upstream grows, which is what a deny-list cannot promise. Moving
-`fetch` to an allow-list is the outstanding work.
+That defect is **not** the reason samples kept reaching a scanner, and an earlier draft of this
+section said it was. `fetch` returns `_check()` for an existing cache and raises on failure; it does
+not fall through to a download. Repeated extraction needs a missing cache, an external removal, or a
+failure before publication, which is what the third incident was: extraction into the staging
+directory failed while the scanner held a file open, so no entry was published and the 17,756 staged
+files had to be swept by hand. A run that cannot publish leaves nothing for the next one to hit.
+
+The count that prompted the fetch was taken the way rule 1 asks for, and the allow-list above was
+verified the same way: the tarball streamed into memory, never written.
 
 ## It happened again, which is why it is now a guard rather than a rule
 

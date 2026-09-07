@@ -115,10 +115,13 @@ def test_case_sensitivity_follows_the_rule_rather_than_the_probe(probes):
 
 
 #: Round 3's counterexamples to the rewrite itself, and to the premise that
-#: only a zero-width assertion can make a leaf match vanish in the joined text.
+#: only a zero-width assertion can make a leaf match vanish in the joined text,
+#: followed by round 4's, which reach the same quantifier from further away.
 #: Each must be refused from pruning rather than rewritten.
 UNSOUND_TO_STRIP = [
     (r"^ab(?=x){0}c$", "abc", "quantified lookaround"),
+    (r"(?x)^ab(?=x) {0} c$", "abc", "quantified lookaround"),
+    (r"^ab(?=x)(?#comment){0}c$", "abc", "quantified lookaround"),
     (r"(?>(?!\A)a|ab)c", "abc", "atomic group or possessive quantifier"),
     (r"a(?>bc\nx|b)c", "abc", "atomic group or possessive quantifier"),
     (r"(?(1)a|b)c", "bc", "conditional"),
@@ -166,6 +169,53 @@ def test_an_unprunable_rule_is_still_probed(probes):
     assert "t:conditional" in splits
     # The stand-in probe admits every unit, so nothing is pruned away.
     assert relaxed[0][1]("anything at all") is True
+
+
+@pytest.mark.parametrize("pattern,leaf,kind", UNSOUND_TO_STRIP[:3])
+def test_a_distant_quantifier_reaches_candidate_selection_unpruned(probes, pattern, leaf, kind):
+    """Round 4's route past the adjacency check, through the selection path.
+
+    An adjacency check classified these two as ordinary, so the rewrite ran and
+    the relaxed pattern pruned the unit before the split probe could confirm it.
+    They compile on every supported interpreter, so unlike the atomic-group case
+    the whole selection path can be exercised here.
+    """
+
+    class Fake:
+        id = "t:distant"
+        case_sensitive = True
+        predicate_kind = probes.PredicateKind.REGEX
+        predicate = pattern
+
+    relaxed, splits, census, unprunable = probes.build_probes([Fake()])
+    assert unprunable == ["t:distant"], f"{pattern!r} was pruned by a rewrite that loses its match"
+    assert relaxed[0][1]("anything at all") is True
+    # The split probe takes the lines, and finds the leaf that the joined text
+    # hides. Confirming it is exactly what the rewrite would have prevented.
+    assert splits["t:distant"]([leaf]) is True
+    assert splits["t:distant"](["z", leaf, "y"]) is True
+    assert not re.compile(pattern).search("z\n" + leaf + "\ny")
+
+
+def test_no_shipped_rule_carries_a_construct_the_rewrite_cannot_handle(probes):
+    """Keeps the committed record honest as the bundle changes.
+
+    `scripts/leaf-traversal-diagnostic.json` records `probed_without_pruning: []`
+    and `docs/calibration.md` says the shipped rules carry none of these. Both
+    are claims about a bundle that a later build can change under them, so the
+    claim is checked against the bundle rather than restated.
+    """
+    import json
+
+    bundle = json.loads((SCRIPT.parents[1] / "src" / "agent_defs" / "bundle.json")
+                        .read_text(encoding="utf-8"))
+    assert len(bundle["rules"]) == 205, "the bundle changed; regenerate the diagnostic record"
+    patterns = [(rule["id"], rule["predicate"]) for rule in bundle["rules"]
+                if rule.get("predicate_kind") == "REGEX"]
+    assert len(patterns) == 201, "the four STRUCTURED rules carry no pattern to classify"
+    carrying = {rule_id: sorted(probes.unsupported_constructs(pattern))
+                for rule_id, pattern in patterns if probes.unsupported_constructs(pattern)}
+    assert carrying == {}, "a shipped rule is now unprunable; the recorded counts are stale"
 
 
 def test_the_string_level_detection_needs_no_interpreter_support(probes):

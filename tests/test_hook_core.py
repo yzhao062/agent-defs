@@ -124,6 +124,9 @@ def test_every_budget_stops_the_walk_and_says_so(limit, field):
     outcome = run({"a": {"b": "text"}}, scanner, limits=replace(LIMITS, **{field: limit}))
     assert outcome.incomplete
     assert outcome.updated == {"a": {"b": "text"}}
+    # Without this the test passes on a walk that sets `incomplete` and then
+    # keeps scanning: a clean scanner leaves the payload unchanged either way.
+    assert scanner.seen == [], "the walk continued past its own limit"
 
 
 def test_a_non_string_leaf_is_returned_untouched():

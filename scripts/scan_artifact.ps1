@@ -59,8 +59,12 @@ function Write-Record {
     $json = $Record | ConvertTo-Json -Depth 6
     if ($Destination) {
         $temp = "$Destination.$([guid]::NewGuid().ToString('N').Substring(0,8)).tmp"
-        [IO.File]::WriteAllText($temp, $json + "`n", (New-Object Text.UTF8Encoding $false))
         try {
+            # Inside the guard, not before it. A destination under a directory
+            # that does not exist fails here rather than at the replace, and
+            # outside the guard that surfaced as exit 1, which the protocol
+            # assigns to a detection. Failing to write is not a detection.
+            [IO.File]::WriteAllText($temp, $json + "`n", (New-Object Text.UTF8Encoding $false))
             # Not Move-Item -Force. Its provider handles an IOException on a
             # forced move by deleting the destination and retrying, so a
             # transient share lock on the target destroys the previous record

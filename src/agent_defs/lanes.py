@@ -72,14 +72,17 @@ MAX_SUPPORTED_TRIALS = 10_000_000
 #: derivation is wrong: CPython evaluates a Lanczos expression whose own
 #: logarithms, products and sums carry error, and at 49,095 hits in 9,892,023
 #: trials the coefficient's measured error is -8.36e-8, already larger than the
-#: figure the derivation produced. What is measured, against a 60-digit
-#: ``mpmath.loggamma`` over a sweep of trial counts and rates at or below
-#: :data:`MAX_SUPPORTED_TRIALS`, is a worst absolute coefficient error near
-#: 2.7e-8, so this value carries roughly thirty-fold headroom over what was
-#: observed. No search has produced a wrong resolved decision inside the cap,
-#: and none of that is a proof. Treat the pair as a fail-closed device: the
-#: domain is capped where the error is known to grow past the band, and a
-#: comparison inside the band is not answered.
+#: figure the derivation produced. Two maxima are on record, with different
+#: scopes. A sweep of trial counts and rates at or below
+#: :data:`MAX_SUPPORTED_TRIALS`, measured against a 60-digit
+#: ``mpmath.loggamma``, observed a worst absolute coefficient error near 2.7e-8.
+#: The adversarial witness above, searched for rather than swept, reaches
+#: 8.36e-8. This band is about twelve times that larger known error, and a
+#: sweep maximum is not a maximum over everything now observed. No search has
+#: produced a wrong resolved decision inside the cap, and none of that is a
+#: proof. Treat the pair as a fail-closed device: the domain is capped where
+#: the error is known to grow past the band, and a comparison inside the band
+#: is not answered.
 LOG_CDF_SLACK = 1e-6
 
 
@@ -140,8 +143,8 @@ def bound_within(trials: int, hits: int, threshold: float):
     single-point one: the bound is at or below ``threshold`` exactly when
     ``P[Binomial(trials, threshold) <= hits] <= 0.05``. Evaluating the CDF once
     at the threshold keeps the coefficient's error in the CDF, where
-    :data:`LOG_CDF_SLACK` bounds it, instead of moving it into an inverted rate
-    where nothing bounds it.
+    :data:`LOG_CDF_SLACK` is an empirical refusal band measured against it,
+    instead of moving it into an inverted rate where nothing is measured at all.
 
     A None is a refusal to certify, and every caller is expected to take the
     stricter lane on it. Two things produce one: a comparison whose log-CDF

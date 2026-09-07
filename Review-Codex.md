@@ -1,252 +1,600 @@
-<!-- Round 3 -->
+<!-- Round 4 -->
 
 Verification notes:
 
-All commands ran in `C:/Users/yuezh/PycharmProjects/agent-defs`. Root `AGENTS.md` and `AGENTS.local.md` were absent; the supplied instructions applied. Python was `C:\Users\yuezh\miniforge3\envs\py312\python.exe` (3.12.12). PowerShell commands used the resolved shell `/c/Program Files/PowerShell/7/pwsh` (7.6.5). The review helpers are reproduced below. Their temporary configurations, records, and replay outputs were separate from installed settings and committed artifacts. No real scanner or malware fixture was run.
+All shell commands below ran in `C:/Users/yuezh/PycharmProjects/agent-defs`. The prescribed Python is CPython 3.12.12. PowerShell probes used `/c/Program Files/PowerShell/7/pwsh`. Root `AGENTS.md` and `AGENTS.local.md` were absent; the supplied instructions applied. Bootstrap and shared configuration refresh were skipped as instructed. The initial working tree was clean. Helpers are reproduced at the end of this review so the commands remain reproducible after cleanup.
 
-1. The following scope/history commands completed with exit 0. The supplied Round 2 review was also read from its preserved path. `git rev-parse HEAD` returned `0640eef770d5a53401947e4a52a8db35e8ba3fee`; the last two checks returned no output:
+1. These scope and environment commands completed successfully. HEAD was `199f5bbfc5b6d86fa8d2fae76a31d5f4860fa3c2`; the log contained exactly `199f5bb`, `eb745f7`, and `86534c7`. The whitespace check had no output. The historical review was Round 3.
 
 ~~~powershell
-git diff --cached --stat
-git diff --cached -- src/agent_defs/lanes.py src/agent_defs/bench.py src/agent_defs/hooks/_claude_code_impl.py tests/test_bound_within.py tests/test_calibrate_from_report.py tests/test_bench.py
-git diff --cached -- README.md SAMPLES.md docs/bench.md docs/calibration.md scripts/build_bundle.py tests/test_shipped_bundle.py scripts/scan_artifact.ps1 scripts/rebuild_holdout_units.py scripts/artifact-scan.json scripts/leaf-traversal-diagnostic.json
-git show HEAD:Review-Codex.md
+git status --short
+git log --oneline 869ccd2..HEAD
+git diff --stat 869ccd2..HEAD
+git diff --name-only 869ccd2..HEAD
+git diff --check 869ccd2..HEAD
 git rev-parse HEAD
-git diff --cached --check
-git diff --exit-code -- . ':!Review-Codex.md'
+git show HEAD~3:Review-Codex.md
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' --version
 ~~~
 
-2. The initial command below completed with exit 1 and 26 collection errors, all caused by `agent_defs` being absent from the interpreter's import path:
+The complete diff was read in these two batches:
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q
+git diff 869ccd2..HEAD -- src/agent_defs/sources.py src/agent_defs/hooks/_claude_code_impl.py src/agent_defs/hooks/_core.py tests/test_sources.py tests/test_hook_core.py
+git diff 869ccd2..HEAD -- src/agent_defs/lanes.py scripts/bound_leaf_discrepancy.py tests/test_bound_within.py tests/test_leaf_discrepancy_probes.py docs/calibration.md SAMPLES.md
 ~~~
 
-With the checkout import path set, the full suite completed with exit 0: **686 passed, 6 skipped, 1 warning in 74.28 seconds**. The warning was the existing possible nested regex set in `test_evaluate_adversarial.py`.
+2. Full-suite command, exit 0: **717 passed, 6 skipped, 1 warning in 42.48 seconds**. The warning was the existing possible nested regex set in `test_evaluate_adversarial.py`. The source tests mock downloads and block unexpected network access; no real corpus was fetched by this suite. The reported nine-runner CI result was supplied by the requester, not independently rerun here.
 
 ~~~powershell
 $env:PYTHONPATH = 'src'
 & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q
 ~~~
 
-3. Each numerical command completed with exit 0:
+3. Archive-control probe, exit 0. Both a tar symlink and a tar hardlink materialized harmless marker bytes from excluded members under `rules/`; `verify()` returned `verified`. A second fetch was a cache hit. Six mutations were rejected by both `verify()` and `fetch()`: changed content, missing content, an extra file, an added excluded file, an added excluded directory, and removal of a required empty parent. Replaying the pre-range reader against this excluded-path cache raised `SourceError` without another download. The only `fetch()` calls outside the suite used this synthetic archive and a mocked response.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-numeric.py capped
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-numeric.py uncapped
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-numeric.py coefficient
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py sources
 ~~~
 
-The capped search used SciPy to locate the two adjacent integer trial counts at each positive-hit boundary for both lane ceilings, retaining pairs below 10,000,001 trials. It checked 19,670 pairs at 0.001 and 99,264 at 0.005. There were respectively 628 and 1,415 unresolved comparisons and **zero wrong resolved decisions** against that reference. Sixty-digit mpmath evaluation independently checked the largest observed errors and all three original counterexamples. Those three now return `None`, and actual `effective_lanes` returns ADVISE, RECORD, RECORD. This is strong testing of this interpreter, not a proof for every supported platform or every threshold.
-
-The uncapped search produced two positive-hit false admissions through `lanes.admit`; the hook's measurement reader rejected both for exceeding its cap. The coefficient probe independently measured errors larger than the documented approximately 5e-8 coefficient bound. Exact witnesses are under N5.
-
-4. Each controlled code probe completed with exit 0:
+4. Numerical commands, both exit 0. The helper was recovered unchanged from the embedded Round 3 numerical probe and executed against current code.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-probes.py leaves
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-probes.py vacuity
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-probes.py verdict
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-numeric.py capped
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-numeric.py coefficient
 ~~~
 
-The leaf probe ran four accepted synthetic rules through the complete diagnostic CLI. Each matches its actual leaf, yet every newline diagnostic reports zero; three substring diagnostics also report zero. Separate probes confirmed correct single-line `regex_all` conjunction and case flags, and a missed multiline conjunction. The vacuity probe confirmed that both documented omitted whitespace shapes pass the builder and match a blank leaf, that all 20 builder and test fixtures agree, that indeterminate/zero-evaluated scans fail, and that missing bundle/scan-record inputs assert rather than skip. The verdict probe forced `bench.measure` down its new `None` branch and checked its actual emitted failure: both pooled-opt-in settings reject it. This probe tests classification, with the numerical calculation independently tested above.
+The search checked both adjacent integer trial counts at every positive-hit boundary below the cap for both lane ceilings. SciPy located the boundaries; 60-digit mpmath independently checked the largest observed errors and the three original witnesses.
 
-5. These exact PowerShell commands exercised the staged scanner body through a harness that mocked copying, resident removal, scanner discovery, and temporary-directory creation. No scanner ran and no scan copy was created. The actual existing-destination `Move-Item` operation was tested separately on two harmless temporary review files.
+| Ceiling | Boundary pairs checked | Unresolved | Wrong resolved decisions | Largest observed absolute log-CDF error, checked with mpmath |
+|---|---:|---:|---:|---:|
+| 0.001 | 19,670 | 628 | 0 | 7.32850e-8 |
+| 0.005 | 99,264 | 1,415 | 0 | 8.35963e-8 |
+
+All three original witnesses returned `None`; actual adapter lane resolution returned ADVISE, RECORD, RECORD. The full suite exercised both out-of-domain witnesses through `bound_within` and `admit`, and the cap boundary. The coefficient probe reproduced **-8.3614283313323e-8** at `(n, k) = (9,892,023, 49,095)`. These are empirical checks on this interpreter, not a proof across platforms or arbitrary thresholds.
+
+5. Hook differential probe, exit 0: **1,200 generated cases, zero mismatches** between the actual pre-range `process` body and current `process`. Compared responses, ordered records, scanner calls, byte allowances, and supplied time budgets across nested payloads, IN/OUT, exhausted limits, empty and whitespace leaves, Unicode/surrogates, denied leaves, incomplete results, and scanner exceptions. The probe also rebound the adapter's `WITHHELD` and `INCOMPLETE`. Scalar NaN generated a spurious update in both versions; a nested NaN did not. A self-referential list returned in both versions under the tested depth limit.
 
 ~~~powershell
-& ./.Review-Codex-round3-scan-probe.ps1 -Mode removed
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py hooks
+~~~
+
+6. Diagnostic probe, final command exit 0. Two evaluator-accepted patterns each produced an actual leaf hit but zero joined, newline-diagnostic, and substring-diagnostic hits through the diagnostic's main entry point. The 205 shipped rules reproduced the committed classification: 102 probed, zero unprunable, identical construct census. This did not rerun the 1,743-unit corpus replay.
+
+~~~powershell
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py regex
+~~~
+
+The initial direct rewrite probe succeeded. Its first extension to evaluator execution exited 1 because the capture-renumbering witness was rejected by the evaluator as an unsupported backreference. The corrected probe records that rejection and exercises the two accepted witnesses. The rejected witness is not reported as a reachable evaluator failure.
+
+7. Mutation probe, exit 0 because the assertions confirm the test gap: removing only the node/depth/time guard's `return node` left **all 12 tests in `test_hook_core.py` passing**, although the scanner ran with all three budgets exhausted. As a control, the existing adapter integration test failed on the same in-memory mutation, observing budgets `[1.0, 0]` instead of `[1.0]`. No implementation file was mutated.
+
+~~~powershell
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py vacuity
+~~~
+
+8. These PowerShell commands ran the real scanner script with a harmless review artifact and mocked directory creation. No scanner ran, no artifact scan copy was created, and cleanup validated its temporary targets.
+
+~~~powershell
+& ./.Review-Codex-round4-scan.ps1 -Mode setup
 exit $LASTEXITCODE
 ~~~
 
-Exit 1 as expected: replaced the old clean record with `DETECTED`, `removed_on_contact: true`, and `copy removed before an on-demand scan could run`.
+Exit 2 as expected: a synthetic setup failure replaced the prior clean record with an inconclusive result.
 
 ~~~powershell
-& ./.Review-Codex-round3-scan-probe.ps1 -Mode blocked
+& ./.Review-Codex-round4-scan.ps1 -Mode locked
 exit $LASTEXITCODE
 ~~~
 
-Exit 2 as expected: replaced the old clean record with an inconclusive blocked-copy result.
+Exit 3 as expected: `File.Replace` failed against a destination opened without delete sharing, preserved the prior bytes, and reported publication failure.
 
 ~~~powershell
-& ./.Review-Codex-round3-scan-probe.ps1 -Mode missing-scanner
+& ./.Review-Codex-round4-scan.ps1 -Mode missing-parent
 exit $LASTEXITCODE
 ~~~
 
-Exit 2 as expected: replaced the old clean record with `inconclusive: no scanner`. Initial invocations of these three commands without the explicit final `exit $LASTEXITCODE` all surfaced as shell exit 1; the reruns above preserve the script's distinct exit codes.
+Exit 1, the defect witness: `WriteAllText` raised outside the publication guard when the destination's parent did not exist. No result was published at that destination. The harness's separate control record remained unchanged; it is not evidence of a stale record at the missing destination.
+
+9. Pinned ATR inspection command, exit 0 on its final execution. The archive was downloaded into a `BytesIO`-backed tar reader and never written. Its 42,260,904 bytes matched `sources.lock` sha256 `5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5`. Rule loading used in-memory file objects. Sample inspection computed digests and JSON schemas in memory; neither sample bytes nor sample text were written or printed. The final run also evaluated the proposed policy in memory and read CFG gates from its four explicitly selected source files.
 
 ~~~powershell
-& ./.Review-Codex-round3-scan-probe.ps1 -Mode setup-failure
-& ./.Review-Codex-round3-scan-probe.ps1 -Mode atomic
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-atr.py
 ~~~
 
-Each completed with exit 0 because the harness asserted the defect. A synthetic `New-Item` failure left the old clean record byte-identical. In the atomicity probe, holding the source open without delete sharing made `Move-Item -Force` fail after deleting the old destination; the source remained and the destination was absent.
+Results: 20,015 tar members, 19,405 regular files, 793 YAML rules, zero loader errors, zero archive links. Current policy excludes 1,602 files and would materialize 17,803. The proposed ATR policy retains 798 files: 793 rules, the licence, and four gate inputs. CFG gate reading succeeded with that selection. Using a different source name retained the current non-ATR selection on the same archive. The earlier inspection executions completed successfully; the final helper corrects its initial coarse refusal categorization and adds the policy check.
 
-The proposed replacement was also executed on harmless review files. An initial inline probe using `[IO.File]::Replace($reviewNewPath, $reviewOldPath, $null)` failed with exit 1 because PowerShell bound the third argument as an empty path. The corrected command below uses `[NullString]::Value`; it completed with exit 0, preserved the old destination when the source was locked, replaced an existing destination after unlocking, and published an absent destination. The recommendation under N9 uses the verified form.
+The independent `IN` count is **57 total, 14 runnable/shippable/evaluator-screened, 16 refused only for multiple fields, 25 refused on measurement, and two additional refusals**. Details appear below. The requester’s 26 measured refusals was not reproduced.
+
+10. Finalization command, exit 0 on the completed run: checked HEAD and the unchanged 11-file range, confirmed implementation and index remained unchanged, embedded the verification helpers, flushed the complete sibling temporary review, atomically replaced `Review-Codex.md` with `os.replace`, read it back, and removed only the named review helpers. Final tracked change: `Review-Codex.md` only.
 
 ~~~powershell
-& ./.Review-Codex-round3-replace-probe.ps1
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-finalize.py
 ~~~
-
-6. The independent replay and complete diagnostic command completed with exit 0. Both rebuilds recovered all 1,743 pinned units from 96 transcripts, with zero digest mismatches or missing units, and produced byte-identical files. The regenerated diagnostic matched every non-path/provenance result field of the staged record: joined 1/1,743; newline diagnostic 1/1,743 with zero gainers; substring diagnostic 489/1,743 with per-rule gains 485, 2, and 1; `hook_upper_bound: null`.
-
-~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-probes.py replay
-~~~
-
-The helper prints the exact nested commands, uses the prescribed interpreter for both rebuilds and the diagnostic, and checks report, unit, artifact, and rule-ID digests. It reads the pinned `holdout-report-v2.json` at sha256 `3106c49d2a220616b8ef8f9b02eba0c389a76b7c24c37bfaa04678a14658ee1f`. The original 1,743-unit file's digest is `bd429d68174135bab674426bea82e0e58f504241002c3e589202f8c1a828893e`. Corpus text was neither printed nor copied into this review.
-
-7. Primary-source inspection confirmed the implementation assumptions relevant to N5 and N9: CPython 3.12.12 computes `lgamma` with a Lanczos calculation, and PowerShell's overwrite fallback deletes the destination before retrying a move. The executable probes above establish the local behavior; source links appear beside the findings.
-
-8. Finalization command, completed with exit 0 on the corrected run:
-
-~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round3-finalize.py
-~~~
-
-The first invocation exited 1 before writing or replacing the review: its placeholder check accidentally matched its own embedded source. The check was moved before helper embedding and the command was rerun. The successful run verified the 20-file staged scope, HEAD, unchanged non-review working files, staged whitespace, and artifact digest; embedded the complete verification helpers; wrote and flushed the complete sibling temporary review; replaced `Review-Codex.md` with `os.replace`; and read it back. The staged diff was unchanged. Temporary review instrumentation was removed. No implementation file, Git index entry, installed configuration, commit, or remote was changed.
 
 Verification status: VERIFIED
 
 Commit verdict: BLOCK
 
-The old numerical witnesses are repaired and the post-selection disclosure is substantially corrected. The replacement diagnostic still misses real leaf matches, the numerical error guarantee exceeds what its derivation establishes, and the scan-record replacement is not atomic. These are actionable correctness issues despite the passing suite. N4 is reduced from High to Medium because the deployed-hook bound and admission-evidence claims have now been explicitly withdrawn; its remaining claims about retained-text decompositions are still false. There are no High-priority findings this round.
+The archive control still materializes known attack collections, and excluded bytes can bypass it through links. The leaf diagnostic also still prunes real matches. The numerical cap and hook refactor passed the relevant checks; neither passing tests nor an empirical numerical margin establishes the broader security and rewrite claims.
 
-File/diff scope: the 20 staged paths relative to the HEAD above. Implementation: `src/agent_defs/lanes.py`, `src/agent_defs/bench.py`, `src/agent_defs/hooks/_claude_code_impl.py`; scripts and records: `scripts/build_bundle.py`, `scripts/bound_leaf_discrepancy.py`, `scripts/rebuild_holdout_units.py`, `scripts/scan_artifact.ps1`, `scripts/artifact-scan.json`, `scripts/leaf-traversal-diagnostic.json`; tests: `tests/test_bench.py`, `tests/test_bound_within.py`, `tests/test_calibrate_from_report.py`, `tests/test_leaf_discrepancy_probes.py`, `tests/test_shipped_bundle.py`; documents: `README.md`, `SAMPLES.md`, `docs/bench.md`, `docs/calibration.md`; artifact: `src/agent_defs/bundle.json`; review history: staged `Review-Codex.md`. The artifact's digest remains `2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1`; its 205 rows were not re-reviewed. Executing the artifact tests and diagnostic is not a new content review of those rows.
+File/diff scope: **`git diff 869ccd2..199f5bbfc5b6d86fa8d2fae76a31d5f4860fa3c2`**, not the index. Eleven changed files: `SAMPLES.md`, `docs/calibration.md`, `scripts/bound_leaf_discrepancy.py`, `src/agent_defs/hooks/_claude_code_impl.py`, `src/agent_defs/hooks/_core.py`, `src/agent_defs/lanes.py`, `src/agent_defs/sources.py`, `tests/test_bound_within.py`, `tests/test_hook_core.py`, `tests/test_leaf_discrepancy_probes.py`, and `tests/test_sources.py`. Ancillary review of unchanged base files was limited to verifying Round 3 repairs, caller dependencies, and the committed diagnostic census, including `scripts/scan_artifact.ps1` and `scripts/build_bundle.py`. New findings identify retained defects when they predate the range.
 
-Review lens: code correctness and honesty of the stated guarantees, prioritizing admission arithmetic, traversal semantics, validation independence, and durable scan outcomes. This is not publication approval or a claim about attack recall.
+Review lens: code correctness and whether the security control and diagnostic guarantees follow from their implementation. This is not an antivirus clearance, attack-recall evaluation, or publication approval.
 
 ## New
 
-### N9. Medium: `Move-Item -Force` can delete the prior record before a failed replacement
+### N10. High: links bypass the excluded-source guard, and the shared verifier accepts the result
 
-Location: `scripts/scan_artifact.ps1:54`.
+Location: `src/agent_defs/sources.py:88`.
 
-Writing a complete sibling temporary file is appropriate, but this move does not give the claimed atomic replacement. I opened a harmless source file with `FileShare.Read`, leaving rename/delete disallowed, then ran the exact `Move-Item -LiteralPath ... -Destination ... -Force` operation against an existing destination. It raised a sharing error, **deleted the destination**, and left the source in place. This can occur if another process briefly opens the new JSON file, including during the scanner-oriented workflow this script serves.
+`_layout` resolves each link to a regular `TarInfo`, but retains the link's destination as the dictionary key. `_kept` examines only that key. A symlink `rules/symlink.txt -> ../data/test-corpora/payload.txt` or a hardlink `rules/hardlink.txt -> repo/conformance/v1.0/fixtures/tp/marker.txt` therefore copies excluded bytes into `rules/`. Both were reproduced using harmless marker bytes; no actual attack sample was needed. The excluded directories did not exist, while the copies did, and both cache-hit `fetch()` and `verify()` accepted them.
 
-PowerShell's provider handles an `IOException` on a forced move by deleting an existing destination and retrying `MoveTo`. There is an interruption/failure window between those operations. The source inspection explains the observed local failure. [PowerShell FileSystemProvider implementation](https://github.com/PowerShell/PowerShell/blob/v7.6.0/src/System.Management.Automation/namespaces/FileSystemProvider.cs#L5510)
+The extraction bypass predates this range. The new shared filter preserves it and additionally makes the resulting excluded-member cache pass verification. The pinned ATR archive has no links, so this is a generic archive-control failure, not the cause of the particular ATR incident.
 
-Use an actual same-volume replacement operation. An exact replacement for `scripts/scan_artifact.ps1:54` on this Windows/.NET environment is:
+Exact minimal rewrite at `src/agent_defs/sources.py:88`, replacing the `kept_files` comprehension:
 
-~~~powershell
-        if ([IO.File]::Exists($Destination)) {
-            [IO.File]::Replace($temp, $Destination, [NullString]::Value)
-        } else {
-            [IO.File]::Move($temp, $Destination)
-        }
+~~~python
+    kept_files = {
+        relative: member for relative, member in files.items()
+        if not _is_excluded(PurePosixPath(relative).parts)
+        and not _is_excluded(_safe_parts(member.name)[1:])
+    }
 ~~~
 
-Also handle/report publication failure without claiming that every attempted run produced a durable record. Verify an existing target, a missing target, and a locked temporary source. This finding concerns losing the old record during replacement; N8 separately concerns retaining an old clean record without attempting replacement.
+This checks both the destination and the already-resolved source after removing the repository root. Preserve the shared writer/verifier policy and test symlinks and hardlinks in both directions. The larger rewrite under N11 includes this protection too.
+
+### N11. High: the pinned ATR tree already contains further unexcluded attack collections
+
+Locations: `src/agent_defs/sources.py:59`, `src/agent_defs/sources.py:88`, `SAMPLES.md:85`.
+
+This is not merely a possibility on a future pin. At the locked revision, `_kept(*_layout(archive))` retains these regular files:
+
+| Retained archive-relative file | In-memory structural check |
+|---|---|
+| `data/autoresearch/adversarial-samples.json` | 1,054 records; fields include `payload`, `technique`, and `original_rule_id` |
+| `data/autoresearch/missed-payloads.json` | 895 records; fields include `payload`, `technique`, and `original_rule_id` |
+| `data/evasion-payloads.json` | 64 records; fields include `payload`, `expected`, and `detection_field` |
+| `data/semantic-validation/attacks.json` | 20 records; fields include `payload`, `label`, and `technique` |
+| `data/pint-benchmark/pint-corpus.json` | 850 corpus records; fields include `text`, `category`, and `label`; not all are asserted malicious |
+
+These are payload-bearing collections, not just filenames that sound suspicious. The present extraction loop would write them normally. This review makes no claim that a particular collection triggers Bitdefender, and did not test that by writing it. The bytes and selection were checked against the [pinned ATR archive](https://codeload.github.com/Agent-Threat-Rule/agent-threat-rules/tar.gz/faf743fee8a5018467959ec8ea7ccdb1a1aab333).
+
+Recommend an ATR-specific input allow-list now. The main tradeoff is declaring the small additional inputs needed by its CFG loader. A global `rules/`-and-licence rule is incompatible with other loaders: Netzilo reads `ai_agent/`, AAK reads `rules.json`, AVE reads `records/` and `crosswalks/`, and Guardana reads `docs/generated/rules.json`. ATR itself reads three TypeScript files and the interface contract to establish CFG gates; dropping those silently removes CFG bindings.
+
+Exact replacement for `_kept` at `src/agent_defs/sources.py:73`, including N10's source check:
+
+~~~python
+def _kept(files, directories, *, name, license_path):
+    required = {
+        _portable_path(license_path),
+        "src/engine.ts",
+        "src/enforcement.ts",
+        "src/quality/rule-contract.ts",
+        "engines/typescript/INTERFACE-CONTRACT.md",
+    }
+
+    def allowed(relative):
+        parts = PurePosixPath(relative).parts
+        if _is_excluded(parts):
+            return False
+        return name != "atr" or parts[0] == "rules" or relative in required
+
+    kept_files = {
+        relative: member for relative, member in files.items()
+        if allowed(relative)
+        and allowed(_portable_path("/".join(_safe_parts(member.name)[1:])))
+    }
+    if name == "atr":
+        kept_dirs = {
+            str(parent) for relative in kept_files
+            for parent in PurePosixPath(relative).parents if str(parent) != "."
+        }
+    else:
+        kept_dirs = {relative for relative in directories if allowed(relative)}
+    return kept_files, kept_dirs
+~~~
+
+Exact replacement call at `src/agent_defs/sources.py:278`:
+
+~~~python
+            files, directories = _kept(
+                *_layout(archive), name=name, license_path=entry["license_path"])
+~~~
+
+Exact replacement call at `src/agent_defs/sources.py:335`:
+
+~~~python
+                files, directories = _kept(
+                    declared, all_directories, name=name,
+                    license_path=entry["license_path"])
+~~~
+
+The standalone proposed filter was executed against the pinned layout in memory: 798 selected inputs, no `data/` members, and successful CFG gate parsing from the selected source files. This is a checked recommendation, not an applied implementation or a full regression test of the proposed patch. Update directory-policy fixtures accordingly and add the sample/link regressions.
+
+Also replace the universal sentence at `SAMPLES.md:85` with this narrower statement:
+
+~~~text
+The selection materialized 793 rule files and the licence, and refused 18,611
+other regular files. An input allow-list prevents unrelated upstream directories
+from being extracted. It does not certify the contents of an allowed rule file.
+~~~
+
+An upstream sample can be added under `rules/`, and existing rule YAML can contain positive examples. Consequently neither this cheap policy nor the uncommitted rules-only script warrants “a sample cannot reach disk ... whatever upstream grows.” The policy should promise a bounded selection of declared inputs.
+
+### N12. Low: the claimed automatic re-download mechanism is not in `fetch`
+
+Locations: `SAMPLES.md:77`, `src/agent_defs/sources.py:80`, `src/agent_defs/sources.py:277`.
+
+The old writer/verifier disagreement is real and the new shared layout fixes it. The stated consequence is wrong: `fetch()` immediately returns `_check()` for an existing cache, and a failed check raises `SourceError`. It does not fall through to download, remove the cache, or retry extraction. I executed the old reader against an excluded-path cache and confirmed zero additional requests. Repeated materialization requires a different/missing cache, external removal or retry logic, or failure before publication. The described cleanup failure could be relevant to the last case, but the verifier mismatch alone does not establish the incident's recurrence mechanism.
+
+Replace the causal claim with: “A cache containing excluded archive paths failed verification on reuse. Subsequent fetches raised `SourceError` until the cache state changed. Sharing the filter fixes that disagreement; repeated downloads require a separate explanation.” Apply the correction in all three locations. The new source tests establish a valid cache hit, not an old automatic retry loop.
+
+### N13. Low: the new budget tests can pass while scanning past every traversal limit
+
+Location: `tests/test_hook_core.py:122`.
+
+The parametrized budget test checks `incomplete` and unchanged output, but its clean scanner also returns unchanged output if it runs. Deleting only the budget guard's early return makes it continue scanning after setting `incomplete`; all 12 tests in this new module still pass. The existing adapter integration test detects that mutation, so the complete suite is not vacuous in this way.
+
+Add `assert scanner.seen == []` after the call at line 124. Retain the positive scanner-injection test, which prevents “never call the scanner” from satisfying the module. The finding concerns this test's claimed stopping contract; no corresponding runtime regression was found in HEAD.
+
+### N14. Low: temporary-record write failures escape the new publication exit contract
+
+Location: `scripts/scan_artifact.ps1:62` (Round 3 fix follow-up, unchanged within this range).
+
+`WriteAllText` is before the publication `try`. With `-Out` beneath a nonexistent directory, it throws without setting `PublishFailed`; the script invocation fails with exit 1, which the documented protocol assigns to a detection, instead of exit 3 for an unpublished result. The probe mocked setup failure so no scanner ran. This does not refute `File.Replace` atomicity or reproduce a false clean result.
+
+Move the temporary-file write inside the same `try` as `File.Replace`/`File.Move`, so ordinary write failures use the existing stderr message and exit-3 path. Keep the original record intact if publication cannot complete.
 
 ## Previously raised
 
 ### Fixed
 
-**N1 and N2, High in earlier rounds:** No regression found in the native-refusal and aggregate-set protections. The full suite includes their import tests. The new numerical refusal is correctly classified: its actual emitted text has no `POOLED_ONLY_FAILURE` prefix and contains the fatal marker `is not resolvable against`. Both pooled-opt-in settings reject it. I found no other new emitted message that collides with the relaxable refusal. This does not certify arbitrary assembled-report coherence beyond these checks.
+**N6:** The residual hook-frequency assertion was removed. `scripts/build_bundle.py:149` now states that the nonempty whitespace leaf matches and that the fixtures do not establish deployed frequency. The full suite passed the artifact/fixture checks.
 
-**N3, High: post-measurement filtering was presented as preserving untouched validation.** Fixed in the relevant new claims. `scripts/build_bundle.py:30` and `docs/calibration.md:237` disclose that evaluation feedback caused the filter and that expressing it as a pattern property does not restore independence. The revised 209-rule row is explicitly identified as revised. README now qualifies the numerical result as nominal and denies transfer to the deployed hook. The subset qualification is correct for the same unbudgeted union of predicate hits: a valid bound for the original fixed superset also covers its subsets. It does not justify a tighter post-selection confidence calculation or transfer to a different traversal/budget. The documents now make the central distinction instead of asserting the old exemption.
+**N8:** The demonstrated setup-failure hole is fixed. The run record exists before artifact lookup/hash/directory creation inside the guarded operation; an injected directory-creation failure replaced an existing clean record and returned exit 2. The wording now limits the record promise to handled failures and distinguishes publication failure. This is not a promise against interruption or an unwritable destination.
 
-**N7, Medium: required artifact checks became successful skips.** Fixed. The suite exercised the committed artifact. Independent fault injection confirmed that missing bundle and scan record inputs assert; incomplete and zero-evaluated results fail the blank-leaf check. The shared fixture list cannot silently become empty because another test explicitly requires the important fixtures. Individual checks need not each reject an empty rule list when the module's other required checks do; the module no longer has the demonstrated vacuous-pass path.
+**N9:** The original destructive replacement failure is fixed. Actual `File.Replace` against a locked destination preserved the prior bytes and the script returned exit 3. The ordinary successful replacement was exercised by the setup-failure test. N14 is a separate residual failure to include the temporary write in that publication guard.
 
-**Small corrections:** README's first table now says 209 total rules, with 205 ATR plus four starters. Both calibration example blocks include the pooled opt-in. README and `EFFECT` now distinguish an incomplete scan's two audiences from an unwritable log's user-only warning. The recorded scanner result is described as one Defender scan and short-term survival on a machine registering the named products; it is no longer described as two scanners clearing the artifact.
+**N1, N2, N3, N7:** No reopening evidence in the reviewed range or passing suite. The previously closed native-refusal, aggregate-set, post-selection-disclosure, and required-artifact-test findings remain closed for this review. Their entire earlier evidence base was not reconstructed again.
 
 ### Still open
 
-#### N5. Medium, partially repaired: the slack works on the tested capped boundary set, but its claimed derivation and enforced domain are incomplete
+#### N4. Medium: the unsupported-pattern detector still misses quantified lookarounds
 
-Locations: `src/agent_defs/lanes.py:56`, `src/agent_defs/lanes.py:103`, `src/agent_defs/lanes.py:120`, and `src/agent_defs/hooks/_claude_code_impl.py:39`.
+Locations: `scripts/bound_leaf_discrepancy.py:213`, `scripts/bound_leaf_discrepancy.py:260`, `docs/calibration.md:223`.
 
-Evaluating the CDF at the threshold is a good way to formulate this decision. It does not improve the `lgamma` coefficient's conditioning: both paths still use the same coefficient and summation. The substantive improvement is applying an uncertainty band to the decision and declining to certify inside it. The three original cases are now correctly conservative, and the larger search found no wrong resolved decision within the hook's cap on this interpreter.
+The original directly adjacent quantified lookaround, atomic/possessive cases, and conditional classification are now refused from pruning. The 3.9-compatible classification tests correctly inspect syntax before attempting to compile constructs unavailable on that interpreter. The disclosure that all-lines splitting is not the hook decomposition is also fixed.
 
-The comment's approximately 5e-8 coefficient error is not a demonstrated worst-case bound. At `n=9,892,023`, `k=49,095`, an independent 70-digit log-gamma calculation gives coefficient error **-8.3614283313323e-8**, already larger. The errors in the two large individual `math.lgamma` values are approximately -3.28066e-8 and +3.84348e-8, before subtraction rounding. Assuming each function result is correctly rounded and counting only three final representational errors misses the calculation inside the function and the subsequent arithmetic. CPython's actual function uses a Lanczos expression with logarithms, multiplication, and addition; it is not an operation specified here as one correctly rounded evaluation. [CPython 3.12.12 `m_lgamma`](https://github.com/python/cpython/blob/v3.12.12/Modules/mathmodule.c#L458)
+However, checking only `pattern[end]` after the lookaround misses syntax the regex parser ignores before applying a quantifier. Both examples below compile through the actual evaluator, match the leaf `abc`, and fail on joined text `x\nabc\ny`. Both receive an empty unsupported set, then the rewrite moves `{0}` onto the preceding `b`:
 
-This does **not** show an error above `LOG_CDF_SLACK=1e-6` below the cap, and I did not find such a counterexample. It does refute the stated derivation of the claimed twentyfold worst-case margin. Document an error analysis for the actual supported calculation, including summation/tail truncation and log evaluations, or use a conservatively bounded numerical method/fallback. Describe an empirical margin as empirical until that is done. The docstring's "part in a million of a ceiling" also confuses a log-CDF distance with a rate distance; they are different quantities.
+| Pattern | Incorrect relaxed pattern | Full diagnostic result |
+|---|---|---|
+| `(?x)^ab(?=x) {0} c$` | `(?x)ab {0} c` | leaf 1; joined/newline/substring 0/0/0 |
+| `^ab(?=x)(?#comment){0}c$` | `ab(?#comment){0}c` | leaf 1; joined/newline/substring 0/0/0 |
 
-There is a separate concrete domain leak. Only the hook's `measurement` enforces ten million trials. `bound_within`, `lanes.admit`, and the benchmark's core path do not. Consequently the public decision routine certifies results outside the domain its own comment relies on:
+The split probe itself finds `abc`; the false negative occurs when the relaxed candidate filter prevents that probe from running. Thus the `UNSUPPORTED` names are not sufficient to make the implemented classification complete. No additional assertion-free, evaluator-supported construct outside the named classes was established; the concrete failure is missing valid spellings of an existing class.
 
-| Trials | Hits | Ceiling | Computed log-CDF delta | High-precision true delta | `bound_within` | `lanes.admit` |
-|---:|---:|---:|---:|---:|---|---|
-| 4,550,422,216 | 4,546,915 | 0.001 | -3.6562082477e-6 | +8.9748329459e-7 | True | DENY, incorrectly |
-| 1,589,620,769 | 7,943,478 | 0.005 | -1.0988736636e-6 | +4.3623520135e-8 | True | ADVISE, incorrectly |
+A separate generic rewrite counterexample, `^(a)(?=(b))(bc)\2$`, loses its match on `abcb` when removing the lookahead renumbers captures. The evaluator rejects backreferences, so this is a limitation of the helper's general claim, not an accepted-rule counterexample in the deployed evaluator.
 
-Delta means `log(CDF(n, ceiling, k)) - log(0.05)`. Positive true delta requires a bound above the ceiling; both computed deltas fall outside the refusal band on the wrong side. These are synthetic large-count API witnesses, **not hook bypasses**: the hook reader rejects their measurements. Put the supported numeric domain in the shared numerical module and enforce it in `bound_within`, with an unresolved result outside that domain, so every caller receives the same protection. Do not imply that the hook-only cap bounds all uses of the new function.
+A cheap conservative fix is to make every pattern containing a lookaround unprunable; otherwise classify parsed quantification with correct handling of verbose whitespace and comment groups. Add the two accepted examples through candidate selection and the full diagnostic entry point. Until then, withdraw the remaining “only widens” assertion in the script, JSON method string, and calibration paragraph. The regenerated 205-rule census matches the committed record; these examples do not establish that its stored 489 candidates change.
 
-#### N4. Medium, reduced from High: assertion stripping still loses matches, and splitting every newline does not cover all newline-separated blocks
+#### N5. Low residual wording: the domain leak is fixed, but the stated empirical headroom is inconsistent
 
-Locations: `scripts/bound_leaf_discrepancy.py:148`, `scripts/bound_leaf_discrepancy.py:245`, `scripts/bound_leaf_discrepancy.py:281`, `scripts/bound_leaf_discrepancy.py:283`, `docs/calibration.md:199`, and `docs/calibration.md:207`. The same overclaims appear in the script docstring and the report's method strings.
+Locations: `src/agent_defs/lanes.py:75`, `src/agent_defs/lanes.py:143`.
 
-The old MULTILINE simulation and deployed-hook upper-bound claim have been withdrawn. The missing `tool_response` fields and admission limitation are now stated clearly, and `hook_upper_bound` is null. Those are substantive fixes. However, the replacement still asserts mathematical coverage for retained text that the implementation does not provide.
+The substantive cap repair passes: `bound_within` owns `MAX_SUPPORTED_TRIALS`, the adapter aliases it, both large-count witnesses are refused by the shared routine, and `admit` stays RECORD. The repeated capped search found zero wrong resolved decisions across 118,934 pairs. The old incorrect derivation is explicitly withdrawn.
 
-All four fixtures below compile through the actual evaluator. Each actual leaf has one rule hit. The complete script reports zero joined hits and zero newline diagnostic hits for all four; its substring diagnostic also reports zero for the first three.
+The replacement comment still says the worst observed coefficient error is about 2.7e-8 and the margin has roughly thirty-fold headroom, immediately after recording a larger in-domain error. The independently reproduced magnitude is 8.3614283313323e-8, leaving about **12-fold**, not thirty-fold, headroom over this known witness. A limited sweep can have a 2.7e-8 maximum; it is not the maximum over the observations now available. The docstring's “where `LOG_CDF_SLACK` bounds it” also states a guarantee the empirical disclaimer does not establish.
 
-| Pattern | Actual matching leaf | Joined retained text | Why the new diagnostic misses |
-|---|---|---|---|
-| `^ab(?=x){0}c$` | `abc` | `x\nabc\ny` | Removing the assertion leaves `ab{0}c`, which matches `ac`, so pruning discards the real split match. |
-| `(?>(?!\A)a|ab)c` | `abc` | `x\nabc\ny` | Removing the assertion makes the atomic group's first alternative commit; `(?>a|ab)c` cannot recover the successful `ab` alternative. |
-| `a(?>bc\nx|b)c` | `abc` | `z\nabc\nx\ny` | The atomic alternative consumes across the joined boundary and prevents the fallback. There is no assertion, so the rule gets no split probe at all. |
-| `\Afoo\nbar\Z` | `foo\nbar` | `x\nfoo\nbar\ny` | The original text block spans two lines. Splitting every newline destroys the matching block, although all original block boundaries are newline separators. |
+State the two observed maxima with their scopes and call the slack an empirical refusal band throughout. For example: “A limited sweep observed about 2.7e-8; the adversarial witness above reaches 8.36e-8. The 1e-6 band is about twelve times that known error. This is empirical headroom, not a proved bound.” This residual wording is not a numerical counterexample inside the cap and is not itself a blocker.
 
-The first two refute the stripping implication itself. The third refutes the premise that only zero-width assertions can make a substring match disappear in the joined text. The fourth refutes transferring an all-lines split to a decomposition whose cuts are merely a subset of the newline positions. A `regex_all` rule with `\Afoo` and `bar\Z` has the same multiline-leaf failure; conjunction must hold on one actual leaf, which need not be one line.
-
-`split_probe` itself correctly applies the requested conjunction and case flags to its supplied lines. The complete pass is still not exact because it only evaluates candidates admitted by the unsound pruning step and omits assertion-free rules. Moreover, the reported value unions joined hits with split hits; even a corrected union is not the exact split firing count when a rule only matches across lines.
-
-The explanation about **an individual `\b` assertion** at a newline boundary is correct, including its analogous right boundary. It does not imply that every rule containing `\b` is invariant: that same rule can contain other assertions or an atomic construct. The observed zero gain for the 98 rules must remain an observation unless all relevant constructs are accounted for.
-
-For an exact all-lines diagnostic, evaluate all runnable rules on the actual split and do not prune using an unproved rewrite. If retaining the joined union, label it as that union. For substring coverage, either implement a conservative transformation for an explicitly supported regex subset, conservatively include unsupported patterns, or remove the coverage claim and label this an experimental rewrite diagnostic. Quantified assertions must not transfer their quantifier to the preceding consuming token, and atomic/possessive constructs need separate treatment. The current randomized test samples a restricted atom list without these counterexamples; it does not establish the general property.
-
-As an immediate honest replacement for the claims at `docs/calibration.md:199` and the start of `docs/calibration.md:207`, use:
-
-~~~markdown
-The middle row unions joined hits with the current pruned all-lines probe.
-No rule gained a hit in this run. This does not establish an exact leaf count
-or cover every decomposition at a subset of the newline separators.
-
-The bottom row records an experimental assertion-removal diagnostic. The
-rewrite is not proved to preserve all substring matches, so this row is not
-an upper bound over arbitrary substring decompositions. One rule contributes
-485 of the 489 recorded candidates.
-~~~
-
-Update the table labels, script docstring, and JSON method strings consistently until the computation supports stronger claims. The counterexamples demonstrate generic correctness failures; they do not show that the committed 205-rule artifact contains these patterns or that its stored numerical counts differ from a rerun.
-
-#### N6. Low residual wording; the Medium code and fixture-contract defects are repaired
-
-Location: `scripts/build_bundle.py:150`.
-
-The 20 fixtures are shared without an import cycle, both named non-caught shapes really are non-caught, and incomplete/zero-evaluated probes raise. The shipped-artifact tests read the committed bundle and exercise all 20 strings. These close the substantive fixture and fail-closed defects.
-
-One unsupported frequency claim remains in `fires_on_nothing`: "measured the way the hook actually scans, it fires constantly." Neither the finite probes nor the retained-text diagnostic measures actual hook frequency, as the revised calibration document correctly explains. Replace the clause beginning `measured the way` with:
-
-~~~text
-when scanned as a nonempty whitespace-only leaf, it matches. These fixtures
-do not establish how often such leaves occur in deployed tool responses.
-~~~
-
-This wording issue is not a blocker by itself.
-
-#### N8. Medium, partially repaired: setup failures still preserve an authoritative old clean record
-
-Locations: `scripts/scan_artifact.ps1:59`, `scripts/scan_artifact.ps1:61`, `scripts/scan_artifact.ps1:64`, and `SAMPLES.md:117`.
-
-The demonstrated resident-removal path is fixed: it replaces the record with DETECTED and exits 1. Blocked copies and unavailable scanners now replace it with an inconclusive record and exit 2. The narrower scanner-product wording is also correct.
-
-But artifact lookup, hashing, temporary-path construction, and directory creation still execute before the result dictionary and guarded block. Injecting a `New-Item` failure at line 64 left an existing clean record byte-identical, with the repository artifact still present and unchanged. The release test's digest/size/verdict conditions therefore still accept that old record. This is an ordinary catchable setup failure with a writable record destination, not an unavoidable power-loss or unwritable-output case.
-
-Initialize a run record before fallible setup and include setup in the guarded operation. Publish an inconclusive/pending state before the scan work if later interruption must invalidate a prior success. Give the final publication its own explicit failure handling; no script can promise a durable record if it cannot write its destination. Replace the unconditional "Every exit now writes a record" claim with a statement limited to handled failures and a writable destination, after actually covering those failures. N9 must also be fixed for the replacement to be atomic.
+The revised inverted-bound test appropriately checks proximity to the ceiling and independent exact truth without requiring a particular floating-point side. Its tolerance admits both reported platform values, and it passed here. A direct comparison of the two supplied Windows/glibc and macOS values would indeed choose different sides; the claim about a lane determined that way is correct. This review did not execute macOS. The fixed witness's refusal is well inside the empirical band; do not generalize the observed cross-runner agreement into a guarantee for all comparisons near the band's edges.
 
 ### Reopened
 
-None. N4, N5, N6, and N8 are classified as Still open with the repairs and remaining scope stated explicitly, rather than treating their partial fixes as regressions of fully closed findings.
+None. N4 and N5 retain specifically identified unfinished parts. N9's original atomicity defect is closed; N14 identifies a different write-failure boundary.
 
 ### Deferred
 
-The earlier asynchronous RECORD design, unused Pre registration, capture/completion ledger, and interleaved latency work remain outside this change. Session dependence, group overlap, chronological selection independence, and full deployed `tool_response` evaluation are not established by recovering the pinned retained text. Broader arbitrary-report coherence was not re-audited. The unchanged artifact's 205 rule rows and the original scanner's actual execution were not re-reviewed or re-executed.
+The original attack/benign corpus replay, actual antivirus execution, full deployed `tool_response` capture and calibration, and platform-wide numerical certification were not performed. The global migration of other corpus loaders to declared extraction inputs remains broader than the ATR-specific recommendation. The asynchronous RECORD design, unused Pre registration, capture/completion ledger, and interleaved latency work from prior reviews remain outside this change.
+
+## Hook and cache conclusions
+
+The hot-path extraction preserves the old traversal for the supported payload shapes checked. Nodes are still charged before the limits check; empty strings skip scanning only after that check; scanner exceptions do not debit bytes; successful calls use the same UTF-8/surrogatepass byte arithmetic. Incomplete-detail records precede findings, and the aggregate incomplete record remains last. Withholding still requires DENY and OUT. JSON Pointer escaping still replaces `~` before `/`. No string leaf was scanned twice or omitted differently in the differential tests. Existing integration tests additionally exercise the advancing shared clock and truncated-result hashing.
+
+Rebinding the adapter's `WITHHELD` still works because `process` explicitly passes `withheld=WITHHELD`. `INCOMPLETE` is read by the adapter when forming the response; traversal does not use it. Existing clock tests patch the attribute of the shared `time` module, so they still control the core clock. The feared marker-rebinding vacuity is not present in HEAD.
+
+`Outcome.changed` means inequality, not necessarily a withholding event. A scalar NaN is unequal to itself and triggers an update in both old and new code. Python's `json.loads` accepts the nonstandard `NaN` token, so this is reachable at the hook's raw input boundary even though valid JSON has no NaN. Nested NaNs are the same object in the reconstructed containers and do not necessarily produce inequality. JSON decoding cannot create a self-referential container; direct Python callers can. The tested cycle was bounded and returned in both versions, although a resulting cyclic object cannot be serialized as JSON. These are pre-existing boundary semantics, not a refactor regression. Rename the property's docstring to describe inequality if its implementation remains unchanged.
+
+For ordinary non-link members, `_kept` now correctly aligns extraction, cache hits, and `verify()`. A retained parent such as `data/` can remain empty after `data/test-corpora/` is excluded; that writes no sample and does not remove a loader input. Removing that expected parent is correctly rejected by the current exact-tree contract. I did not find a new acceptance of changed bytes, extra/missing regular paths, or inserted excluded directories. The policy-invalid link result in N10 is the demonstrated acceptance failure; it is not an attacker modifying the archive behind an unchanged digest. Files outside `tree/`, such as the informational `EXCLUDED` marker, are not newly brought into the verified-content contract by this change.
+
+## ATR count reconciliation
+
+The in-memory load used the actual ATR loader with only its file-discovery/read boundary replaced by memory objects. Its normalization, shippability property, and evaluator screen were unchanged. CFG reading was deliberately absent for the IN count; the separate proposed-profile check verified that the four selected source inputs suffice for gate reading.
+
+| Mutually exclusive outcome | Count |
+|---|---:|
+| Runnable, shippable, evaluator-screened | 14 |
+| Reason is exactly “multiple condition fields cannot be flattened into one text payload” | 16 |
+| Reason contains “refused on measurement” | 25 |
+| Other refusal | 2 |
+| Total IN | 57 |
+
+The two residual rules are `ATR-2026-01602`, refused for code-block suppression plus multiple condition fields, and `ATR-2026-02557`, refused for code-block suppression. Reasons overlap: 27 IN rules mention multiple condition fields in total, including 10 measurement refusals and `ATR-2026-01602`. Counting 16 exact field-only refusals is valid; counting 26 measurement refusals was not reproduced. No raw rule examples are included here.
 
 ## Reproducible verification helpers
 
-These files were temporary review instrumentation and were removed after their complete sources were embedded here. Their assertions intentionally confirm the defect witnesses where indicated; an exit 0 for such a probe means the witness reproduced, not that the implementation passed the property.
+These are temporary review instrumentation, not proposed repository additions. A successful witness probe means it reproduced and asserted the reported defect. The policy helper is the unapplied recommendation checked in memory. The finalizer embeds these sources before removing the named helper files.
 
 <details>
-<summary>.Review-Codex-round3-numeric.py</summary>
+<summary>.Review-Codex-round4-probes.py</summary>
+
+~~~python
+import ast
+from contextlib import contextmanager
+from dataclasses import replace
+import hashlib
+import importlib.util
+import io
+import json
+from pathlib import Path
+import random
+import re
+import subprocess
+import sys
+import tarfile
+import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / 'src'))
+from agent_defs import sources, bundle, evaluate
+from agent_defs.hooks import _core, _claude_code_impl as hook
+from agent_defs.model import Lane, PredicateKind, Rule, Surface
+
+
+def load_diagnostic():
+    spec = importlib.util.spec_from_file_location('diagnostic', ROOT / 'scripts/bound_leaf_discrepancy.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def archive_probe():
+    marker = b'harmless review marker, not an attack sample\n'
+    entries = [('repo/rules/ok.yaml', b'id: harmless\n', None),
+               ('repo/data/test-corpora/payload.txt', marker, None),
+               ('repo/conformance/v1.0/fixtures/tp/marker.txt', marker, None),
+               ('repo/rules/symlink.txt', b'', ('sym', '../data/test-corpora/payload.txt')),
+               ('repo/rules/hardlink.txt', b'', ('hard', 'repo/conformance/v1.0/fixtures/tp/marker.txt'))]
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode='w:gz') as archive:
+        for name, data, link in entries:
+            member = tarfile.TarInfo(name)
+            if link:
+                member.type = tarfile.SYMTYPE if link[0] == 'sym' else tarfile.LNKTYPE
+                member.linkname = link[1]
+                archive.addfile(member)
+            else:
+                member.size = len(data)
+                archive.addfile(member, io.BytesIO(data))
+    blob = buf.getvalue()
+    entry = dict(name='synthetic', repo_url='https://github.com/fixture/review', commit='1'*40,
+                 archive_sha256=hashlib.sha256(blob).hexdigest(), fetched_at='2026-09-06T00:00:00Z',
+                 license_spdx='MIT', license_path='LICENSE', record_count=1)
+    calls = []
+
+    @contextmanager
+    def download(*args):
+        calls.append(args)
+        yield io.BytesIO(blob)
+
+    with tempfile.TemporaryDirectory(prefix='agent-defs-round4-synthetic-') as temporary:
+        root = Path(temporary)
+        lock = root / 'lock.json'
+        lock.write_text(json.dumps([entry]), encoding='utf-8')
+        with patch.object(sources, '_response', download):
+            tree = sources.fetch('synthetic', root / 'cache', lock_path=lock)
+            assert not (tree / 'data/test-corpora').exists()
+            assert not (tree / 'conformance').exists()
+            assert (tree / 'data').is_dir()
+            assert (tree / 'rules/symlink.txt').read_bytes() == marker
+            assert (tree / 'rules/hardlink.txt').read_bytes() == marker
+            assert sources.verify(root / 'cache', lock_path=lock)['synthetic']['status'] == 'verified'
+            assert sources.fetch('synthetic', root / 'cache', lock_path=lock) == tree
+            assert len(calls) == 1
+            rejected = []
+            for mode in ('edit', 'missing', 'extra', 'excluded_file', 'excluded_directory', 'missing_parent'):
+                target = tree / 'rules/ok.yaml'
+                original = target.read_bytes()
+                if mode == 'edit': target.write_bytes(b'tampered harmless marker')
+                if mode == 'missing': target.unlink()
+                if mode == 'extra': (tree / 'extra.txt').write_bytes(marker)
+                if mode == 'excluded_file':
+                    (tree / 'conformance').mkdir()
+                    (tree / 'conformance/extra.txt').write_bytes(marker)
+                if mode == 'excluded_directory': (tree / 'conformance').mkdir()
+                if mode == 'missing_parent': (tree / 'data').rmdir()
+                assert sources.verify(root / 'cache', lock_path=lock)['synthetic']['status'] == 'invalid', mode
+                try:
+                    sources.fetch('synthetic', root / 'cache', lock_path=lock)
+                except sources.SourceError:
+                    rejected.append(mode)
+                else:
+                    raise AssertionError(mode)
+                assert len(calls) == 1
+                if mode in ('edit', 'missing'): target.write_bytes(original)
+                if mode == 'extra': (tree / 'extra.txt').unlink()
+                if mode == 'excluded_file': (tree / 'conformance/extra.txt').unlink()
+                if mode in ('excluded_file', 'excluded_directory'): (tree / 'conformance').rmdir()
+                if mode == 'missing_parent': (tree / 'data').mkdir()
+            # Replay the pre-range reader against the same excluded-path cache.
+            old = subprocess.check_output(['git', 'show', '869ccd2:src/agent_defs/sources.py'], cwd=ROOT).decode()
+            namespace = {'__file__': str(ROOT / 'src/agent_defs/sources.py'), '__name__': 'old_sources'}
+            exec(compile(old, 'old_sources.py', 'exec'), namespace)
+            with patch.dict(namespace, {'_response': download}):
+                try:
+                    namespace['fetch']('synthetic', root / 'cache', lock_path=lock)
+                except namespace['SourceError']:
+                    pass
+                else:
+                    raise AssertionError('old cache check should reject this tree')
+            assert len(calls) == 1
+            print(json.dumps(dict(link_bytes_written=['symlink', 'hardlink'], unsafe_tree_status='verified',
+                                  tampering_rejected=rejected, requests=1, old_reader='raises without redownload')))
+
+
+def regex_probe():
+    diagnostic = load_diagnostic()
+    cases = [(r'^(a)(?=(b))(bc)\2$', 'abcb', 'x\nabcb\ny'),
+             (r'(?x)^ab(?=x) {0} c$', 'abc', 'x\nabc\ny'),
+             (r'^ab(?=x)(?#comment){0}c$', 'abc', 'x\nabc\ny')]
+    for pattern, leaf, joined in cases:
+        strict = re.compile(pattern)
+        relaxed, kinds = diagnostic.strip_assertions(pattern)
+        assert strict.search(leaf)
+        assert not strict.search(joined)
+        assert not diagnostic.unsupported_constructs(pattern)
+        assert relaxed is not None and not re.search(relaxed, joined)
+        fake = SimpleNamespace(id='t:probe', predicate_kind=PredicateKind.REGEX, predicate=pattern,
+                               case_sensitive=True)
+        loose, splits, census, unprunable = diagnostic.build_probes([fake])
+        assert not loose[0][1](joined)
+        assert splits[fake.id](joined.split('\n'))
+        real = Rule(id='t:probe', source='t', source_id='probe', source_rev='1'*40,
+                    source_path='rules/probe.yaml', upstream_url='https://example.test', title='probe',
+                    surface=Surface.OUT, predicate_kind=PredicateKind.REGEX, predicate=pattern,
+                    case_sensitive=True)
+        accepted = True
+        try:
+            evaluate.compile_rule(real)
+        except ValueError as exc:
+            accepted = False
+            print(json.dumps(dict(evaluator_rejection=str(exc))))
+        print(json.dumps(dict(pattern=pattern, leaf=leaf, relaxed=relaxed, assertion_kinds=sorted(kinds),
+                              unsupported=[], true_split=True, candidate=False,
+                              joined_match=bool(strict.search(joined)), evaluator_accepts=accepted)))
+        if not accepted:
+            continue
+        with tempfile.TemporaryDirectory(prefix='agent-defs-round4-regex-') as temporary:
+            temp = Path(temporary)
+            units, report = temp / 'units.jsonl', temp / 'report.json'
+            units.write_text(json.dumps({'text': joined}) + '\n', encoding='utf-8')
+            with patch.object(diagnostic.bundle, 'load', lambda _: [real]):
+                with patch.object(sys, 'stdout', io.StringIO()):
+                    assert diagnostic.main(['--units', str(units), '--rules', str(ROOT/'src/agent_defs/bundle.json'),
+                                            '--out', str(report)]) == 0
+            data = json.loads(report.read_text())
+            assert data['joined']['hits'] == data['newline_leaf_diagnostic']['hits'] == data['substring_leaf_diagnostic']['hits'] == 0
+            assert diagnostic.hits(leaf, [real]) == {'t:probe'}
+    shipped = bundle.load(ROOT / 'src/agent_defs/bundle.json')
+    relaxed, splits, census, unprunable = diagnostic.build_probes(shipped)
+    record = json.loads((ROOT / 'scripts/leaf-traversal-diagnostic.json').read_text())
+    assert len(shipped) == 205 and len(splits) == record['probed_rules'] == 102
+    assert unprunable == record['probed_without_pruning'] == []
+    assert {k: len(v) for k,v in sorted(census.items())} == record['construct_census']
+    print('VERIFIED: evaluator-accepted witnesses have leaf=1, joined/newline/substring=0; shipped 205-rule classification matches the committed record.')
+
+
+def hook_probe():
+    old = subprocess.check_output(['git', 'show', '869ccd2:src/agent_defs/hooks/_claude_code_impl.py'], cwd=ROOT).decode()
+    parsed = ast.parse(old)
+    process = next(n for n in parsed.body if isinstance(n, ast.FunctionDef) and n.name == 'process')
+    old_process = ast.Module(body=[process], type_ignores=[])
+    scope = hook.__dict__.copy()
+    exec(compile(old_process, 'old_process.py', 'exec'), scope)
+    prior = scope['process']
+    rule = SimpleNamespace(id='r', surface=SimpleNamespace(value='OUT'))
+    config = dict(surfaces=['OUT', 'IN'])
+    rng = random.Random(4606)
+
+    def payload(depth=0):
+        if depth > 3 or rng.random() < .5:
+            return rng.choice(['', ' ', 'abc', 'deny', 'partial', 'error', '\ud800', 'é🙂', None, 2, True])
+        if rng.random() < .5:
+            return [payload(depth+1) for _ in range(rng.randrange(5))]
+        return {f'a~/{i}': payload(depth+1) for i in range(rng.randrange(5))}
+
+    def one(fn, value, surface, limit):
+        records, calls = [], []
+        def scanner(text, rules, **kwargs):
+            calls.append((text, kwargs))
+            if text == 'error': raise MemoryError('synthetic')
+            finding = SimpleNamespace(rule_id='r', start=0, end=1)
+            return SimpleNamespace(complete=text != 'partial', rules_evaluated=0 if text == 'partial' else 1,
+                                   rules_skipped_budget=0, errors=(), worker_error=None, truncated_input=False,
+                                   partial_findings=[finding] if text == 'deny' else [])
+        changes = dict(active_rules=lambda c, r: r,
+                       effective_lanes=lambda c, r: {'r': (Lane.DENY, 'measured')},
+                       log_status=lambda c, r: records.extend(r) or True,
+                       scan=scanner, MAX_SCAN_BYTES=limit[0], MAX_NODES=limit[1],
+                       MAX_DEPTH=limit[2], SCAN_BUDGET_S=limit[3], WITHHELD='custom withheld',
+                       INCOMPLETE='custom incomplete')
+        field = 'tool_response' if surface == 'OUT' else 'tool_input'
+        event = 'PostToolUse' if surface == 'OUT' else 'PreToolUse'
+        rule.surface.value = surface
+        with patch.dict(fn.__globals__, changes), patch.object(hook.time, 'perf_counter', lambda: 0):
+            result = fn(dict(hook_event_name=event, **{field: value}), config, [rule])
+        return result, records, calls
+
+    for i in range(1200):
+        value = payload()
+        surface = rng.choice(['IN', 'OUT'])
+        limit = rng.choice([(20, 20, 3, 1), (0, 20, 3, 1), (20, 1, 3, 1), (20, 20, 0, 1), (20, 20, 3, 0)])
+        assert one(prior, value, surface, limit) == one(hook.process, value, surface, limit), i
+    nan = float('nan')
+    old_nan = one(prior, nan, 'OUT', (20, 20, 3, 1))[0]
+    new_nan = one(hook.process, nan, 'OUT', (20, 20, 3, 1))[0]
+    assert 'updatedToolOutput' in old_nan['hookSpecificOutput']
+    assert 'updatedToolOutput' in new_nan['hookSpecificOutput']
+    assert one(prior, {'n': nan}, 'OUT', (20, 20, 3, 1))[0] == {}
+    assert one(hook.process, {'n': nan}, 'OUT', (20, 20, 3, 1))[0] == {}
+    cycle = []
+    cycle.append(cycle)
+    outcomes = []
+    for fn in (prior, hook.process):
+        try: one(fn, cycle, 'OUT', (20, 20, 3, 1))
+        except RecursionError: outcomes.append('RecursionError')
+        else: outcomes.append('returned')
+    print(json.dumps(dict(differential_cases=1200, mismatches=0, root_nan='spurious update in both',
+                          nested_nan='unchanged in both', cycles=outcomes,
+                          adapter_markers='custom WITHHELD and INCOMPLETE injected and equivalent')))
+
+
+def vacuity_probe():
+    import inspect
+    import pytest
+    code = ast.parse(inspect.getsource(_core.scan_payload))
+    walk = next(n for n in ast.walk(code) if isinstance(n, ast.FunctionDef) and n.name == 'walk')
+    budget_guard = walk.body[2]
+    assert isinstance(budget_guard, ast.If) and isinstance(budget_guard.body[-1], ast.Return)
+    budget_guard.body.pop()
+    exec(compile(code, 'mutated_core.py', 'exec'), _core.__dict__)
+    status = pytest.main(['-q', 'tests/test_hook_core.py'])
+    assert status == 0, status
+    calls = []
+    def scanner(*args, **kwargs):
+        calls.append(args[0])
+        return SimpleNamespace(complete=True, rules_evaluated=0, partial_findings=[])
+    outcome = _core.scan_payload({'a': 'content'}, rules=[], lanes={}, surface='OUT', event='e',
+                                 limits=_core.Limits(100, 0, 0, 0), scanner=scanner)
+    assert calls == ['content'] and outcome.incomplete
+    print('VERIFIED WITNESS: all core tests pass after removing the node/depth/time early return; the scanner still ran with all three budgets exhausted.')
+    status = pytest.main(['-q', 'tests/test_hook_integration.py::test_event_budget_is_shared_and_exhaustion_warns_the_model'])
+    assert status == 1, status
+    print('VERIFIED CONTROL: the existing adapter integration test detects this mutation.')
+
+
+if __name__ == '__main__':
+    {'sources': archive_probe, 'regex': regex_probe, 'hooks': hook_probe, 'vacuity': vacuity_probe}[sys.argv[1]]()
+~~~
+
+</details>
+
+<details>
+<summary>.Review-Codex-round4-numeric.py</summary>
 
 ~~~python
 import argparse
@@ -387,309 +735,253 @@ if __name__ == '__main__':
 </details>
 
 <details>
-<summary>.Review-Codex-round3-probes.py</summary>
-
-~~~python
-import argparse
-import contextlib
-from dataclasses import replace
-import hashlib
-import importlib.util
-import io
-import json
-from pathlib import Path
-import subprocess
-import sys
-from tempfile import TemporaryDirectory
-from unittest.mock import patch
-
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT / 'src'))
-from agent_defs import bundle, evaluate
-from agent_defs.builtin import STARTER_RULES
-from agent_defs.hooks import _claude_code_impl as hook
-from agent_defs.model import PredicateKind
-
-
-def module(name, path):
-    spec = importlib.util.spec_from_file_location(name, ROOT / path)
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
-
-
-def leaves():
-    d = module('leaf_probe', 'scripts/bound_leaf_discrepancy.py')
-    fixtures = [
-        ('quantified assertion', r'^ab(?=x){0}c$', 'abc', 'x\nabc\ny'),
-        ('atomic with assertion', r'(?>(?!\A)a|ab)c', 'abc', 'x\nabc\ny'),
-        ('atomic without assertions', r'a(?>bc\nx|b)c', 'abc', 'z\nabc\nx\ny'),
-        ('multiline leaf', r'\Afoo\nbar\Z', 'foo\nbar', 'x\nfoo\nbar\ny'),
-    ]
-    with TemporaryDirectory(prefix='agent-defs-review3-leaves-') as tmp:
-        root = Path(tmp)
-        for name, pattern, leaf, text in fixtures:
-            r = replace(STARTER_RULES[0], predicate_kind=PredicateKind.REGEX, predicate=pattern)
-            evaluate.compile_rule(r)
-            relaxed, splits, _, _ = d.build_probes([r])
-            found = d.hits(text,[r])
-            candidates = {rid for rid,test in relaxed if rid not in found and test(text)}
-            newline = found | {rid for rid in candidates if splits[rid](text.split('\n'))}
-            assert d.hits(leaf,[r]) and not newline
-            rp, up, op = root/'rules.json', root/'units.jsonl', root/'out.json'
-            bundle.write(rp,[r])
-            up.write_text(json.dumps({'text':text})+'\n',encoding='utf-8')
-            with contextlib.redirect_stdout(io.StringIO()):
-                assert d.main(['--rules',str(rp),'--units',str(up),'--out',str(op)]) == 0
-            report=json.loads(op.read_text())
-            assert report['newline_leaf_diagnostic']['hits'] == 0
-            print(json.dumps(dict(name=name,pattern=pattern,leaf=leaf,joined=text,
-                stripped=d.strip_assertions(pattern)[0],strict_leaf_hit=True,
-                joined_hits=report['joined']['hits'],
-                newline_hits=report['newline_leaf_diagnostic']['hits'],
-                substring_hits=report['substring_leaf_diagnostic']['hits'])))
-        r = replace(STARTER_RULES[0],predicate_kind=PredicateKind.STRUCTURED,
-                    predicate={'regex_all':[r'\Afoo',r'bar\Z']})
-        evaluate.compile_rule(r)
-        assert d.hits('foo\nbar',[r])
-        assert not d.split_probe([r'\Afoo',r'bar\Z'],'all',0)('x\nfoo\nbar\ny'.split('\n'))
-        assert not d.split_probe(['foo','bar'],'all',0)(['foo','bar'])
-        assert d.split_probe(['foo','bar'],'all',0)(['foobar'])
-        assert not d.split_probe(['FOO'],'any',0)(['foo'])
-        assert d.split_probe(['FOO'],'any',2)(['foo'])
-        print(json.dumps(dict(regex_all_single_line_conjunction=True,case_flags=True,
-                              regex_all_multiline_leaf_missed=True)))
-
-
-def vacuity():
-    builder = module('builder_probe', 'scripts/build_bundle.py')
-    tests = module('shipped_probe', 'tests/test_shipped_bundle.py')
-    rules,meta = bundle.read(hook.BUNDLE_PATH)
-    assert len(tests.CONTENT_FREE) == len(builder.CONTENT_FREE) == 20
-    assert tuple(tests.CONTENT_FREE) == builder.CONTENT_FREE
-    for pattern,leaf in [(r'^ {7}$',' '*7),(r'^\u2028+$','\u2028')]:
-        rule=replace(STARTER_RULES[0],predicate_kind=PredicateKind.REGEX,predicate=pattern)
-        assert builder.screened(rule) == '' and builder.fires_on_nothing(rule) == ''
-        assert evaluate.scan_trusted(leaf,[rule]).findings
-    zero=evaluate.ScanResult((),0,0,0,False)
-    incomplete=replace(zero,worker_error='synthetic incomplete')
-    for fake in (zero,incomplete):
-        with patch.object(builder,'scan_trusted',return_value=fake):
-            try: builder.fires_on_nothing(STARTER_RULES[0])
-            except builder.IndeterminateProbe: pass
-            else: raise AssertionError('indeterminate build probe passed')
-        with patch.object(tests,'scan_trusted',return_value=fake):
-            try: tests.test_no_shipped_rule_fires_on_a_leaf_with_nothing_in_it((rules,meta),' ')
-            except AssertionError: pass
-            else: raise AssertionError('incomplete shipped scan passed')
-    with TemporaryDirectory(prefix='agent-defs-review3-missing-') as tmp:
-        missing=Path(tmp)/'absent.json'
-        with patch.object(hook,'BUNDLE_PATH',missing):
-            try: tests.shipped.__wrapped__()
-            except AssertionError: pass
-            else: raise AssertionError('missing bundle passed')
-        with patch.object(tests,'SCAN_RECORD',missing):
-            try: tests.test_the_scanner_self_check_names_a_record_rather_than_a_promise((rules,meta))
-            except AssertionError: pass
-            else: raise AssertionError('missing scan record passed')
-    print(json.dumps(dict(shared_fixtures=20,uncaught_documented_shapes_confirmed=2,
-        builder_refuses_incomplete_and_zero_evaluated=True,
-        shipped_checks_refuse_incomplete_and_zero_evaluated=True,
-        missing_bundle_asserts=True,missing_scan_record_asserts=True)))
-
-
-def replay():
-    base=Path('C:/Users/yuezh/AppData/Local/Temp/claude/C--Users-yuezh-PycharmProjects-agent-startup-thesis/0c2c85fb-d0d8-49d1-a9cd-a3b2dc006ecd/scratchpad')
-    report=base/'holdout-report-v2.json'
-    old=json.loads((ROOT/'scripts/leaf-traversal-diagnostic.json').read_text())
-    assert hashlib.sha256(report.read_bytes()).hexdigest() == '3106c49d2a220616b8ef8f9b02eba0c389a76b7c24c37bfaa04678a14658ee1f'
-    assert hashlib.sha256(hook.BUNDLE_PATH.read_bytes()).hexdigest() == old['inputs']['rules_sha256']
-    with TemporaryDirectory(prefix='agent-defs-review3-replay-') as tmp:
-        root=Path(tmp)
-        paths=[root/'units1.jsonl',root/'units2.jsonl']
-        for out in paths:
-            command=[sys.executable,str(ROOT/'scripts/rebuild_holdout_units.py'),
-                     '--report',str(report),'--root','C:/Users/yuezh/.claude/projects',
-                     '--corpus','local-claude-unique-holdout','--out',str(out)]
-            print('COMMAND:',json.dumps(command),flush=True)
-            subprocess.run(command,cwd=ROOT,check=True)
-        assert paths[0].read_bytes() == paths[1].read_bytes()
-        assert hashlib.sha256(paths[0].read_bytes()).hexdigest() == old['inputs']['units_sha256']
-        out=root/'diagnostic.json'
-        command=[sys.executable,str(ROOT/'scripts/bound_leaf_discrepancy.py'),
-                 '--units',str(paths[0]),'--rules',str(hook.BUNDLE_PATH),'--out',str(out),
-                 '--units-from','Round 3 independent replay of pinned report']
-        print('COMMAND:',json.dumps(command),flush=True)
-        subprocess.run(command,cwd=ROOT,check=True,stdout=subprocess.PIPE,text=True)
-        new=json.loads(out.read_text())
-        for key in old:
-            if key != 'inputs': assert new[key] == old[key],key
-        for key in ['units_sha256','rules_sha256','rule_count','rule_ids_sha256','python']:
-            assert new['inputs'][key] == old['inputs'][key],key
-        print(json.dumps(dict(two_replays_identical=True,units_sha256=old['inputs']['units_sha256'],
-            trials=new['trials'],joined=new['joined'],newline=new['newline_leaf_diagnostic'],
-            substring=new['substring_leaf_diagnostic'],hook_upper_bound=new['hook_upper_bound'])),flush=True)
-
-
-def verdict():
-    from agent_defs import bench
-    t=module('bench_fixtures','tests/test_bench.py')
-    with patch.object(bench,'bound_within',return_value=None):
-        report=bench.measure([t.rule()],[t.corpus(3000,3000)])
-    failure=report['bundle']['failures']
-    assert len(failure)==1 and 'is not resolvable against' in failure[0]
-    assert hook.POOLED_ONLY_FAILURE not in failure[0]
-    for opted in (False,True):
-        try: hook._screen_bench_verdict(report,opted)
-        except ValueError as exc: assert 'not one this importer may relax' in str(exc)
-        else: raise AssertionError('unresolvable failure was relaxed')
-    print(json.dumps(dict(generated_failure=failure,refused_with_and_without_opt_in=True)))
-
-
-if __name__ == '__main__':
-    parser=argparse.ArgumentParser()
-    parser.add_argument('phase',choices=['leaves','vacuity','replay','verdict'])
-    globals()[parser.parse_args().phase]()
-~~~
-
-</details>
-
-<details>
-<summary>.Review-Codex-round3-scan-probe.ps1</summary>
+<summary>.Review-Codex-round4-scan.ps1</summary>
 
 ~~~powershell
-param([ValidateSet('removed','blocked','missing-scanner','setup-failure','atomic')][string]$Mode)
+param([ValidateSet('setup', 'locked', 'missing-parent')][string]$Mode)
 $ErrorActionPreference = 'Stop'
-$repo = (Get-Location).Path
-$recordPath = Join-Path $repo ('.Review-Codex-round3-scan-' + [guid]::NewGuid().ToString('N') + '.json')
-$oldBytes = [IO.File]::ReadAllBytes((Join-Path $repo 'scripts/artifact-scan.json'))
-[IO.File]::WriteAllBytes($recordPath, $oldBytes)
-
-if ($Mode -eq 'atomic') {
-    $sourcePath = $recordPath + '.tmp'
-    [IO.File]::WriteAllText($sourcePath, 'replacement')
-    $handle = [IO.File]::Open($sourcePath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-    try {
-        $failure = $null
-        try { Move-Item -LiteralPath $sourcePath -Destination $recordPath -Force }
-        catch { $failure = $_.Exception.Message }
-        $exists = [IO.File]::Exists($recordPath)
-        [ordered]@{ mode=$Mode; move_failed=($null -ne $failure); destination_exists=$exists;
-                     source_exists=[IO.File]::Exists($sourcePath); error=$failure } | ConvertTo-Json
-        if (-not $failure -or $exists) { throw 'expected failed move to remove existing destination' }
-    } finally {
-        $handle.Dispose()
-        [IO.File]::Delete($sourcePath)
-        [IO.File]::Delete($recordPath)
-    }
-    exit 0
-}
-
+$reviewRoot = [IO.Path]::GetFullPath((Get-Location).Path)
+$reviewRecord = Join-Path $reviewRoot '.Review-Codex-round4-scan-record.json'
+$reviewArtifact = Join-Path $reviewRoot '.Review-Codex-round4-harmless.txt'
+$reviewMissing = Join-Path $reviewRoot '.Review-Codex-round4-absent-parent'
+if ([IO.Directory]::Exists($reviewMissing)) { throw 'expected missing parent already exists' }
+$reviewOld = '{"verdict":"clean","review_marker":true}'
+[IO.File]::WriteAllText($reviewRecord, $reviewOld)
+[IO.File]::WriteAllText($reviewArtifact, 'harmless review artifact')
+$reviewLock = $null
 function New-Item {
-    param($ItemType, $Path)
-    if ($Mode -eq 'setup-failure') { throw 'synthetic temporary directory failure' }
-}
-function Copy-Item {
-    param($LiteralPath, $Destination)
-    $script:mockCopy = $Destination
-    if ($Mode -eq 'blocked') { throw 'synthetic copy blocked' }
-}
-function Start-Sleep { param($Seconds) }
-function Get-CimInstance {
-    param($Namespace, $ClassName)
-    [pscustomobject]@{ displayName = 'Synthetic registered product' }
-}
-function Get-Item {
     [CmdletBinding()]
-    param($Path, $LiteralPath)
-    if ($Path -like '*MpCmdRun.exe') { return }
-    Microsoft.PowerShell.Management\Get-Item -LiteralPath $LiteralPath
-}
-function Test-Path {
-    param($LiteralPath)
-    if ($LiteralPath -eq $script:mockCopy) { return $Mode -ne 'removed' }
-    Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
+    param($ItemType, $Path)
+    throw 'synthetic scan directory setup failure'
 }
 function Remove-Item {
     [CmdletBinding()]
     param($LiteralPath, [switch]$Recurse, [switch]$Force)
     $resolved = [IO.Path]::GetFullPath($LiteralPath)
-    $expectedRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
-    if (-not $resolved.StartsWith($expectedRoot, [StringComparison]::OrdinalIgnoreCase) -or
-        [IO.Path]::GetFileName($resolved) -notmatch '^agent-defs-scan-[0-9a-f]{8}$') {
-        throw 'cleanup target escaped the expected temporary directory'
+    if ($Recurse) {
+        $tempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+        if (-not $resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or
+            [IO.Path]::GetFileName($resolved) -notmatch '^agent-defs-scan-[0-9a-f]{8}$') {
+            throw 'cleanup escaped the expected temporary scan directory'
+        }
+        if ([IO.Directory]::Exists($resolved)) { throw 'mock unexpectedly created scan directory' }
+        return
     }
-    # No directory or copy was created by these mocks.
+    if ([IO.Path]::GetDirectoryName($resolved) -ne $reviewRoot -or
+        [IO.Path]::GetFileName($resolved) -notlike '.Review-Codex-round4-scan-record.json.*.tmp') {
+        throw 'cleanup escaped review temporary files'
+    }
+    [IO.File]::Delete($resolved)
 }
-
-$source = [IO.File]::ReadAllText((Join-Path $repo 'scripts/scan_artifact.ps1'))
-$body = [ScriptBlock]::Create($source)
-$caught = $null
 try {
-    & $body -Path (Join-Path $repo 'src/agent_defs/bundle.json') -Out $recordPath | Out-Null
-} catch {
-    $caught = $_.Exception.Message
-} finally {
-    try {
-        $after = [IO.File]::ReadAllBytes($recordPath)
-        $record = [Text.Encoding]::UTF8.GetString($after) | ConvertFrom-Json
-        $unchanged = [Convert]::ToBase64String($after) -eq [Convert]::ToBase64String($oldBytes)
-        [ordered]@{ mode=$Mode; caught=$caught; old_record_unchanged=$unchanged;
-                     verdict=$record.verdict; on_demand=$record.on_demand;
-                     resident=$record.resident; actual_scanner_executed=$false } | ConvertTo-Json -Depth 6
-        switch ($Mode) {
-            'removed' { if ($unchanged -or $record.verdict -ne 'DETECTED') { throw 'removal was not recorded' } }
-            'blocked' { if ($unchanged -or $record.verdict -notlike 'inconclusive:*') { throw 'blocked copy was not recorded' } }
-            'missing-scanner' { if ($unchanged -or $record.verdict -ne 'inconclusive: no scanner') { throw 'missing scanner was not recorded' } }
-            'setup-failure' { if (-not $unchanged -or $caught -ne 'synthetic temporary directory failure') { throw 'setup witness changed' } }
-        }
-    } finally {
-        if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($recordPath)) -ne $repo) {
-            throw 'record cleanup escaped the repository'
-        }
-        [IO.File]::Delete($recordPath)
+    if ($Mode -eq 'locked') {
+        $reviewLock = [IO.File]::Open($reviewRecord, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
     }
+    $destination = if ($Mode -eq 'missing-parent') { Join-Path $reviewMissing 'result.json' } else { $reviewRecord }
+    try {
+        & ./scripts/scan_artifact.ps1 -Path $reviewArtifact -Out $destination
+        $reviewExit = $LASTEXITCODE
+    } catch {
+        $reviewExit = 1
+        Write-Output ('Unhandled exception: ' + $_.Exception.Message)
+    }
+    $after = [IO.File]::ReadAllText($reviewRecord)
+    $parsed = $after | ConvertFrom-Json
+    if ($Mode -eq 'setup' -and ($parsed.verdict -notlike 'inconclusive:*' -or $reviewExit -ne 2)) {
+        throw 'setup failure did not replace the old record with exit 2'
+    }
+    if ($Mode -eq 'locked' -and ($after -ne $reviewOld -or $reviewExit -ne 3)) {
+        throw 'locked destination was not preserved with exit 3'
+    }
+    if ($Mode -eq 'missing-parent' -and $reviewExit -ne 1) { throw 'temporary-write witness changed' }
+    [ordered]@{ mode=$Mode; script_exit=$reviewExit; previous_record_unchanged=($after -eq $reviewOld);
+                verdict=$parsed.verdict; actual_scanner_executed=$false } | ConvertTo-Json -Compress
+    exit $reviewExit
+} finally {
+    if ($reviewLock) { $reviewLock.Dispose() }
+    [IO.File]::Delete($reviewRecord)
+    [IO.File]::Delete($reviewArtifact)
 }
 ~~~
 
 </details>
 
 <details>
-<summary>.Review-Codex-round3-replace-probe.ps1</summary>
+<summary>.Review-Codex-round4-atr.py</summary>
 
-~~~powershell
-$ErrorActionPreference = 'Stop'
-$reviewOldPath = Join-Path (Get-Location) '.Review-Codex-round3-replace-check.json'
-$reviewNewPath = "$reviewOldPath.tmp"
-try {
-    [IO.File]::WriteAllText($reviewOldPath, 'old')
-    [IO.File]::WriteAllText($reviewNewPath, 'new')
-    $reviewLock = [IO.File]::Open($reviewNewPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-    try {
-        $reviewFailure = $null
-        try { [IO.File]::Replace($reviewNewPath, $reviewOldPath, [NullString]::Value) }
-        catch { $reviewFailure = $_.Exception.Message }
-        if (-not $reviewFailure -or [IO.File]::ReadAllText($reviewOldPath) -ne 'old') {
-            throw 'locked replacement did not preserve the old target'
-        }
-    } finally { $reviewLock.Dispose() }
-    [IO.File]::Replace($reviewNewPath, $reviewOldPath, [NullString]::Value)
-    if ([IO.File]::ReadAllText($reviewOldPath) -ne 'new') { throw 'replacement failed' }
-    [IO.File]::Delete($reviewOldPath)
-    [IO.File]::WriteAllText($reviewNewPath, 'new target')
-    [IO.File]::Move($reviewNewPath, $reviewOldPath)
-    if ([IO.File]::ReadAllText($reviewOldPath) -ne 'new target') { throw 'new destination move failed' }
-    'VERIFIED: File.Replace preserved the target with a locked source, replaced an existing target after unlock, and File.Move published an absent target.'
-} finally {
-    [IO.File]::Delete($reviewNewPath)
-    [IO.File]::Delete($reviewOldPath)
-}
+~~~python
+from collections import Counter
+import hashlib
+import io
+import importlib.util
+import json
+from pathlib import Path, PurePosixPath
+import sys
+import tarfile
+from unittest.mock import patch
+import urllib.request
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / 'src'))
+from agent_defs import evaluate, sources
+from agent_defs.loaders import atr
+from agent_defs.model import Surface
+
+
+class MemoryFile:
+    def __init__(self, data): self.data = data
+    def read_bytes(self): return self.data
+
+
+entry = sources.load_lock()['atr']
+url = entry['archive_http']['url']
+with urllib.request.urlopen(url, timeout=90) as response:
+    assert response.status == 200
+    blob = response.read()
+assert hashlib.sha256(blob).hexdigest() == entry['archive_sha256']
+print(json.dumps(dict(url=url, sha256=entry['archive_sha256'], archive_bytes=len(blob))), flush=True)
+with tarfile.open(fileobj=io.BytesIO(blob), mode='r:gz') as archive:
+    members = archive.getmembers()
+    root = members[0].name.split('/')[0]
+    files, directories = sources._layout(archive)
+    kept, kept_dirs = sources._kept(files, directories)
+    counts = Counter('/'.join(PurePosixPath(p).parts[:3]) for p in kept)
+    possible = [p for p in kept if not p.startswith('rules/') and
+                any(token in p.lower() for token in ('malicious', 'payload', 'fixture', 'sample', 'attack', 'test-corp', 'benchmark'))]
+    print(json.dumps(dict(members=len(members), declared_files=len(files), kept_files=len(kept),
+                          excluded_files=len(files)-len(kept),
+                          possible_sample_paths=[p for p in possible if p.startswith('data/') and '/benign/' not in p],
+                          actual_links=sum(m.issym() or m.islnk() for m in members))), flush=True)
+    # Read only approved regular rule YAML and LICENSE. No archive bytes or members are written.
+    rule_files = []
+    license_text = None
+    for member in members:
+        rel = member.name.removeprefix(root + '/')
+        if not member.isfile(): continue
+        if rel == entry['license_path']:
+            license_text = archive.extractfile(member).read().decode('utf-8')
+        elif rel.startswith('rules/') and PurePosixPath(rel).suffix in ('.yaml', '.yml'):
+            rule_files.append((MemoryFile(archive.extractfile(member).read()), rel))
+    rule_files.sort(key=lambda row: row[1])
+    assert license_text.startswith('MIT License')
+    def memory_source(*args): return entry['commit'], rule_files, 'MIT', {}
+    with patch.object(atr, '_source_files', memory_source), patch.object(
+            atr.atr_skill_gates, 'read_skill_gates', side_effect=atr.atr_skill_gates.GateReadError('rules-only in-memory view')):
+        result = atr.load(ROOT, source_rev=entry['commit'])
+    inbound = [r for r in result.rules if r.surface == Surface.IN]
+    categories = Counter()
+    details = []
+    for rule in inbound:
+        if not rule.runnable:
+            reason = rule.not_runnable_reason
+            category = ('multiple fields' if 'multiple condition fields cannot be flattened' in reason else
+                        'measured backtracking' if 'refused on measurement' in reason else 'other refusal')
+        elif not rule.shippable:
+            category, reason = 'not shippable', rule.restricted_reason
+        else:
+            try:
+                compiled = evaluate.compile_rule(rule)
+                assert compiled is not None
+            except (ValueError, NotImplementedError) as exc:
+                category, reason = 'evaluator rejection', str(exc)
+            else:
+                category, reason = 'runnable shippable screened', ''
+        categories[category] += 1
+        details.append(dict(id=rule.id, category=category, reason=reason))
+    measured = [r for r in inbound if 'refused on measurement' in r.not_runnable_reason]
+    exact_fields = [r for r in inbound if r.not_runnable_reason == 'multiple condition fields cannot be flattened into one text payload']
+    residual = [r for r in inbound if not r.runnable and r not in measured and r not in exact_fields]
+    print(json.dumps(dict(yaml_files=len(rule_files), loaded=len(result.rules), errors=len(result.delta.entry_errors),
+                          inbound=len(inbound), runnable_shippable_screened=categories['runnable shippable screened'],
+                          measured_refusal=len(measured), exact_fields_only=len(exact_fields),
+                          residual=[dict(id=r.id, reason=r.not_runnable_reason) for r in residual])), flush=True)
+    # Only digests are compared for non-allow-listed members, without printing their contents.
+    excluded_hashes = {}
+    for path, member in files.items():
+        if path not in kept:
+            excluded_hashes.setdefault(hashlib.sha256(archive.extractfile(member).read()).hexdigest(), []).append(path)
+    aliases = []
+    for path in possible:
+        member = kept[path]
+        digest = hashlib.sha256(archive.extractfile(member).read()).hexdigest()
+        same = excluded_hashes.get(digest, [])
+        if any('/tp/' in p or '/malicious/' in p for p in same):
+            aliases.append(dict(kept=path, sha256=digest, excluded=same[:3], bytes=member.size))
+    print(json.dumps(dict(kept_identical_to_excluded_positive=aliases)), flush=True)
+    for path in ['data/autoresearch/adversarial-samples.json', 'data/autoresearch/missed-payloads.json',
+                 'data/evasion-payloads.json', 'data/pint-benchmark/pint-corpus.json',
+                 'data/semantic-validation/attacks.json', 'data/fn-mining/skill-benchmark-malicious.json']:
+        member = kept[path]
+        value = json.loads(archive.extractfile(member).read())
+        schema = ({key: dict(type=type(val).__name__, length=len(val) if isinstance(val, (list, dict, str)) else None)
+                   for key, val in value.items()} if isinstance(value, dict) else
+                  dict(type=type(value).__name__, length=len(value), first_keys=list(value[0]) if value and isinstance(value[0], dict) else None))
+        print(json.dumps(dict(kept_json=path, bytes=member.size, schema=schema)), flush=True)
+    spec = importlib.util.spec_from_file_location('proposed_policy', ROOT / '.Review-Codex-round4-policy.py')
+    policy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(policy)
+    selected, selected_dirs = policy._kept(files, directories, name='atr', license_path=entry['license_path'])
+    assert len(selected) == 798
+    assert not any(path.startswith('data/') for path in selected)
+    other, other_dirs = policy._kept(files, directories, name='synthetic_other', license_path='LICENSE')
+    assert other == kept and other_dirs == kept_dirs
+    class MemoryPath:
+        def __init__(self, name=''): self.name = name
+        def __truediv__(self, segment): return MemoryPath(self.name + '/' + segment if self.name else segment)
+        def is_file(self): return self.name in selected
+        def read_text(self, **kwargs): return archive.extractfile(selected[self.name]).read().decode('utf-8')
+        def __str__(self): return self.name
+    with patch.object(atr.atr_skill_gates, 'Path', lambda _: MemoryPath()):
+        gates = atr.atr_skill_gates.read_skill_gates('memory', source_rev=entry['commit'])
+    assert gates.source_rev == entry['commit']
+    print(json.dumps(dict(proposed_policy_keeps=len(selected), unchanged_other_source_policy=True,
+                          cfg_gates_read=True, cfg_scan_context=gates.scan_context)), flush=True)
 ~~~
 
 </details>
 
 <details>
-<summary>.Review-Codex-round3-finalize.py</summary>
+<summary>.Review-Codex-round4-policy.py</summary>
+
+~~~python
+from pathlib import PurePosixPath
+from agent_defs.sources import _is_excluded, _portable_path, _safe_parts
+
+
+def _kept(files, directories, *, name, license_path):
+    required = {
+        _portable_path(license_path),
+        "src/engine.ts",
+        "src/enforcement.ts",
+        "src/quality/rule-contract.ts",
+        "engines/typescript/INTERFACE-CONTRACT.md",
+    }
+
+    def allowed(relative):
+        parts = PurePosixPath(relative).parts
+        if _is_excluded(parts):
+            return False
+        return name != "atr" or parts[0] == "rules" or relative in required
+
+    kept_files = {
+        relative: member for relative, member in files.items()
+        if allowed(relative)
+        and allowed(_portable_path("/".join(_safe_parts(member.name)[1:])))
+    }
+    if name == "atr":
+        kept_dirs = {
+            str(parent) for relative in kept_files
+            for parent in PurePosixPath(relative).parents if str(parent) != "."
+        }
+    else:
+        kept_dirs = {relative for relative in directories if allowed(relative)}
+    return kept_files, kept_dirs
+~~~
+
+</details>
+
+<details>
+<summary>.Review-Codex-round4-finalize.py</summary>
 
 ~~~python
 import hashlib
@@ -698,43 +990,43 @@ from pathlib import Path
 import subprocess
 
 root = Path('C:/Users/yuezh/PycharmProjects/agent-defs').resolve()
-temporary = root / '.Review-Codex-round3.tmp'
+temporary = root / '.Review-Codex-round4.tmp'
 target = root / 'Review-Codex.md'
-expected = {
-    'README.md', 'Review-Codex.md', 'SAMPLES.md', 'docs/bench.md', 'docs/calibration.md',
-    'scripts/artifact-scan.json', 'scripts/bound_leaf_discrepancy.py', 'scripts/build_bundle.py',
-    'scripts/leaf-traversal-diagnostic.json', 'scripts/rebuild_holdout_units.py',
-    'scripts/scan_artifact.ps1', 'src/agent_defs/bench.py', 'src/agent_defs/bundle.json',
-    'src/agent_defs/hooks/_claude_code_impl.py', 'src/agent_defs/lanes.py',
-    'tests/test_bench.py', 'tests/test_bound_within.py', 'tests/test_calibrate_from_report.py',
-    'tests/test_leaf_discrepancy_probes.py', 'tests/test_shipped_bundle.py',
+expected_head = '199f5bbfc5b6d86fa8d2fae76a31d5f4860fa3c2'
+expected_paths = {
+    'SAMPLES.md', 'docs/calibration.md', 'scripts/bound_leaf_discrepancy.py',
+    'src/agent_defs/hooks/_claude_code_impl.py', 'src/agent_defs/hooks/_core.py',
+    'src/agent_defs/lanes.py', 'src/agent_defs/sources.py',
+    'tests/test_bound_within.py', 'tests/test_hook_core.py',
+    'tests/test_leaf_discrepancy_probes.py', 'tests/test_sources.py',
 }
-assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root).decode().strip() == '0640eef770d5a53401947e4a52a8db35e8ba3fee'
-paths = subprocess.check_output(['git', 'diff', '--cached', '--name-only'], cwd=root).decode().splitlines()
-assert set(paths) == expected, paths
-staged_before = subprocess.check_output(['git', 'diff', '--cached', '--binary'], cwd=root)
-subprocess.run(['git', 'diff', '--cached', '--check'], cwd=root, check=True)
-subprocess.run(['git', 'diff', '--exit-code', '--', '.', ':!Review-Codex.md'], cwd=root, check=True)
-raw_bundle = subprocess.check_output(['git', 'show', ':src/agent_defs/bundle.json'], cwd=root)
-assert hashlib.sha256(raw_bundle).hexdigest() == '2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1'
-assert raw_bundle == (root / 'src/agent_defs/bundle.json').read_bytes()
+
+
+def git(*args):
+    return subprocess.check_output(['git', *args], cwd=root)
+
+
+assert git('rev-parse', 'HEAD').decode().strip() == expected_head
+assert set(git('diff', '--name-only', '869ccd2..HEAD').decode().splitlines()) == expected_paths
+git('diff', '--check', '869ccd2..HEAD')
+git('diff', '--exit-code', '--', '.', ':!Review-Codex.md')
+assert git('diff', '--cached', '--binary') == b''
 review = temporary.read_text(encoding='utf-8')
-assert 'REPLAY_RESULT_PENDING' not in review
+assert review.startswith('<!-- Round 4 -->\n\nVerification notes:\n')
+assert review.splitlines().count('Verification status: VERIFIED') == 1
+assert review.splitlines().count('Commit verdict: BLOCK') == 1
+for heading in ['## New', '## Previously raised', '### Fixed', '### Still open', '### Reopened', '### Deferred']:
+    assert heading in review
+assert not any(c in review for c in ('\u202f', '\u2013', '\u2014'))
 helpers = [
-    '.Review-Codex-round3-numeric.py', '.Review-Codex-round3-probes.py',
-    '.Review-Codex-round3-scan-probe.ps1', '.Review-Codex-round3-replace-probe.ps1',
-    '.Review-Codex-round3-finalize.py',
+    '.Review-Codex-round4-probes.py', '.Review-Codex-round4-numeric.py',
+    '.Review-Codex-round4-scan.ps1', '.Review-Codex-round4-atr.py',
+    '.Review-Codex-round4-policy.py', '.Review-Codex-round4-finalize.py',
 ]
 for name in helpers:
     source = (root / name).read_text(encoding='utf-8')
     language = 'powershell' if name.endswith('.ps1') else 'python'
     review += f'\n<details>\n<summary>{name}</summary>\n\n~~~{language}\n{source.rstrip()}\n~~~\n\n</details>\n'
-assert review.startswith('<!-- Round 3 -->\n\nVerification notes:\n')
-assert review.splitlines().count('Verification status: VERIFIED') == 1
-assert review.splitlines().count('Commit verdict: BLOCK') == 1
-for heading in ['## New', '## Previously raised', '### Fixed', '### Still open', '### Reopened', '### Deferred']:
-    assert heading in review
-assert not any(char in review for char in ('\u202f', '\u2013', '\u2014'))
 assert temporary.parent.resolve() == target.parent.resolve() == root
 data = review.encode('utf-8')
 with temporary.open('wb') as stream:
@@ -744,14 +1036,17 @@ with temporary.open('wb') as stream:
 os.replace(temporary, target)
 assert target.read_bytes() == data
 assert not temporary.exists()
-assert subprocess.check_output(['git', 'diff', '--cached', '--binary'], cwd=root) == staged_before
-subprocess.run(['git', 'diff', '--exit-code', '--', '.', ':!Review-Codex.md'], cwd=root, check=True)
 for name in helpers:
     helper = root / name
-    assert helper.resolve().parent == root and helper.name.startswith('.Review-Codex-round3-')
+    assert helper.resolve().parent == root and helper.name.startswith('.Review-Codex-round4-')
     helper.unlink()
-print('VERIFIED: 20-file staged scope unchanged; complete review atomically replaced and read back; review helpers removed.')
-print('Review bytes:', len(data))
+assert git('rev-parse', 'HEAD').decode().strip() == expected_head
+git('diff', '--exit-code', '--', '.', ':!Review-Codex.md')
+assert git('diff', '--cached', '--binary') == b''
+status = git('status', '--porcelain').decode().splitlines()
+assert status == [' M Review-Codex.md'], status
+print('VERIFIED: complete Round 4 review atomically replaced and read back; verification helpers removed; HEAD and index unchanged; only Review-Codex.md modified.')
+print('Review bytes:', len(data), 'sha256:', hashlib.sha256(data).hexdigest())
 ~~~
 
 </details>

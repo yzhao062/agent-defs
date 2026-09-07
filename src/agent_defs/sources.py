@@ -1,6 +1,11 @@
 """Pinned GitHub archives and an offline, content-addressed source cache.
 
 The default lock belongs to this checkout. Installed callers can pass lock_path.
+What reaches disk is a selection, not the archive: a source named in
+DECLARED_INPUTS gets the inputs its loader reads, and any other source gets
+everything NEVER_EXTRACT does not refuse. The whole tarball is kept beside the
+tree, so anything left out is still readable in memory.
+
 Cache entries contain archive.tar.gz and tree/; links to archived regular files
 are materialized as ordinary files, so extraction also works on Windows.
 Windows-invalid filename characters (and literal percent signs) are percent
@@ -52,10 +57,9 @@ _REPO = re.compile(r"https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\Z")
 #: because a deny-list cannot know where a corpus will put its samples next.
 #:
 #: Treat additions here as evidence that the shape is wrong rather than as the
-#: fix. What is actually needed from a corpus is ``rules/`` and the licence;
-#: everything else is extracted because nothing says not to. Until a caller can
-#: declare what it needs, the entries below are the guard, and a new upstream
-#: directory of samples will beat them the same way.
+#: fix. A source that appears in :data:`DECLARED_INPUTS` no longer depends on
+#: this list to stay ahead of an upstream; one that does not still does, and a
+#: new upstream directory of samples will beat it the same way.
 NEVER_EXTRACT = (
     ("data", "skill-benchmark", "malicious"),
     ("data", "test-corpora"),
@@ -64,31 +68,96 @@ NEVER_EXTRACT = (
     ("tests", "fixtures"),
 )
 
+#: What a source's loader actually reads, archive-relative with the repository
+#: directory already stripped. A trailing slash declares a directory and admits
+#: everything beneath it; anything else is one exact path. The entry's
+#: ``license_path`` is always admitted and does not need repeating here.
+#:
+#: A source listed here is extracted by allow-list, which is the shape
+#: :data:`NEVER_EXTRACT` should have had. The deny-list was outrun twice: it did
+#: not name ``conformance/v1.0/fixtures/tp``, one true-positive attack document
+#: per rule across 74 directories, and at the pinned revision it also does not
+#: name ``data/autoresearch/adversarial-samples.json`` (1,054 payload records),
+#: ``data/autoresearch/missed-payloads.json`` (895), ``data/evasion-payloads.json``
+#: (64), ``data/semantic-validation/attacks.json`` (20) or the 850-record
+#: ``data/pint-benchmark/pint-corpus.json``. Naming those five would have left
+#: the sixth to be found the same way.
+#:
+#: This bounds what is extracted to the declared inputs. It says nothing about
+#: the contents of an allowed file: upstream can add a sample under ``rules/``,
+#: and rule YAML carries positive examples by design.
+#:
+#: A source absent from this mapping is extracted under the deny-list alone. The
+#: five loaders still in that position read ``ai_agent/`` (Netzilo),
+#: ``rules.json`` (agent-audit-kit), ``records/`` and ``crosswalks/`` (AVE), and
+#: ``docs/generated/rules.json`` (Guardana); declaring them is the same edit,
+#: made against each pinned archive rather than from the loader source alone.
+DECLARED_INPUTS = {
+    # rules/** and the licence are the corpus. The four source files below are
+    # what atr_skill_gates reads to establish which rules the skill entry point
+    # actually admits; dropping them silently removes every CFG binding.
+    "atr": (
+        "rules/",
+        "src/engine.ts",
+        "src/enforcement.ts",
+        "src/quality/rule-contract.ts",
+        "engines/typescript/INTERFACE-CONTRACT.md",
+    ),
+}
+
 
 def _is_excluded(parts):
     """True when an archive member sits under a NEVER_EXTRACT prefix."""
     return any(tuple(parts[:len(prefix)]) == prefix for prefix in NEVER_EXTRACT)
 
 
-def _kept(files, directories):
-    """The members that belong on disk, given :data:`NEVER_EXTRACT`.
+def _source_relative(member):
+    """The archive-relative path a member's bytes come from, root stripped.
+
+    For a link, ``_layout`` has already resolved the member to its target, so
+    this is the target's path while the key it is stored under is the link's.
+    Checking only the key let ``rules/link.txt -> ../data/test-corpora/payload``
+    copy an excluded file into an admitted directory.
+    """
+    parts = _safe_parts(member.name)[1:]
+    return _portable_path("/".join(parts)) if parts else None
+
+
+def _kept(files, directories, *, name=None, license_path=None):
+    """The members that belong on disk, by allow-list where one is declared.
 
     Both the extractor and the cache verifier read the layout through this, and
     that is the point rather than tidiness. They used to disagree: the writer
     skipped excluded members while the verifier compared the tree against every
     member the archive declares, so a cache built for a corpus with excluded
-    paths failed its own check on the next call. The cache could then never hit,
-    and every run re-extracted the corpus, which is the thing that keeps putting
-    samples in front of a scanner.
+    paths failed its own check and every later call raised instead of hitting.
 
-    A directory is kept when it is not itself excluded. An excluded directory
-    is not created either, so the tree stops carrying empty folders named after
-    the samples that were refused.
+    Each file is admitted on both the path it is written to and the path its
+    bytes come from. Under an allow-list a directory exists only because an
+    admitted file needs it, so no empty folder survives to name what was
+    refused; under the deny-list a directory is kept when it is not excluded.
     """
+    declared = DECLARED_INPUTS.get(name)
+    prefixes, exact = (), set()
+    if declared is not None:
+        prefixes = tuple(_portable_path(p) + "/" for p in declared if p.endswith("/"))
+        exact = {_portable_path(p) for p in declared if not p.endswith("/")}
+        if license_path is not None:
+            exact.add(_portable_path(license_path))
+
+    def allowed(relative):
+        if relative is None or _is_excluded(PurePosixPath(relative).parts):
+            return False
+        return declared is None or relative in exact or relative.startswith(prefixes)
+
     kept_files = {relative: member for relative, member in files.items()
-                  if not _is_excluded(PurePosixPath(relative).parts)}
-    kept_dirs = {relative for relative in directories
-                 if not _is_excluded(PurePosixPath(relative).parts)}
+                  if allowed(relative) and allowed(_source_relative(member))}
+    if declared is None:
+        kept_dirs = {relative for relative in directories
+                     if not _is_excluded(PurePosixPath(relative).parts)}
+    else:
+        kept_dirs = {str(parent) for relative in kept_files
+                     for parent in PurePosixPath(relative).parents if str(parent) != "."}
     return kept_files, kept_dirs
 
 
@@ -274,8 +343,9 @@ def _check(entry, cached):
         with tarfile.open(archive_path, "r:gz") as archive:
             # Through the same filter the extractor used. Comparing against
             # every declared member instead made a cache with excluded paths
-            # fail verification, so it never hit and every call re-extracted.
-            files, directories = _kept(*_layout(archive))
+            # fail verification, so it could never hit again.
+            files, directories = _kept(
+                *_layout(archive), name=name, license_path=entry["license_path"])
             observed_files, observed_dirs = set(), set()
             for parent, dirs, names in os.walk(tree, followlinks=False):
                 for child in dirs + names:
@@ -332,7 +402,9 @@ def fetch(name, cache_dir=DEFAULT_CACHE, *, lock_path=None, timeout=30):
             tree = stage / "tree"
             with tarfile.open(archive_path, "r:gz") as archive:
                 declared, all_directories = _layout(archive)
-                files, directories = _kept(declared, all_directories)
+                files, directories = _kept(
+                    declared, all_directories, name=name,
+                    license_path=entry["license_path"])
                 tree.mkdir()
                 for relative in sorted(directories):
                     (tree / relative).mkdir(parents=True, exist_ok=True)
@@ -341,8 +413,10 @@ def fetch(name, cache_dir=DEFAULT_CACHE, *, lock_path=None, timeout=30):
                     with archive.extractfile(member) as source, (tree / relative).open("xb") as target:
                         shutil.copyfileobj(source, target)
                 if skipped:
+                    policy = ("DECLARED_INPUTS allow-list" if name in DECLARED_INPUTS
+                              else "NEVER_EXTRACT deny-list")
                     (stage / "EXCLUDED").write_text(
-                        f"{skipped} members were not extracted; see sources.NEVER_EXTRACT" + chr(10),
+                        f"{skipped} members were not extracted; see sources.{policy}" + chr(10),
                         encoding="utf-8")
             try:
                 stage.rename(cached)

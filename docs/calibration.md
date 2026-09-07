@@ -222,10 +222,15 @@ not-`\w`, and a newline is not a word character. That is a fact about `\b`, not
 about those 98 rules, since a rule carrying one can carry something else too.
 
 The bottom row records an experimental assertion-removal rewrite. For a pattern
-free of atomic groups, possessive quantifiers, conditionals and quantified
-lookarounds the rewrite only widens what matches, so it over-approximates
-arbitrary substring decompositions; a pattern carrying one of those is counted
-as a candidate on every unit instead. Read the aggregate with its breakdown,
+free of atomic groups, possessive quantifiers, conditionals, quantified
+lookarounds and backreferences the rewrite only widens what matches, so it
+over-approximates arbitrary substring decompositions; a pattern carrying one of
+the first four is counted as a candidate on every unit instead. Backreferences
+are absent by screening rather than by detection: removing a lookahead can
+renumber the groups after it, and the evaluator rejects backreferences before a
+rule can reach this. The quantifier that makes a lookaround unsafe need not sit
+against it, since verbose-mode whitespace and comment groups can come between,
+which is how round 4 of the review reached past the first version of this check. Read the aggregate with its breakdown,
 because one rule contributes 485 of the 489. `ATR-2026-02007` looks for a leaf
 that is *entirely* a bare key label,
 `^\W{0,5}(?:the\s+)?(?:secret[_ ]?key|key|…)\W{0,5}:?\W{0,5}$`. Without its

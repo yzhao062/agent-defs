@@ -66,6 +66,13 @@ class Unit:
     strata: dict[str, str]
     sha256: str
     size_bytes: int
+    #: The strings a hook would actually scan, when that is not ``text`` itself.
+    #: A PreToolUse payload is a JSON object and the hook walks its string
+    #: leaves; scanning the serialization instead adds quoting and boundaries
+    #: that neither add nor remove text a rule can see at the same offsets. One
+    #: unit stays one trial either way: a rule hits the unit when it hits any
+    #: part, which is what the hook's per-leaf traversal amounts to.
+    parts: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -298,8 +305,17 @@ def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: st
         seen_content = set()
         duplicates = 0
         def evaluate_unit(unit):
+            # An empty part is skipped, because the hook's traversal skips an
+            # empty leaf before scanning and a pattern that matches the empty
+            # string would otherwise fire here and never there. A blank one is
+            # not empty and is scanned, on both sides.
+            material = unit.text if unit.parts is None else unit.parts
+            texts = (material,) if isinstance(material, str) else tuple(p for p in material if p)
             try:
-                return _hits(unit.text, runnable, compiled, isolated=isolated, budget_s=budget_s)
+                found = set()
+                for text in texts:
+                    found |= _hits(text, runnable, compiled, isolated=isolated, budget_s=budget_s)
+                return found
             except RuntimeError as exc:
                 raise RuntimeError(f"{corpus.identity}:{unit.id}: {exc}") from exc
 
@@ -338,8 +354,17 @@ def measure(rules: Sequence[Rule], corpora: Sequence[Corpus], *, measured_at: st
             coverage_failures.append(f"{corpus.identity} missing strata: {', '.join(missing_strata)}")
         if duplicates:
             coverage_failures.append(f"{corpus.identity} has {duplicates} duplicate material units; independence requires review")
+        # Which text was matched, because two procedures over the same units are
+        # two different measurements. "leaves" unions over the strings a hook
+        # would scan; "whole" matches the unit's own text.
+        leafwise = sum(u.parts is not None for u in corpus.units)
+        if leafwise not in (0, len(corpus.units)):
+            coverage_failures.append(
+                f"{corpus.identity} mixes whole-text and leaf-wise units; one corpus is one procedure")
         report["corpora"].append({"identity": corpus.identity, "revision": corpus.revision,
                                   "manifest_sha256": corpus.manifest_sha256, "trials": len(corpus.units),
+                                  "material": "leaves" if leafwise else "whole",
+                                  "leaves": sum(len(u.parts) for u in corpus.units) if leafwise else None,
                                   "bytes": sum(u.size_bytes for u in corpus.units), "duplicate_units": duplicates,
                                   "missing_strata": missing_strata,
                                   "strata": [{"surface": s, "stratum": t, "trials": n}

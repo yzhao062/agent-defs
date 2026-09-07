@@ -1,7 +1,7 @@
 {
  "format_version": 1,
  "reachability": {
-  "reachable": 205
+  "reachable": 216
  },
  "stripped_fields": [
   "examples_positive",
@@ -17,17 +17,17 @@
  "archive_sha256": "5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5",
  "license_spdx": "MIT",
  "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules",
- "built_at": "2026-09-06T19:26:23.737895+00:00",
+ "built_at": "2026-09-07T01:11:56.887044+00:00",
  "surfaces": [
-  "OUT"
+  "OUT",
+  "IN"
  ],
  "rule_files": 793,
  "loaded": 793,
- "shipped": 205,
+ "shipped": 216,
  "dropped": {
-  "not_runnable": 179,
-  "measured_loud": 11,
-  "surface:IN": 57,
+  "not_runnable": 222,
+  "measured_loud": 14,
   "surface:CFG": 116,
   "surface:PROMPT": 218,
   "surface:NONE": 6,
@@ -50,7 +50,7 @@
   "atr:ATR-2026-00065": "fired on 1 of 1813 benign tool results (local-claude-unique-select, 2026-09-06)"
  },
  "screen_refusals": {
-  "atr:ATR-2026-02010": "matches a leaf holding only '   '"
+  "atr:ATR-2026-02010": "matches a leaf holding only ' '"
  },
  "rules": [
   {
@@ -818,6 +818,160 @@
       "9df48e91ae0fdca12c4b96fe9a682f92a9b36383c81e97dbc766816cce24a210",
       "090ec4ce04964baaa594ae3962eb38827331a641fbf944351ee3df46d1609d19",
       "bbb4fc81508183d990ce669ad4f113384d0c2e841db180e60c7372c85f7b7554"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-00118",
+   "source": "atr",
+   "source_id": "ATR-2026-00118",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/agent-manipulation/ATR-2026-00118-approval-fatigue.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/agent-manipulation/ATR-2026-00118-approval-fatigue.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/agent-manipulation/ATR-2026-00118-approval-fatigue.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Human Approval Fatigue Exploitation",
+   "description": "Detects patterns that exploit human-in-the-loop approval fatigue. Attackers may\ninstruct agents to generate rapid repeated permission requests, use minimizing\nlanguage to make dangerous actions seem routine, or embed risky operations within\nbatches of benign ones. When humans approve actions in bulk or under time pressure,\ndangerous tool calls can slip through unreviewed.\n",
+   "severity_raw": "medium",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "agent-manipulation",
+    "approval-fatigue",
+    "mcp",
+    "medium"
+   ],
+   "references": [
+    "ASI09:2026",
+    "T1204 - User Execution",
+    "LLM01:2025",
+    "AML.T0051 - LLM Prompt Injection"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:(?:just\\s+)?(?:click|press|hit|tap)\\s+(?:yes|approve|accept|allow|confirm)\\s+(?:for\\s+)?(?:all|each|every))|(?i:(?:auto[_-]?approve|approve[_-]?all|skip[_-]?confirmation|bypass[_-]?review))|(?i:\\b(routine|standard|normal|perfectly\\s+safe|harmless|nothing\\s+to\\s+worry\\s+about|no\\s+big\\s+deal|just\\s+a\\s+formality)\\b[\\s\\S]{0,45}(approv|sign[- ]?off|no\\s+need\\s+to\\s+(review|check|read|verify)|don'?t\\s+(need|have)\\s+to\\s+(review|check|worry)|just\\s+(click|accept|approve)|safe\\s+to\\s+(run|approve|proceed))|(approv|auto[- ]?approve|just\\s+(confirm|accept|click))[\\s\\S]{0,45}\\b(routine|standard|normal|perfectly\\s+safe|harmless|nothing\\s+to\\s+worry)\\b)|(?i:(?:batch|bulk)\\s+(?:approve|execute|run|process)\\s+(?:all|these|the\\s+following))|(?i:(?:don'?t\\s+(?:bother|worry|need\\s+to)\\s+(?:reading|reviewing|checking)|no\\s+need\\s+to\\s+review))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "CI/CD systems with legitimate auto-approve workflows",
+    "Bulk operation tools with appropriate safeguards described",
+    "Medical triage documentation describing a patient's condition as 'routine' or 'standard' in clinical notes",
+    "User interface accessibility guide instructing users to 'press accept for all cookies' in a browser tutorial"
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "mcp",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "tool_description"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 5,
+     "matched": 5,
+     "example_sha256": [
+      "9c82348130abdd3bf4844614a3821d566bb8649bae4a0254e059b2dc3b190f69",
+      "adba919a019c05a64a68ef1796fedf795b1eb8a8a379cff49438bc6d48d2685f",
+      "1f236465bb5f10122a70ca689445e88920cf19693e69ac1500bbf2143a4d5be2",
+      "18a9bab520288bcc9b397bb282271fb9e76b79e7293917ecaa40c3087fdb8dd7",
+      "a8452f732c2d03918416dbb5d63fda315dd628d2f43ed782b8fb2e8710c73100"
      ],
      "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
     }
@@ -19451,6 +19605,224 @@
    }
   },
   {
+   "id": "atr:ATR-2026-02525",
+   "source": "atr",
+   "source_id": "ATR-2026-02525",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/excessive-autonomy/ATR-2026-02525-shell-command-word-reassembly-classifier-evasion.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/excessive-autonomy/ATR-2026-02525-shell-command-word-reassembly-classifier-evasion.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/excessive-autonomy/ATR-2026-02525-shell-command-word-reassembly-classifier-evasion.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Shell Command-Word Reassembly via Parameter Expansion",
+   "description": "Detects a shell command in which the WORD THAT WILL BE EXECUTED is not written literally but is produced at expansion time by a bash parameter transformation, indirection, or pattern substitution. The command a static safety classifier reads is therefore not the command the shell runs.\nDerived from CVE-2026-29783 (GitHub Copilot CLI <= 0.0.422), where the shell tool's safety assessment classified a command as \"read-only\" while bash parameter transformation operators reconstructed and executed a different command. The advisory names indirect prompt injection through repository files, MCP server responses, or user instructions as the entry point, so the reassembled command arrives as ordinary agent input.\nSHAPE, NOT VENDOR STRING. Nothing here is Copilot-specific. The invariant is positional: a legitimate command line names its executable literally (\"git status\", \"$PYTHON -m pytest\"). Computing the executable name inline at the call site -- ${!ref}, ${v//X/}, ${v^^}, ${v:3:4} in command position -- has no benign purpose; it exists to make the command word unreadable until after the classifier has run.\nDELIBERATE LIMITS, stated so the boundary is not mistaken for coverage:\n1. A plain expansion in command position (\"$b -s http://host/x\") is NOT\n   matched and cannot be. It is lexically identical to \"$PYTHON -m pip\",\n   which is everywhere in real scripts. When the reassembly happens in an\n   earlier assignment and only a bare $var reaches the call site, this rule\n   sees nothing. That residue is real and is not claimed.\n2. Suffix/prefix stripping (${f##*/}, ${f%.md}) is excluded from the\n   operator set entirely. It is the single most common benign expansion in\n   shell code and carries no execution semantics.\n3. Pattern substitution counts only when the replacement is EMPTY\n   (${v//pat/}). Deleting characters is how a concealed command word is\n   reassembled; ${v//pat/value} is ordinary templating and is excluded.\n4. @Q, @A and @K are not in the operator set. They serialise a value for\n   printing or re-import rather than concealing a command word.\n\nFP LOG -- adversarial review 2026-08-23, run through the real engine on the canonical corpus shapes. Ten of sixteen near-boundary benign inputs fired against the first draft. What changed, and why each change is load-bearing:\na. An @P-only condition was DELETED. It matched the bare token ${v@P}\n   anywhere in any text, with no command context at all, so it fired on the\n   bash manual's own wording for the operator, on a legitimate shell-tool\n   description that mentions expanding ${cmd@P} before classification, and\n   on real prompt-framework dotfile code (local rendered=\"${theme_line@P}\").\n   Excluding P-initial variable names did not help: theme_line, rendered and\n   LP_PS1 are all real prompt variables that do not begin with P. No lexical\n   narrowing separates a prompt preview from a payload, so the condition is\n   gone. Cost, stated plainly: printf \"${note@P}\" -- an execution primitive\n   hidden inside an output-only verb -- is no longer detected unless it\n   reaches an evaluator (condition 2).\nb. Condition 1 now requires an ARGUMENT after the computed word. The opening\n   anchor alone (line start, ;, &, |, \"(\" ) treated every markdown table row\n   (\"| ${var^^} | Uppercase |\"), every parameter-expansion cheat sheet line,\n   every parenthesised example in prose (\"operators (${q//-/} and ${v^^})\")\n   and a Makefile recipe as \"command position\". Requiring a flag, URL or\n   path to follow is what distinguishes an invocation from documentation.\nc. Both conditions dropped non-empty replacements, which removed\n   eval \"${SNIPPET//__PLACEHOLDER__/$prefix}\" -- installer templating.\nd. A second probe round then broke the repaired condition 1 three more\n   times, so its operator set was cut to indirection and deletion only.\n   Substring extraction died because ${sha:0:7} followed by a path is the\n   standard CI log and prompt idiom (\"build | ${sha:0:7} /src/main.go\"),\n   where the pipe is a column separator and nothing is being executed at\n   all. Case modification died because dispatch scripts really do write\n   \"${PM,,} -y install curl\" and \"${SERVER_MODE,,} --config /etc/app.yaml\".\n   Cost: an attacker who slices or case-folds the command word at the call\n   site is not caught in command position. Both operators are still live in\n   condition 2, where an explicit evaluator removes the benign reading.\n\nKNOWN RESIDUAL, not fixed and not hidden: a document that reproduces a working payload verbatim inside a fenced shell block still fires, because the payload is textually the attack. So does a script that genuinely computes a binary name inline and immediately passes it a flag (${TOOLCHAIN//-/} --version). Both are triage items, not silent passes.\n",
+   "severity_raw": "high",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "excessive-autonomy",
+    "command-safety-classifier-evasion",
+    "both",
+    "medium"
+   ],
+   "references": [
+    "CVE-2026-29783",
+    "CWE-78",
+    "LLM01:2025",
+    "ASI02:2026",
+    "AML.T0051 - LLM Prompt Injection",
+    "AML.T0053 - LLM Plugin Compromise",
+    "https://github.com/github/copilot-cli/security/advisories"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?:(?:^|[\\n;&|(])[ \\t]*(?:[\"']\\s*)?\\$\\{(?:![A-Za-z_][A-Za-z0-9_]{0,31}\\}|[A-Za-z_][A-Za-z0-9_]{0,31}(?:@[PE]|/{1,2}[^}/]{0,24}/)\\})[\"']?[ \\t]+(?:-{1,2}[A-Za-z0-9]|https?://|/[A-Za-z0-9._~-]|\\./|~/))|(?i:\\b(?:eval|\\bbash\\s+-c|\\bsh\\s+-c|\\bzsh\\s+-c|\\bksh\\s+-c)\\s+(?:[\"']\\s*)?\\$\\{(?:![A-Za-z_][A-Za-z0-9_]{0,31}\\}|[A-Za-z_][A-Za-z0-9_]{0,31}(?:@[PE]|\\^\\^?|,,?|/{1,2}[^}/]{0,24}/|:[0-9]{1,4}:[0-9]{1,4})\\}))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "A build or entrypoint script that genuinely computes a binary name inline and immediately passes it a flag, e.g. ${TOOLCHAIN//-/} --version. Rare but real; the rule fires and triage is required",
+    "Security documentation that reproduces a working payload verbatim inside a fenced shell block. The payload is textually the attack, so this cannot be excluded without excluding the attack",
+    "Prose, cheat sheets, markdown tables and dotfiles that merely NAME the expansion operators were measured and do NOT fire: the trailing argument requirement in condition 1 and the removal of the standalone @P condition are what keep them out"
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "condition fields identify a tool invocation",
+     "fields": [
+      "tool_args"
+     ],
+     "scan_target": "both",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     },
+     {
+      "test_case": 7,
+      "path": "input"
+     },
+     {
+      "test_case": 8,
+      "path": "input"
+     },
+     {
+      "test_case": 9,
+      "path": "input"
+     },
+     {
+      "test_case": 10,
+      "path": "input"
+     },
+     {
+      "test_case": 11,
+      "path": "input"
+     },
+     {
+      "test_case": 12,
+      "path": "input"
+     },
+     {
+      "test_case": 13,
+      "path": "input"
+     },
+     {
+      "test_case": 14,
+      "path": "input"
+     },
+     {
+      "test_case": 15,
+      "path": "input"
+     },
+     {
+      "test_case": 16,
+      "path": "input"
+     },
+     {
+      "test_case": 17,
+      "path": "input"
+     },
+     {
+      "test_case": 18,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 7,
+     "matched": 7,
+     "example_sha256": [
+      "aab9cf26e65dfe8e7a2f9e830f6ed288b2c51a0f0d5b92d1d0bfc9b9e10d570b",
+      "6e760e94d107df364755ea9989925c7f243f690f4720531acff3e36c24854df3",
+      "5c3ef6ac0a8c69eba9807400c4305e61830e2062eaa35e99ae490152f15da035",
+      "a588a16b5947e5d625ddfd4add843e2b9861f7f4dc73e22178034a1cbabb0664",
+      "577f9d1ae943187c244909aa7e520b3008bb5f1728cc2234ff8fa0071eb72c77",
+      "909e76e8cabd29547175327a1cefcbec872e303dcb5637383c5e94ebb462c72e",
+      "5823857ebcf1805207268ab0a593333852b88c1834c2257a32428a283124e1e8"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
    "id": "atr:ATR-2026-00289",
    "source": "atr",
    "source_id": "ATR-2026-00289",
@@ -20269,6 +20641,382 @@
       "063f9323f510864a79decbec9bab4334fc1c3df0c6cf37ea91e2c3b22c08badc",
       "8d44ca8ac611e3a0a04c9d20d73e8d46f97be6b158fd38464de1b09bac551230",
       "de8a1b8ec3ad4640a08d1bcca827c827916aa167d37271bfa8f820472217b5d2"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-02411",
+   "source": "atr",
+   "source_id": "ATR-2026-02411",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/model-abuse/ATR-2026-02411-ai-provenance-metadata-stripping.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/model-abuse/ATR-2026-02411-ai-provenance-metadata-stripping.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/model-abuse/ATR-2026-02411-ai-provenance-metadata-stripping.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Targeted Stripping of C2PA / IPTC AI-Provenance Metadata from Generated Media",
+   "description": "Detects an agent performing targeted removal of the machine-readable provenance markings that identify media as artificially generated: deletion of the JUMBF/CBOR container holding a C2PA manifest, blanking of the IPTC `DigitalSourceType` field (whose AI value is the URI ending `trainedAlgorithmicMedia`), or blanking of the PNG `parameters` / XMP generation fields written by diffusion tooling. The signal is SELECTIVITY. An attacker who wants a file to pass as camera-original does not run a blanket wipe — a blanket wipe is itself conspicuous. They delete only the provenance group and leave EXIF, GPS and the ICC profile intact, producing a file that looks ordinary in every viewer while carrying no trace of having been generated. This rule therefore deliberately does NOT cover generic metadata clearing (`-all=`, `-gps:all=`, ImageMagick `-strip`, `ffmpeg -map_metadata -1`): those are the daily tools of photographers protecting sources, of privacy workflows, and of image optimisation CI, and matching them would punish the legitimate majority to catch the rare attacker. Two further layers cover the paths that leave no suspicious command string at all — platform re-upload, canvas redraw, online removal services — by matching the stated intent instead. Scope limit stated plainly: every technique here removes only the METADATA layer. Pixel-domain watermarks (SynthID, TrustMark) survive all of it and are covered by ATR-2026-02412. Stripped metadata does not mean provenance is unrecoverable.\n",
+   "severity_raw": "medium",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "model-abuse",
+    "ai-provenance-metadata-stripping",
+    "both",
+    "medium"
+   ],
+   "references": [
+    "LLM09:2025",
+    "ASI08:2026",
+    "AML.T0054 - LLM Jailbreak",
+    "T1070 - Indicator Removal",
+    "T1027 - Obfuscated Files or Information",
+    "CWE-345",
+    "https://exiftool.org/",
+    "https://spec.c2pa.org/specifications/specifications/2.1/specs/C2PA_Specification.html",
+    "https://cv.iptc.org/newscodes/digitalsourcetype/",
+    "https://arxiv.org/abs/2503.18156"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:-\\s*(?:jumbf|c2pa|cbor)\\s*:\\s*all\\s*=)|(?i:-\\s*(?:iptc|xmp)[\\w:.-]{0,24}:digitalsourcetype\\s*=(?:\\s|$|[\"';&|]))|(?i:-\\s*(?:png(?:-text)?:parameters|xmp:(?:prompt|negativeprompt|aiprompt|cfgscale|steps|sampler|scheduler|lora|controlnet|vae))\\s*=(?:\\s|$|[\"';&|-]))|(?i:\\b(?:remov|strip|delet|eras|scrub|wipe|bypass|circumvent|suppress)\\w*\\b[\\s\\S]{0,60}\\b(?:c2pa|content credentials?|jumbf|provenance manifest|digitalsourcetype|trainedalgorithmicmedia)\\b)|(?i:\\b(?:remove|strip|erase|bypass|hide)\\b[\\s\\S]{0,40}\\b(?:ai[- ]generated (?:label|tag|marker|badge)|made with ai (?:label|tag)|ai (?:content )?credentials?)\\b)|(?i:/(?:c2pa|content-credentials?|ai|synthid)[a-z0-9-]{0,24}(?:metadata|watermark|credential)s?-remover\\b)",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "Photojournalists and human-rights workers removing GPS to protect a source (`exiftool -gps:all=`). Same tool, same syntax family — this rule is scoped to provenance group names and never matches gps or a blanket wipe.",
+    "Legal or compliance de-identification and pre-press cleaning (`exiftool -all= file.pdf`). The bare `-all=` flag is deliberately NOT matched by any layer.",
+    "C2PA verification and diagnostic tooling: `exiftool -jumbf:all -G3 -b -j -u -struct`, `c2patool inspect`, `c2pa.Reader.from_file()`. ExifTool's READ syntax has no trailing `=`; every artifact layer here requires the `=` that makes it a delete.",
+    "Image optimisation CI: `convert -strip`, `mogrify -strip`, `jpegoptim --strip-all`, `optipng -strip all`. Not covered — imagemin ships `-strip all` by default and the developer never typed it.",
+    "Node.js sharp strips metadata unless `.withMetadata()` is called, and Pillow drops EXIF unless `exif=` is passed. Behaviourally equivalent to stripping, but the artifact is an ABSENCE and regex cannot match an absence. Not covered by design.",
+    "CDN image layers (Cloudflare Polish, Cloudflare Images `metadata=copyright`) strip on delivery as infrastructure default, not as anyone's decision.",
+    "mat2 and the Tails/Whonix privacy workflow. mat2 is deliberately not treated as an indicator — it is the standard privacy tool of an entire community.",
+    "FFmpeg transcode normalisation and reproducible builds (`-map_metadata -1`, `-fflags +bitexact`). Not covered.",
+    "Legitimate C2PA authoring projects using `c2patool --sidecar` / `--remote`.",
+    "Security education, detection-vendor documentation and standards commentary that enumerate these techniques will match the intent layers (4 and 5). A pattern matcher cannot separate teaching from doing."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "both",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     },
+     {
+      "test_case": 7,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     },
+     {
+      "test_case": 7,
+      "path": "input"
+     },
+     {
+      "test_case": 8,
+      "path": "input"
+     },
+     {
+      "test_case": 9,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 8,
+     "matched": 8,
+     "example_sha256": [
+      "1df46102020499f8d8850bda49d41e212ef2fd7e6209f415984dfd3db8847028",
+      "8770466cb154092d94771bb715401c94bffcefa2bb8dd26e2e9fb20192915cba",
+      "91f091c615f82fcd7b561955d23afd3cb326c67973e0508114d8b2f63a9531be",
+      "df3077b484ac80155f1b4556200d5a9b7d0e2dbcf35c53f609f117ddb6894164",
+      "3030a12740210c4bdb4d79673e5116d43a7d1dd4fee564833d8675b0c1851c8f",
+      "65bd73223e2ca2feb05a695e2d18e934348d2b46cd43e82c1c7cbdce5c53caf8",
+      "ed205a2ac52ccf7da4d2f34ad70936895a33878ae7707643c81993ccb78faee7",
+      "a7dd631277f69e7a8cc3a72193acb5c4c49d72e4771a4cd58b0283af5bee8f49"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-02412",
+   "source": "atr",
+   "source_id": "ATR-2026-02412",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/model-abuse/ATR-2026-02412-generative-watermark-removal-tooling.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/model-abuse/ATR-2026-02412-generative-watermark-removal-tooling.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/model-abuse/ATR-2026-02412-generative-watermark-removal-tooling.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Generative Watermark Removal Tooling (SynthID / StableSignature / TreeRing / StegaStamp)",
+   "description": "Detects an agent installing or invoking tooling whose stated purpose is the removal of imperceptible generative watermarks: purpose-built removal CLIs and packages, published attack implementations, and scheme-targeted attack invocations that name a watermarking system as their parameter. Kept deliberately separate from ATR-2026-02411 because the two attack the same obligation through incompatible physics. A C2PA manifest lives in a metadata container and one exiftool invocation removes it. SynthID and StableSignature are woven into the pixel values themselves, where metadata stripping has no effect at all and removal requires regeneration, adversarial perturbation or a dedicated attack implementation. The artifacts differ, the false-positive structure differs, and merging them would force the near-zero-FP package-name layers here to inherit the broader intent layers there. Honest limitation: the published-attack layer cannot distinguish an attacker from a watermark robustness researcher, a standards evaluator, or this project's own red team, because they run identical code. That is why this rule alerts and never blocks, and why it is scoped to the hunt lane.\n",
+   "severity_raw": "medium",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "model-abuse",
+    "generative-watermark-removal",
+    "both",
+    "medium"
+   ],
+   "references": [
+    "LLM09:2025",
+    "ASI08:2026",
+    "AML.T0054 - LLM Jailbreak",
+    "T1027 - Obfuscated Files or Information",
+    "CWE-345",
+    "https://deepmind.google/technologies/synthid/",
+    "https://github.com/adobe/trustmark",
+    "https://arxiv.org/abs/2503.18156"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:\\b(?:remove-ai-watermarks|noai-watermark|gemini-watermark-and-synthid-remover|synthid-bypass)\\b)|(?i:\\b(?:DiffWMAttacker|VAEWMAttacker|WatermarkAttacker|UnMarker|watermark-stealing)\\b)|(?i:\\battack\\.py\\b[\\s\\S]{0,80}-e\\s+(?:SynthID|StableSignature|TreeRing|StegaStamp|HiDDeN)\\b)|(?i:--synthid-(?:attack|strength)\\b)|(?i:\\b(?:remove|removes|removing|removal|strip|strips|stripping|stripped|erase|erases|erasing|scrub|scrubs|scrubbing|get rid of|clean off|take off)\\b[\\s\\S]{0,60}\\b(?:synthid|stable ?signature|tree ?ring|stegastamp|trustmark|audioseal|invisible watermark|imperceptible watermark)\\b)",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "Watermark robustness researchers, standards evaluators and this project's own red team run the published attack implementations by design. Layer 2 cannot separate them from an attacker — the code is the same. This is the primary reason the rule alerts rather than blocks.",
+    "Adobe TrustMark's `remove_watermark()` is a legitimate API for a content owner clearing an old payload before re-marking their own asset. No layer matches that function call; layer 4 matches natural-language intent only.",
+    "Image restoration and super-resolution (Real-ESRGAN, GFPGAN, img2img denoising) destroy pixel watermarks as a physical side effect with no evasive intent. Not covered.",
+    "Generic ComfyUI nodes (KSampler, LoadImage, SaveImage, denoise) are everyday workflow components. Only removal-specific custom node names match.",
+    "Standard audio pipelines (`ffmpeg -ar 16000`, lowpass filtering, MP3 transcode) are known to weaken AudioSeal, but none of those flags are matched.",
+    "`add_watermarker=False` in diffusers and `\"addWatermark\": false` in Vertex AI are deliberately NOT matched: the first is required when the watermark package is absent, and Google's own documentation states the second is required for deterministic seeded output.",
+    "Educational, defensive and academic text that enumerates attack names will match layer 2. Layer 4 was narrowed specifically to reduce this: research verbs (break, defeat, evade) were removed after they matched defensive sentences, leaving only operational verbs (remove, strip, erase, scrub)."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "both",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     },
+     {
+      "test_case": 7,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 7,
+     "matched": 7,
+     "example_sha256": [
+      "c8c169554ecf50713523f3731c320ddcee3210c670897f14c58a60cb54f3e09b",
+      "833063bbb356cf8ef8574708e374fef14ea0848cc0a544f190b1fea119cc87f2",
+      "da0f8636309b2b7196f9bc64f499ce572b163957aba5adebad0daed54318af07",
+      "1de6fd3a6181b6642ff712847c8e0cb9437c008183cac3fe39d922582bcc26ca",
+      "284d13f91a33d9a6d84b03d5759485b858b10f2c1ce922b87fdb8b4553756134",
+      "6f8387b76ae33043cb203cb37c5f319a465325dc8e39e3ecda6ae948c1b222c6",
+      "e57c35e798701e59e91cdf34a51396eb5b691d45210f442b7cf069becb68d741"
      ],
      "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
     }
@@ -21178,6 +21926,287 @@
       "3454d8e6d5e3ad97d514c706ad8f6d2f078cbb651942cb28bdfa537c7e46fc2e",
       "d9cf5a55cf976076dc804d0620e51cc48d3d84e2d7cf26cfccbb8e8211dc567a",
       "ae122c6c72380beab954e737692e7674df37ef87b33be2a1563d46f52bf714ed"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-01981",
+   "source": "atr",
+   "source_id": "ATR-2026-01981",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/privilege-escalation/ATR-2026-01981-network-ai-approval-inbox-unauth-cors-bypass.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/privilege-escalation/ATR-2026-01981-network-ai-approval-inbox-unauth-cors-bypass.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/privilege-escalation/ATR-2026-01981-network-ai-approval-inbox-unauth-cors-bypass.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Network-AI ApprovalInbox Unauthenticated Cross-Origin Approval Bypass (GHSA-mxjx-28vx-xjjj)",
+   "description": "Detects GHSA-mxjx-28vx-xjjj (CWE-862 Missing Authorization + CWE-352 CSRF via wildcard CORS): network-ai's ApprovalInbox HTTP server (lib/approval-inbox.ts) has no authentication of any kind and sets Access-Control-Allow-Origin: * on every route, including the state-changing POST /approvals/:id/approve and /deny. ApprovalInbox is the network surface of the human-in-the-loop Approval Gate that gates high-risk operations (writes, shell commands, budget spend). Any caller that can reach the inbox port — a co-located process, an SSRF, a non-loopback remote client, or any website the operator visits in a browser via the wildcard CORS — can enumerate pending approvals (GET /approvals/) and approve them (POST /approvals/:id/approve) with no Authorization header, defeating the Approval Gate so a gated shell command executes without consent. Affected: network-ai <= 5.11.0.\nDetection covers: (a) a state-changing request to the approval control plane\n    (/approvals/<id>/approve or /deny) with no auth context, matching the\n    unauthenticated-client PoC shape;\n(b) an enumeration request to the approval queue (GET /approvals/) paired\n    with the wildcard-CORS marker on the approval control plane;\n(c) explicit GHSA-mxjx-28vx-xjjj / ApprovalInbox exploitation framing.\nThe detection target is the request shape at the approval control plane — an unauthenticated approve/deny or enumerate call combined with the wildcard-CORS marker — which is the exact bypass primitive, caught before the gated action is released.\n",
+   "severity_raw": "high",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "privilege-escalation",
+    "unauth-approval-gate-bypass",
+    "tool_call",
+    "high",
+    "ghsa-disclosure",
+    "network-ai-ghsa-mxjx-28vx-xjjj"
+   ],
+   "references": [
+    "LLM06:2025",
+    "ASI03:2026",
+    "ASI06:2026",
+    "AML.T0049 - Exploit Public-Facing Application",
+    "T1068 - Exploitation for Privilege Escalation",
+    "T1190 - Exploit Public-Facing Application",
+    "GHSA-mxjx-28vx-xjjj"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:POST\\s+/approvals/[a-f0-9]+/(?:approve|deny)\\b[\\s\\S]{0,300}(?:approvedBy[\"\\x27]?\\s*[:=]\\s*[\"\\x27]?(?:anonymous|attacker)|no\\s+auth|Authorization[\"\\x27]?\\s*:\\s*(?:null|undefined|absent|none)))|(?i:GET\\s+/approvals/\\??(?:status=pending)?\\b[\\s\\S]{0,200}Access-Control-Allow-Origin[\"\\x27]?\\s*:\\s*[\"\\x27]?\\*)|(?i:GHSA-mxjx-28vx-xjjj[\\s\\S]{0,200}(?:approval[- ]?inbox|network-ai|approve|CORS))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "Legitimate operator approving a pending action through an authenticated ApprovalInbox deployment that has been hardened with a reverse-proxy auth layer — expected to match; review confirms intent.",
+    "Security advisory or PR text quoting the GHSA-mxjx-28vx-xjjj PoC.",
+    "A read-only status check against an endpoint that is not the approvals control plane."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "tags.scan_target=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "tool_call",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 1,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 2,
+      "path": "tool_description"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 1,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 2,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 3,
+      "path": "tool_description"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 3,
+     "matched": 3,
+     "example_sha256": [
+      "8da0c58167e768decae645a26f22e3637a5316769cafed300101819509075613",
+      "974f4b33bffc5c40b02bcc441bfd9b0ba2cc5763b4a132e6841fe113f1b16d64",
+      "2882701771e546f781b45979d2f97d78adad6d494371ecdb6c01f9975b249d3e"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-01986",
+   "source": "atr",
+   "source_id": "ATR-2026-01986",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/privilege-escalation/ATR-2026-01986-windows-mcp-unauth-http-powershell-cors.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/privilege-escalation/ATR-2026-01986-windows-mcp-unauth-http-powershell-cors.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/privilege-escalation/ATR-2026-01986-windows-mcp-unauth-http-powershell-cors.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Windows-MCP Unauthenticated HTTP PowerShell via Wildcard CORS (CVE-2026-48989)",
+   "description": "Detects CVE-2026-48989 / GHSA-vrxg-gm77-7q5g (CWE-306 Missing Authentication for Critical Function): Windows-MCP's SSE and Streamable HTTP transports build the FastMCP control plane with no auth provider (src/windows_mcp/__main__.py:75-113) and install blanket wildcard CORS (allow_origins=*, allow_methods=*, allow_headers=*, __main__.py:37-42), answering every OPTIONS preflight with the same wildcard headers regardless of Origin. The same server registers the PowerShell tool (src/windows_mcp/tools/shell.py:10-24), which executes caller-controlled commands via PowerShell -EncodedCommand (src/windows_mcp/desktop/powershell.py:176-204). A client that can reach http://<host>:<port>/mcp — including a cross-origin browser page, since the wildcard CORS grants it — can initialize an MCP session and call tools/call for PowerShell with no credential of any kind, achieving arbitrary PowerShell execution as the Windows user running Windows-MCP. Affected: CursorTouch/Windows-MCP < 0.7.5; the default stdio transport is not affected.\nDetection covers: (a) the OPTIONS preflight / control-plane response on the /mcp endpoint\n    carrying the wildcard access-control-allow-origin marker, which is the\n    structural precondition for the cross-origin bypass;\n(b) a tools/call JSON-RPC request naming the PowerShell tool over the\n    HTTP/SSE control plane co-occurring with that wildcard-CORS marker;\n(c) explicit CVE-2026-48989 / GHSA-vrxg-gm77-7q5g exploitation framing.\nThe detection target is the request/response shape at the MCP control plane — a PowerShell tool invocation reachable through an unauthenticated, wildcard-CORS-exposed /mcp endpoint — which is the exact remote-code- execution primitive, caught before PowerShellExecutor.execute_command runs. Bound to the PowerShell tool name plus the wildcard-CORS marker so a legitimate, authenticated PowerShell call over a properly-scoped-CORS deployment does not fire.\n",
+   "severity_raw": "critical",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "privilege-escalation",
+    "unauth-mcp-control-plane-rce",
+    "mcp",
+    "high",
+    "cve-disclosure",
+    "windows-mcp-cve-2026-48989"
+   ],
+   "references": [
+    "LLM06:2025",
+    "ASI03:2026",
+    "ASI06:2026",
+    "AML.T0053 - LLM Plugin Compromise",
+    "T1059 - Command and Scripting Interpreter",
+    "T1190 - Exploit Public-Facing Application",
+    "CVE-2026-48989",
+    "GHSA-vrxg-gm77-7q5g"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:OPTIONS\\s+.{0,40}/mcp/?[\\s\\S]{0,200}access-control-allow-origin[\"\\x27]?\\s*:\\s*[\"\\x27]?\\*[\\s\\S]{0,200}access-control-allow-methods[\"\\x27]?\\s*:\\s*[\"\\x27]?\\*)|(?i:\"method\"\\s*:\\s*\"tools/call\"[\\s\\S]{0,150}\"name\"\\s*:\\s*\"PowerShell\"[\\s\\S]{0,300}access-control-allow-origin[\"\\x27]?\\s*:\\s*[\"\\x27]?\\*)|(?i:access-control-allow-origin[\"\\x27]?\\s*:\\s*[\"\\x27]?\\*[\\s\\S]{0,300}\\bPowerShell\\b[\\s\\S]{0,150}(?:command|EncodedCommand)[\"\\x27]?\\s*[:=])|(?i:(?:CVE-2026-48989|GHSA-vrxg-gm77-7q5g)[\\s\\S]{0,200}(?:windows-mcp|powershell|wildcard\\s*CORS|unauthenticat))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "A legitimate, authenticated PowerShell tool call over stdio transport or an HTTP deployment with an auth provider and origin-scoped CORS configured — expected to match if wildcard CORS markers are also present; review confirms intent.",
+    "Security advisory or PR text quoting the GHSA-vrxg-gm77-7q5g / CVE-2026-48989 PoC for review purposes.",
+    "An OPTIONS preflight response that scopes Access-Control-Allow-Origin to a specific trusted origin rather than a wildcard."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "mcp",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 1,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 2,
+      "path": "tool_description"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 1,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 2,
+      "path": "tool_description"
+     },
+     {
+      "test_case": 3,
+      "path": "tool_description"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 3,
+     "matched": 3,
+     "example_sha256": [
+      "500bfba974042fcc56edebe38f16444e9fa4213390fcc9289062210d60a5ce5e",
+      "614ed840bdd5a86912fea0a1b8fecb7ff35831a7db5915e3a05422da1d187e3b",
+      "50c2ffe22cd566845a9d218717f1b0f632e7c8527288a8b5f7de75205dceaec0"
      ],
      "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
     }
@@ -31394,6 +32423,344 @@
    }
   },
   {
+   "id": "atr:ATR-2026-00448",
+   "source": "atr",
+   "source_id": "ATR-2026-00448",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/tool-poisoning/ATR-2026-00448-spring-ai-milvus-filter-injection.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-00448-spring-ai-milvus-filter-injection.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-00448-spring-ai-milvus-filter-injection.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Spring AI MilvusVectorStore Filter Expression Injection (CVE-2026-41705)",
+   "description": "Detects exploitation of CVE-2026-41705 (High), filter-expression injection in Spring AI's MilvusVectorStore. The vulnerable sink concatenates a user/LLM-controlled fragment into a Milvus DSL filter expression passed to MilvusVectorStore.delete() or .similaritySearch() without quoting or parameterisation. Attacker-controlled input breaks out of the intended clause and injects new Milvus DSL operators ( == , in[ , like ), boolean combinators ( or , and ), trailing terminators ( ;  -- ), or escape bypasses ( like '%' ESCAPE '\\\\' ) to broaden the deletion / retrieval scope, exfiltrate or wipe arbitrary collection entries, or bypass access-control filters baked into the original expression. This rule detects the LLM-output / user-input payload shapes that reach the Milvus filter sink: filter-context fields containing unbalanced quotes, Milvus operators combined with boolean chaining, or known filter-bypass primitives. CWE-89, CWE-1287. Patches in Spring AI >= 1.0.0; this rule detects exploit attempts against unpatched deployments and provides defence-in-depth post-patch by catching the injection payload shape regardless of upstream patch state.\n",
+   "severity_raw": "high",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "tool-poisoning",
+    "vector-store-filter-injection",
+    "both",
+    "high"
+   ],
+   "references": [
+    "LLM05:2025",
+    "LLM08:2025",
+    "ASI04:2026",
+    "ASI05:2026",
+    "AML.T0051 - LLM Prompt Injection",
+    "AML.T0070 - RAG Poisoning",
+    "T1190 - Exploit Public-Facing Application",
+    "CVE-2026-41705"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:\\b(?:filter|filter_expr|filterExpression)\\b[^\\n]{0,40}(?:==|!=)\\s*\\d+[^\\n]{0,20}\\b(?:or|and)\\s+(?:1\\s*==\\s*1|true\\b|\\d+\\s*==\\s*\\d+|\\w+\\s*==\\s*\\d+))|(?i:\\b(?:filter|filter_expr|filterExpression)\\b[^\\n]{0,80}\\\\?[\"\\x27][^\\n]{0,40}\\)\\s*(?:or|and)\\s+\\w+\\s*(?:==|in\\s*\\[))|(?i:(?:MilvusVectorStore|milvus[-_]?client|milvus[-_]?service)\\b[^.\\n]{0,80}\\.(?:delete|similaritysearch|similarity_search|search)\\s*\\([^)\\n]{0,200}\\+\\s*\\w)|(?i:\\b(?:filter|filter_expr|filterExpression)\\b[^\\n]{0,40}\\bin\\s*\\[[^\\]\\n]{0,80}\\]\\s*(?:or|and)\\s+\\w+\\s*(?:==|!=))|(?i:\\b(?:filter|filter_expr|filterExpression)\\b[^\\n]{0,80}[\"\\x27]\\s*;\\s*(?:drop|delete|truncate|alter)\\s+(?:table|from|collection)\\b)|(?i:[\\x27\"]\\s+(?:or|and)\\s+(?:1\\s*=+\\s*1|true)\\s*(?:--(?=\\s|$|[\"\\x27\\)])|/\\*))|(?i:\\blike\\s+\\\\?[\"\\x27]%\\\\?[\"\\x27]\\s+escape\\s+\\\\?[\"\\x27][\\\\\\\\\\w]{0,8}\\\\?[\"\\x27])|(?i:\\b(?:filter|filter_expr|filterExpression)\\b[^\\n]{0,80}\\)\\s+and\\s+\\w+\\s*==\\s*\\d+)",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "Legitimate documentation or changelog text discussing CVE-2026-41705 patch notes.",
+    "Static analysis tooling output documenting Milvus filter injection patterns for defensive purposes.",
+    "Patched Spring AI MilvusVectorStore deployments that use parameterised filter builders."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "both",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     },
+     {
+      "test_case": 6,
+      "path": "input"
+     },
+     {
+      "test_case": 7,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 8,
+     "matched": 8,
+     "example_sha256": [
+      "5870b3130637e6f39c676840283c0f0755de376c3023900a87e7ce9f4579d540",
+      "25d27ef79a84695e64ba518ab10fed4654030f180251ae0cb9978e55d7c11b2c",
+      "37e422fda13e18da7bd7dd78ec638a8bf7b1b3d58ad7771d4f1b23ab8718bff5",
+      "6f7d6c00534837c856ca502023869411a32859768582b4766c9f72968b2dd208",
+      "b10993e109d7f8b785b3e6b219ac8317eceecc47edbec1b9a639f2a15baa6d33",
+      "7421a8f8cd3911cc5922e880a43a4c43d1be3689966662b867bf5eca33bec3dd",
+      "b2b723ab310a3352c40df57dd0126c2477ad17825d1e2ab23ae72905925c0603",
+      "090334e17ab40a693599ad128351f5d34ac2dab91abb9104e30b65d9748c7975"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-00575",
+   "source": "atr",
+   "source_id": "ATR-2026-00575",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/tool-poisoning/ATR-2026-00575-miasma-npm-worm-agent-config-backdoor.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-00575-miasma-npm-worm-agent-config-backdoor.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-00575-miasma-npm-worm-agent-config-backdoor.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "Miasma / Phantom Gyp — npm Worm Backdoors AI-Agent Config Files (binding.gyp install-exec + auto-run config injection)",
+   "description": "Detects the agent-config persistence used by the self-replicating npm worm tracked as \"Phantom Gyp\" / \"Miasma\" (StepSecurity & OX Security, 2026-06-03/04; ~57 packages, 286+ malicious versions in under two hours; biggest victims @vapi-ai/server-sdk and ai-sdk-ollama). Two artifacts: (1) the install-time primitive — a tiny binding.gyp abusing gyp command-substitution `<!(...)` / `<!@(...)` to fetch-and-run a remote payload during `npm install`, bypassing postinstall scanners; and (2) the novel persistence — backdoors written into the config surfaces that AI coding assistants auto-execute: .claude/setup.mjs (SessionStart hook), .cursor/rules/*.mdc, .gemini/settings.json, and .vscode/tasks.json with runOn:folderOpen. Those auto-run on the next session or folder-open and poison subsequent AI-generated code. Generic npm scanners inspect package tarballs and miss the agent-config persistence; this rule fires on the on-disk artifact shape — a gyp substitution that fetch-pipes to a shell, or an agent auto-run surface co-located with a process-spawn / remote-fetch token. It is signature detection of the known pattern, not a guarantee against re-pathed or obfuscated variants (see false_positives + evasion_tests).\n",
+   "severity_raw": "critical",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "tool-poisoning",
+    "npm-worm-agent-config-backdoor",
+    "both",
+    "high"
+   ],
+   "references": [
+    "LLM05:2025",
+    "LLM06:2025",
+    "ASI04:2026",
+    "ASI05:2026",
+    "AML.T0010 - AI Supply Chain Compromise",
+    "T1195.002 - Compromise Software Supply Chain",
+    "T1546 - Event Triggered Execution",
+    "T1059 - Command and Scripting Interpreter",
+    "StepSecurity, binding.gyp npm supply-chain worm, 2026-06-03: https://www.stepsecurity.io/blog/binding-gyp-npm-supply-chain-attack-spreads-like-worm",
+    "OX Security, Miasma back on npm, 2026-06-04: https://www.ox.security/blog/600000-monthly-downloads-affected-miasma-supply-chain-attack-is-back-on-npm/"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:<!@?\\([^)]{0,200}(?:\\bcurl\\s|\\bwget\\s|https?://|base64\\s+-d|\\|\\s*(?:sh|bash)\\b))|(?i:(?:\\.claude[/\\\\]setup\\.mjs|\\.cursor[/\\\\]rules[/\\\\]\\S*\\.mdc|\\.gemini[/\\\\]settings\\.json|\\.vscode[/\\\\]tasks\\.json)[\\s\\S]{0,300}(?:child_process|exec(?:Sync)?\\s*\\(|spawn(?:Sync)?\\s*\\(|\\bcurl\\s|\\bwget\\s|base64\\s+-d|powershell|\\|\\s*(?:sh|bash)\\b))|(?i:(?:child_process|exec(?:Sync)?\\s*\\(|spawn(?:Sync)?\\s*\\(|\\bcurl\\s+-|\\bwget\\s|base64\\s+-d|powershell\\s+-[en])[\\s\\S]{0,300}(?:\\.claude[/\\\\]setup\\.mjs|\\.cursor[/\\\\]rules[/\\\\]\\S*\\.mdc|\\.gemini[/\\\\]settings\\.json|\\.vscode[/\\\\]tasks\\.json))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "Legitimate binding.gyp command-substitution that does NOT fetch-and-run a remote payload (e.g. <!(node -e \"...\"), <!(pkg-config --libs ...), <!@(python tools/list_sources.py)) — patterns here require a remote fetch or a pipe-to-shell inside the substitution, not the gyp syntax alone.",
+    "Legitimate .vscode/tasks.json with runOn:folderOpen running a benign command (npm run build, tsc -w) — patterns require an agent auto-run surface co-located with a process-spawn or remote-fetch token, not folderOpen by itself.",
+    "Ordinary application code that uses child_process / execSync far from any agent-config surface — the agent surface and the exec token must be co-located (within ~300 chars).",
+    "Security writeups describing the Miasma worm in prose without the literal artifact (a gyp fetch-substitution, or an agent surface next to a fetch/exec token) — naming the worm or saying 'runs on folder open' does not match.",
+    "RUNTIME/STATIC LIMITATION: this rule covers the known artifact shape. A variant that re-paths persistence to a config surface not listed, or builds the fetch command from env vars / char-codes so the literal tokens never appear, can evade a pattern match (see evasion_tests)."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "both",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 6,
+     "matched": 6,
+     "example_sha256": [
+      "de081051d7916376b0df017631f61410057bd44f32b77e9e06e81d0f93cd7cb7",
+      "3a99833e41aaa0755d9f0ab6d9a57d51d9d685949e773181d3e691acf775a15c",
+      "5f215104d46619860bb1dc81ce2f857306fcf9fe9c4d21148d8f448bd95a697b",
+      "3d93b48bf57bffb314080bf288fb4166f3301510e9561f9011303c947a84a98b",
+      "77156256e14eb2051f3b7abd1f0db5426161b2612298661ccad22bc62246d79c",
+      "bf16c8b7495acdfcfcb9c050e67584d78b12016401b3db292d604124af354c97"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
    "id": "atr:ATR-2026-00714",
    "source": "atr",
    "source_id": "ATR-2026-00714",
@@ -31953,6 +33320,464 @@
       "23780d4eb732b57ab0574e879ba6f55b4ec059d3f6ff8864da568cc67241c81d",
       "3b26e316edb3aabf27935796fee7ef57fa60fb6d7066a1f101318e7686100275",
       "0a7d8b8fafe113b86a82afa6f5c1f90b65b0480d86ee56109b3483e1775a9836"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-01931",
+   "source": "atr",
+   "source_id": "ATR-2026-01931",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/tool-poisoning/ATR-2026-01931-gemini-mcp-tool-command-injection-file-exfil.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-01931-gemini-mcp-tool-command-injection-file-exfil.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-01931-gemini-mcp-tool-command-injection-file-exfil.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "gemini-mcp-tool execAsync Command Injection & @file Exfiltration (CVE-2026-0755)",
+   "description": "Detects exploitation of CVE-2026-0755 (CVSS 9.8) in the npm package gemini-mcp-tool (affected 1.1.2 ≤ v < 1.1.6). Two co-located vectors: (1) the `execAsync` method passes user-controlled prompt text to the OS shell without neutralising metacharacters (CWE-78), so a prompt carrying `;`, `|`, `$(...)`, backticks, or `&&` chained to a command achieves unauthenticated RCE; (2) the Gemini CLI `@file` parser dereferences attacker-supplied `@`-paths, letting an injected prompt read/exfiltrate arbitrary local files such as `@/etc/passwd`, `@~/.ssh/id_rsa`, `@~/.aws/credentials`, or `@../../secret`. No prior ATR rule is keyed to the gemini-mcp-tool @file / execAsync vector.\n",
+   "severity_raw": "critical",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "tool-poisoning",
+    "command-injection-file-exfil",
+    "tool_args",
+    "high"
+   ],
+   "references": [
+    "LLM02:2025",
+    "LLM05:2025",
+    "ASI04:2026",
+    "ASI05:2026",
+    "AML.T0051 - LLM Prompt Injection",
+    "AML.T0010 - AI Supply Chain Compromise",
+    "T1059 - Command and Scripting Interpreter",
+    "T1552 - Unsecured Credentials",
+    "CVE-2026-0755"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:@(?:/etc/(?:passwd|shadow)|~?/?\\.ssh/(?:id_[rd]sa|id_ecdsa|id_ed25519|authorized_keys)|~?/?\\.aws/credentials|~?/?\\.config/[\\w./-]*(?:token|secret|cred|key)|~?/?\\.env\\b|(?:\\.\\./){2,}))|(?i:(?:gemini[-_\\s]?(?:mcp|cli)?[-_\\s]?tool|ask[-_\\s]?gemini|execasync)[\\s\\S]{0,160}(?:;\\s*(?:rm|curl|wget|bash|sh|nc|ncat|cat|chmod|python|node)\\b|\\|\\s*(?:sh|bash|curl|wget|nc)\\b|\\$\\(\\s*(?:curl|wget|cat|id|whoami|uname|env)|&&\\s*(?:curl|wget|rm|bash|sh|nc)\\b))|(?i:cve-?2026-?0755[\\s\\S]{0,160}(?:poc\\b|exploit|payload|@(?:~|/etc|\\.\\.)|id_rsa|/etc/(?:passwd|shadow)|execasync\\s*\\(|;\\s*(?:curl|rm|bash|sh)\\b))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "Legitimate gemini @file usage that references workspace files (e.g. @README.md, @src/app.ts) rather than sensitive system paths.",
+    "Advisory / changelog text that mentions CVE-2026-0755 or the upgrade to 1.1.6 without an exploit payload.",
+    "Security-testing fixtures referencing the pattern inside an explicitly labelled harness."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "tags.scan_target=tool_args",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "tool_args",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 6,
+     "matched": 6,
+     "example_sha256": [
+      "c9d50ac92edf71cd3c70f3948a6fa38f01b7abefab977cc9d24ac1e560ef3d71",
+      "10ff02ca496a0b07faea4cced596d401d031db61a71cf8ba55ea0f1f5ee7e664",
+      "dd8040f21567dd41025ce3b9adbc6f6f50d0975d23d97e3bcf952c6107f30848",
+      "5bca8e883ba77a654734fbc09414433d4d74081e75d62f1b9a7a5aca08c9db6e",
+      "60976f29ae985dc914199451ae91df1fb6f2bbad9c5a3dcb0f682c413782fbc9",
+      "c1c754ad519f78fabd036b5474acbe828c915131991514509d76c0c2ea9643ad"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-01983",
+   "source": "atr",
+   "source_id": "ATR-2026-01983",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/tool-poisoning/ATR-2026-01983-mcp-for-stata-log-file-name-command-injection.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-01983-mcp-for-stata-log-file-name-command-injection.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-01983-mcp-for-stata-log-file-name-command-injection.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "MCP-for-Stata: Command Injection via log_file_name Parameter (CVE-2026-47708)",
+   "description": "Detects CVE-2026-47708 (CVSS critical, CWE-77): the `log_file_name` (aka `log_name`) parameter accepted by the `stata_do` MCP tool / CLI is interpolated directly into a Stata `log using \"<log_file>\", ...` command string without sanitization. GuardValidator only scans do-file content, not this wrapper parameter. An attacker breaks out of the quoted log-path string with a quote or newline and appends a dangerous Stata command (`shell`, `python`, `erase`, `winexec`, or `!` shell-escape), achieving remote code execution, or supplies `../` path-traversal segments in log_name to write arbitrary files outside the log directory.\nDetection covers: (a) a stata_do tool call whose log_file_name/log_name value contains a\n    quote/newline breakout followed by a dangerous Stata command token;\n(b) a log_file_name/log_name value containing path-traversal segments; (c) explicit CVE-2026-47708 exploitation framing referencing the\n    log_file_name / stata_do injection.\n\nThe detection target is the request shape — a stata_do log_file_name parameter carrying a string-breakout plus command injection or path traversal — the exact CVE-2026-47708 primitive, caught before the wrapper builds the Stata command string.\n",
+   "severity_raw": "critical",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "tool-poisoning",
+    "mcp-command-injection",
+    "runtime",
+    "high",
+    "cve-disclosure",
+    "mcp-for-stata-cve-2026-47708"
+   ],
+   "references": [
+    "LLM06:2025",
+    "ASI06:2026",
+    "AML.T0053 - LLM Plugin Compromise",
+    "T1059 - Command and Scripting Interpreter",
+    "CVE-2026-47708"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:\\b(?:log_file_name|log_name)\\b[\"\\x27]?\\s*[:=]\\s*[\"\\x27][\\s\\S]{0,80}[\"\\x27][\\s\\S]{0,40}(?:\\bshell\\b|\\bpython\\b|\\berase\\b|\\bwinexec\\b|(?<![\\w=])!(?!=)))|(?i:\\blog\\s+using\\s+[\"\\x27][\\s\\S]{0,120}[\"\\x27][\\s\\S]{0,40}(?:\\bshell\\b|\\bpython\\b|\\berase\\b|\\bwinexec\\b)\\b)|(?i:\\b(?:log_file_name|log_name)\\b[\"\\x27]?\\s*[:=]\\s*[\"\\x27][\\s\\S]{0,20}(?:\\.\\.[\\\\/]){2,})|(?i:CVE-2026-47708[\\s\\S]{0,200}(?:log_file_name|log_name|stata_do|GuardValidator))",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "A log_file_name value that legitimately contains a single quote as part of a project naming convention but no command token follows.",
+    "Security advisory or PR text quoting the CVE-2026-47708 payload.",
+    "A stata_do call with a plain alphanumeric log_file_name and no quote/newline breakout."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [],
+     "classification": "project_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "condition fields identify a tool invocation",
+     "fields": [
+      "tool_args"
+     ],
+     "scan_target": "runtime",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "tool_args"
+     },
+     {
+      "test_case": 1,
+      "path": "tool_args"
+     },
+     {
+      "test_case": 2,
+      "path": "tool_args"
+     },
+     {
+      "test_case": 3,
+      "path": "tool_args"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "tool_args"
+     },
+     {
+      "test_case": 1,
+      "path": "tool_args"
+     },
+     {
+      "test_case": 2,
+      "path": "tool_args"
+     },
+     {
+      "test_case": 3,
+      "path": "tool_args"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 4,
+     "matched": 4,
+     "example_sha256": [
+      "d3540cd45443fe5304963ecb3049d3bb3d91677cc3fed5cc42ba3195260dabe8",
+      "727d18c5b85e007d8a120db1825ce996484ee7c21478292c906c9e9df50d308a",
+      "2ef729b14815a48c96f1e4feb93bae33888a428d494351247a0361ef72ed0a55",
+      "1b9547a13f3da8d9ff60eb03852fc95981c8d766f9ffc76fbc310fae72c6da07"
+     ],
+     "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
+    }
+   }
+  },
+  {
+   "id": "atr:ATR-2026-02263",
+   "source": "atr",
+   "source_id": "ATR-2026-02263",
+   "source_rev": "faf743fee8a5018467959ec8ea7ccdb1a1aab333",
+   "source_path": "rules/tool-poisoning/ATR-2026-02263-workflow-sql-template-expression-injection.yaml",
+   "upstream_url": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-02263-workflow-sql-template-expression-injection.yaml",
+   "lineage": [
+    {
+     "kind": "author_field",
+     "value": "ATR Community (JVN sync + CVE-2026-59257)",
+     "evidence": "https://github.com/Agent-Threat-Rule/agent-threat-rules/blob/faf743fee8a5018467959ec8ea7ccdb1a1aab333/rules/tool-poisoning/ATR-2026-02263-workflow-sql-template-expression-injection.yaml (YAML author)"
+    }
+   ],
+   "license_spdx": "MIT",
+   "redistribution": "unresolved",
+   "restricted": false,
+   "restricted_reason": "",
+   "title": "SQL Injection via Unparameterized Template-Expression Value in Workflow-Automation SQL Node (CVE-2026-59257)",
+   "description": "Detects the n8n legacy MySQL-node SQL-injection pattern (CVE-2026-59257) and the same-class issue in other workflow-automation tools: a SQL query string is built by directly interpolating a template-expression value (n8n's `{{ ... }}`, or an equivalent `${...}`/`<%= %>` engine) into raw SQL text, rather than passing it as a bound/parameterized value. When the workflow is wired to an externally-reachable trigger (a webhook node), attacker-controlled input flows through the expression straight into the SQL string, allowing arbitrary SQL execution under the configured database credentials. Parameterized query builders (placeholders like `?`, `:name`, `$1`) are the safe alternative and are explicitly excluded.\n",
+   "severity_raw": "high",
+   "severity_field": "severity",
+   "maturity_raw": "test",
+   "tags": [
+    "tool-poisoning",
+    "workflow-sql-template-injection",
+    "both",
+    "medium"
+   ],
+   "references": [
+    "LLM06:2025",
+    "ASI05:2026",
+    "AML.T0010 - AI Supply Chain Compromise",
+    "T1190 - Exploit Public-Facing Application",
+    "CVE-2026-59257",
+    "CWE-89",
+    "https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-023001.html"
+   ],
+   "surface": "IN",
+   "breadth": "MEDIUM",
+   "predicate_kind": "REGEX",
+   "predicate": "(?i:\\b(?:SELECT|INSERT|UPDATE|DELETE)\\b[^\\n]{0,40}\\b(?:FROM|SET|INTO|WHERE|TABLE)\\b(?:(?!\\?|:[a-zA-Z_]|\\$\\d)[\\s\\S]){0,200}\\{\\{\\s*\\$[^}]{0,98}\\}\\})|(?i:executeQuery[^\\n]{0,80}\\{\\{\\s*\\$[^}]{0,98}\\}\\}[^\\n]{0,200}\\b(?:SELECT|INSERT|UPDATE|DELETE)\\b)|(?i:(?:webhook|external\\s+trigger)[^\\n]{0,120}(?:executeQuery|raw\\s+sql)[^\\n]{0,120}\\{\\{\\s*\\$[^}]{0,98}\\}\\})",
+   "not_runnable_reason": "",
+   "case_sensitive": false,
+   "bindings": [],
+   "examples_positive": [],
+   "examples_negative": [],
+   "false_positive_notes": [
+    "A query string built entirely from parameterized placeholders (?, :name, $1) with the template expression only supplying the placeholder's bound value, not concatenated into the SQL text itself.",
+    "Template-expression syntax appearing in non-SQL contexts (e.g. an HTML template or a Slack message body) with no adjacent SQL keywords."
+   ],
+   "extra": {
+    "policy": {
+     "name": "agent-defs.atr",
+     "version": 1,
+     "date": "2026-09-04"
+    },
+    "lineage_parse": {
+     "method": "whole author scalar verbatim; parenthetical spans are annotations only",
+     "parenthetical_spans": [
+      {
+       "start": 14,
+       "end": 41,
+       "value": "(JVN sync + CVE-2026-59257)"
+      }
+     ],
+     "classification": "other_attribution",
+     "corpus_marker_matches": []
+    },
+    "surface_decision": {
+     "reason": "agent_source.type=tool_call",
+     "fields": [
+      "content"
+     ],
+     "scan_target": "both",
+     "single_surface_limitation": false
+    },
+    "execution": {
+     "method": "pattern",
+     "case_sensitive_reason": "ATR array regex conditions use implicit IGNORECASE",
+     "measurement": {
+      "verdict": "fast",
+      "budget_s": 1.0,
+      "crossing_bytes": null,
+      "wall_s": null,
+      "over_60s": false,
+      "method": "per-pattern adversarial witness search built from each pattern's own parse tree, nine input lengths to 1 MiB, 1.10 s discovery cap and 62 s confirmation cap, one killable subprocess per attempt, CPython 3.12 on Windows",
+      "measured_at": "2026-09-05"
+     },
+     "breadth": {
+      "policy": "common-text-witness-v1",
+      "probe_indices": [],
+      "reason": "BROAD when a screened path accepts a common text construct; otherwise MEDIUM, unmeasured"
+     },
+     "composition": "scoped regex alternation"
+    },
+    "positive_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     }
+    ],
+    "negative_origins": [
+     {
+      "test_case": 0,
+      "path": "input"
+     },
+     {
+      "test_case": 1,
+      "path": "input"
+     },
+     {
+      "test_case": 2,
+      "path": "input"
+     },
+     {
+      "test_case": 3,
+      "path": "input"
+     },
+     {
+      "test_case": 4,
+      "path": "input"
+     },
+     {
+      "test_case": 5,
+      "path": "input"
+     }
+    ],
+    "license_decision": "Repository notice only; rights to named third-party corpus content remain unresolved",
+    "engine_scope": "Declared raw-text pattern path; no Unicode normalization, model, trace engine, or implicit engine context policies",
+    "reachability": {
+     "status": "reachable",
+     "examples": 4,
+     "matched": 4,
+     "example_sha256": [
+      "b8c8c4cec0422e7436b99912d6473ed88d168528fd60b5a79bda3d160e932c20",
+      "c6fe80c5dbc13b2b080be3ffe981445bc4a53b4fb6667aac16dbe1df3107c87e",
+      "076fc44afc4bd25ffb350ad30fc6c09d4c85740ca994772665dbdb62dd52e650",
+      "215ebc012373518b5867983d73be8354a6d2df0c26a3726993ffdbaad2c36994"
      ],
      "checked_by": "scripts/build_bundle.py via agent_defs.bench.reachability"
     }

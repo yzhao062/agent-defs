@@ -379,11 +379,16 @@ def main(argv=None) -> int:
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--units-from", default="",
                         help="how the units file was produced, recorded verbatim in the report")
+    parser.add_argument("--surface", default="OUT",
+                        help="which of the bundle's rules to probe. The units are one kind of "
+                             "text, and a rule that never runs on it answers nothing here")
     args = parser.parse_args(argv)
 
     raw_units = args.units.read_bytes()
     raw_rules = args.rules.read_bytes()
-    rules = bundle.load(args.rules)
+    rules = [r for r in bundle.load(args.rules) if r.surface.value == args.surface]
+    if not rules:
+        raise SystemExit(f"{args.rules}: no {args.surface} rules to probe")
     relaxed, splits, census, unprunable = build_probes(rules)
     print(f"rules: {len(rules)}; probed: {len(splits)}; "
           f"probed without pruning: {len(unprunable)}", flush=True)
@@ -415,7 +420,10 @@ def main(argv=None) -> int:
             "units": str(args.units), "units_sha256": hashlib.sha256(raw_units).hexdigest(),
             "units_from": args.units_from,
             "rules": str(args.rules), "rules_sha256": hashlib.sha256(raw_rules).hexdigest(),
-            "rule_count": len(rules),
+            # The digest is of the whole bundle; the count is of the subset
+            # probed, because the units are tool results and only the OUT rules
+            # ever see one. A reader comparing the two should see both numbers.
+            "surface": args.surface, "rule_count": len(rules),
             "rule_ids_sha256": hashlib.sha256(
                 "\n".join(sorted(r.id for r in rules)).encode()).hexdigest(),
             "python": sys.version.split()[0],
@@ -441,9 +449,13 @@ def main(argv=None) -> int:
                              "boundaries and destroys a match that spans lines inside one block"),
             "substring_leaf": ("the same rules matched with every zero-width assertion removed. "
                                "The rewrite is sound only for patterns free of atomic groups, "
-                               "possessive quantifiers, conditionals and quantified lookarounds; "
-                               "a pattern carrying one is counted as a candidate on every unit "
-                               "rather than rewritten. Loose by construction"),
+                               "possessive quantifiers, conditionals, quantified lookarounds and "
+                               "backreferences; a pattern carrying one of the first four is "
+                               "counted as a candidate on every unit rather than rewritten, and "
+                               "the quantifier that makes a lookaround unsafe need not sit "
+                               "against it. Backreferences are absent by evaluator screening "
+                               "rather than by detection here: removing a lookahead can renumber "
+                               "the groups after it. Loose by construction"),
             "not_covered": ("string values of tool_response the extractor never rendered into "
                             "tool_result.content; no computation on this corpus reaches them, "
                             "so neither number is a bound on the deployed hook and neither is "

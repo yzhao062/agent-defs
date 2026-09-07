@@ -152,13 +152,15 @@ the copy, so a detection quarantines the copy and leaves the repository alone. T
 under whatever resident protection is active, so one run addresses both questions: whether an
 on-demand scan reports a threat, and whether the file survives contact with resident protection.
 
-On 2026-09-06, against `src/agent_defs/bundle.json` at sha256
-`2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1`, 1,372,797 bytes, 205 ATR rules:
+It has run twice, once per artifact. The current record, on 2026-09-07 against
+`src/agent_defs/bundle.json` at sha256
+`e6efd658a7f93eeef6ad1687a0e4782c3f3c2addc9cd2fd182eda0b3c96e3310`, 1,456,844 bytes, 216 ATR rules:
 **one Windows Defender on-demand scan reported no threats, and the copy was still on disk three
 seconds after it was written, on a machine registering Windows Defender and Bitdefender Antivirus
-with the Security Center.** Verdict `clean`. The record is `scripts/artifact-scan.json`, keyed by
-that digest rather than by a path, so it names the exact bytes scanned and does not silently carry
-over to a rebuild. `tests/test_shipped_bundle.py` fails when the committed record describes
+with the Security Center.** Verdict `clean`. The first run, on 2026-09-06, was the same verdict
+against the 205-rule artifact at `2611b056`, 1,372,797 bytes. The record is
+`scripts/artifact-scan.json`, keyed by digest rather than by a path, so it names the exact bytes
+scanned and does not silently carry over to a rebuild; that is why a rebuild replaces it. `tests/test_shipped_bundle.py` fails when the committed record describes
 different bytes or is missing, so a rebuild without a rescan is caught rather than assumed.
 
 Say it that way rather than "two scanners cleared it", because the run does not establish the

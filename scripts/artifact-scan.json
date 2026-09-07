@@ -1,8 +1,8 @@
 {
   "artifact": "C:\\Users\\yuezh\\PycharmProjects\\agent-defs\\src\\agent_defs\\bundle.json",
-  "sha256": "2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1",
-  "bytes": 1372797,
-  "scanned_at": "2026-09-06T19:28:20.9709917Z",
+  "sha256": "e6efd658a7f93eeef6ad1687a0e4782c3f3c2addc9cd2fd182eda0b3c96e3310",
+  "bytes": 1456844,
+  "scanned_at": "2026-09-07T01:32:45.2398598Z",
   "resident": {
     "products": [
       "Windows Defender",
@@ -14,7 +14,7 @@
   "on_demand": {
     "scanner": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.26060.3008-0\\MpCmdRun.exe",
     "exit_code": 0,
-    "output": "Scan starting...\r\nScan finished.\r\nScanning C:\\Users\\yuezh\\AppData\\Local\\Temp\\agent-defs-scan-29c66df3\\bundle.json found no threats.",
+    "output": "Scan starting...\r\nScan finished.\r\nScanning C:\\Users\\yuezh\\AppData\\Local\\Temp\\agent-defs-scan-ac95e9f1\\bundle.json found no threats.",
     "clean": true
   },
   "verdict": "clean"

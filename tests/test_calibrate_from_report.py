@@ -299,6 +299,68 @@ def test_a_trial_count_past_the_checkable_range_is_refused():
     assert hook.measurement(dict(good, trials=over, u95=binomial_u95(over, 0))) is None
 
 
+@pytest.fixture
+def two_surfaces(tmp_path):
+    """A bundle enabling IN and OUT, which is what the shipped one now does."""
+    from agent_defs.model import Surface
+
+    carried = [replace(rule, id=rule.id.replace("builtin:", "atr:"), source="atr")
+               for rule in STARTER_RULES]
+    carried[0] = replace(carried[0], surface=Surface.IN)
+    path = tmp_path / "bundle.json"
+    bundle_format.write(path, carried)
+    config = hook.default_config()
+    config.update(log_path=str(tmp_path / "log.jsonl"), bundle=str(path), surfaces=["IN", "OUT"])
+    config_path = tmp_path / "agent-defs.json"
+    hook.atomic_json(config_path, config)
+    return config_path, hook.active_rules(config, hook.hook_rules(config)[0])
+
+
+def _two_surface_report(rules, *, in_bundle_hits, drop_surface=None):
+    """Per-rule rows on both surfaces; the union on IN is the loud one."""
+    entries = {rule.id: {"rule_sha256": rule_fingerprint(rule),
+                         "measurements": [_row(rule, hits=0)]} for rule in rules}
+    aggregates = [_row(rules[0], hits=in_bundle_hits, surface="IN"),
+                  _row(rules[0], hits=0, surface="OUT")]
+    return {"rules": entries,
+            "bundle": {"measurements": [a for a in aggregates if a["surface"] != drop_surface],
+                       "rule_sha256": {r.id: rule_fingerprint(r) for r in rules},
+                       "bundle_ok": False,
+                       "failures": ["worst bundle stratum u95=0.950000 exceeds 0.005"],
+                       "worst_u95": 0.95}}
+
+
+def test_a_surface_with_no_union_is_refused_rather_than_skipped(two_surfaces, tmp_path):
+    """The union is the measurement, and it cannot be inferred from its parts.
+
+    Every rule can sit inside the ADVISE ceiling while their union sits outside
+    it, so a report that carries the per-rule rows and loses one surface's union
+    describes a quieter bundle than the one that was measured. Dropping the row
+    instead of refusing it let that report promote every rule it covered.
+    """
+    config_path, enabled = two_surfaces
+    assert {r.surface.value for r in enabled} == {"IN", "OUT"}
+    report = tmp_path / "report.json"
+
+    # With the IN union present the bundle is too loud for ADVISE.
+    report.write_text(json.dumps(_two_surface_report(enabled, in_bundle_hits=60)),
+                      encoding="utf-8")
+    result = hook.calibrate_from_report(config_path, report, accept_pooled_bound=True)
+    assert result["gating_surface"] == "IN"
+    assert result["reaches"] == "RECORD"
+    assert sorted(result["surfaces"]) == ["IN", "OUT"]
+
+    # Remove only that row. Every fingerprint and per-rule row still matches.
+    report.write_text(json.dumps(_two_surface_report(enabled, in_bundle_hits=60,
+                                                     drop_surface="IN")), encoding="utf-8")
+    with pytest.raises(ValueError, match="no whole-corpus bundle measurement for IN"):
+        hook.calibrate_from_report(config_path, report, accept_pooled_bound=True)
+
+    # The refusal has to come before publication, or the config carries evidence
+    # for a bundle bound nothing measured.
+    assert hook.read_config(config_path)["evidence"]["bundle"]["hits"] == 60
+
+
 def test_the_bound_carried_forward_is_the_recomputed_one(installed, tmp_path):
     from dataclasses import asdict
 

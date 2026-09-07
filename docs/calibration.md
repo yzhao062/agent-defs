@@ -19,9 +19,9 @@ over tool results extracted from real sessions, and
 ```sh
 agent-defs export-bundle --out enabled.json      # the exact enabled set
 python scripts/measure_tool_traffic.py \
-    --evidence <dir> --names <corpus> --surface OUT \
+    --evidence <dir> --names <corpus> --surface OUT --surface IN \
     --rules enabled.json --workers 4             # on the corpus host
-agent-defs calibrate --report <corpus>-out-report.json --accept-pooled-bound
+agent-defs calibrate --report <corpus>-out-in-report.json --accept-pooled-bound
 agent-defs promote --source atr --lane ADVISE
 ```
 
@@ -32,6 +32,12 @@ refuse without it. Why, and what taking it gives up, is the last section.
 every enabled rule. The enabled set is the starter rules plus the bundle minus
 whatever the config gates out, and nothing else reproduces it, so measuring
 anything else produces a report `calibrate` rejects.
+
+Every enabled surface goes in one report for the same kind of reason. `bench`
+refuses a whole report when a bundle enables a surface its corpora do not cover,
+so measuring `OUT` and `IN` in two runs produces two reports, each refused for
+missing the other's surface. The lane then rests on whichever surface bounds
+worse, and `calibrate` prints both so a reader can see which one that was.
 
 ## Two corpora, three stages
 
@@ -57,8 +63,12 @@ and the admission criterion were fixed before anyone read the held-out outcome.
 | Select | trace-commons | 2,937 | 231 | 119 | 8 |
 | Select | local-claude, selection half | 1,813 | 216 | 7 | 6 |
 | **Verify** | **local-claude, held-out half** | **1,743** | **209** | **1** | **1** |
+| **Verify** | **held-out half, the same episodes' tool calls** | **1,738** | **11** | **0** | **0** |
 
-The last row describes the enabled set **as revised**, which is 205 ATR rules
+The last row is the `IN` surface and is read in [The tool-call surface](#the-tool-call-surface)
+below; the rest of this section is about `OUT`.
+
+The third row describes the enabled set **as revised**, which is 205 ATR rules
 plus 4 starter rules after the build filter described below removed
 `ATR-2026-02010`. The count is the same either way, because that rule never
 fired on joined text; it was found by a different procedure. The revision still
@@ -88,9 +98,10 @@ would make the held-out number a selection result like the other two.
 
 ## The result
 
-The artifact declares 205 ATR rules on `OUT`, plus the 4 starter rules, at ATR
-`faf743fe`. The evaluation recorded one bundle hit among 1,743 distinct
-payloads. Treating those as independent representative Bernoulli trials gives a
+The artifact declares 216 ATR rules at ATR `faf743fe`: 205 on `OUT`, which with
+the 4 starter rules is the 209 measured here, and 11 on `IN`. The evaluation
+recorded one bundle hit among 1,743 distinct payloads on `OUT`. Treating those
+as independent representative Bernoulli trials gives a
 nominal one-sided 95% Clopper-Pearson upper bound of **0.272%**. The importer
 maps that to an `ADVISE` ceiling and refuses `DENY`, and `agent-defs promote`
 will not set a source higher.
@@ -116,6 +127,131 @@ decided by comparing it is a lane decided by the machine that ran the import.
 CI caught this by disagreeing with itself across runners.
 `lanes.bound_within` answers True, False, or **neither**, every caller takes the
 stricter lane on neither, and that refusal is the same on every platform.
+
+## The tool-call surface
+
+Every unit in the corpus carries two things: the tool result the hook sees at
+`PostToolUse`, and the invocation it sees at `PreToolUse`. So `IN` is measured
+on the same episodes as `OUT`, with nothing new collected. Three things had to
+change before that measurement meant anything, and two more can only be stated,
+because the material to fix them no longer exists.
+
+**The material is the leaves, not the envelope.** The snapshot stores an
+invocation as `{"name": ..., "arguments": ...}`, and the first version of this
+measurement matched that serialization. The hook does not: at `PreToolUse` it
+walks the string values inside `tool_input` and scans each one on its own,
+never the serialization, the object keys, or the tool name. The difference is
+not cosmetic. `ATR-2026-02525` looks for a parameter expansion at the start of
+a command, so it matches `${!VAR} /tmp/x` as the hook sees it and does not
+match the same command inside `{"command": "..."}`, where the character in
+front of it is a quote rather than a line start. Matching the envelope was
+answering a question nobody asks at runtime. The unit is still one invocation
+and one trial, with the serialization as its identity; what is matched is each
+argument string, and a rule hits the unit when it hits any of them. Round 5 of
+the review found this, and also established that it does not change the number:
+1,738 invocations, 3,401 argument leaves, zero hits either way.
+
+**The trial count is not the same.** A tool result is unique here because the
+snapshot was deduplicated on it. An invocation is not: the same call can be made
+twice and return different bytes, which happened five times, across three
+distinct commands. Those five are one piece of `PreToolUse` material, so the
+`IN` corpus holds **1,738** trials against `OUT`'s 1,743. That satisfies
+`bench`'s distinct-material contract, which is what its refusal is about, and
+that refusal is one `calibrate` has no standing to relax. It is not a claim
+that repeated bytes would be invalid draws: if the population of interest were
+invocation occurrences rather than distinct invocations, they would be valid.
+Deduplicating narrows the zero-hit denominator, so it widens the interval.
+
+A second selection sits underneath it. These 1,738 invocations are what
+survived deduplication **on their results**, so two different calls that
+returned identical bytes were already collapsed before this stage saw them.
+What the number describes is distinct invocation serializations retained
+through an output-selected sample, which is a further reason it is not a
+sample of what a user's tool calls look like.
+
+**One stratum was labelled from the wrong text.** `exposure` and `tool` are
+classified from the call name and its arguments, so they already describe an
+invocation. `prose` was classified from the result. On an `IN` unit that labels
+text nobody scans, and over this corpus the two labels disagree on 10.1% of
+units, so it is now classified on the invocation. It moves a lot of them:
+`prose=security-adjacent` holds 186 units on `OUT` and 42 on `IN`. It does not
+move which stratum is worst, on either surface. That is decided by the tools
+called once or twice in the whole corpus, the same way it is for `OUT`.
+`result_status` is left as it stands: it describes the episode rather than the
+call, and it cuts the corpus more finely, which can only make the worst stratum
+worse. Read it as a label on the episode that was retained rather than as a
+property of the command: no duplicate group here mixed an error with a success,
+but if one did, the surviving row would carry only its own status.
+
+**There is no selection half for `IN`, and one cannot be reconstructed.** The
+two selection corpora were working files and are gone from disk; only the
+held-out half survives, because a script exists that replays it from a report.
+So the three `IN` rules held back in `scripts/bundle-held-back.json` were
+condemned by their firing on *tool results* in the selection stage, which is not
+the surface they would run on. That is prior selection rather than selection on
+the held-out half, so it does not make the number below a selection result. It
+is still weaker evidence than the `OUT` rules have, and it cannot be re-derived:
+the counts in that file are the whole record. Reading the held-out outcome and
+then dropping an `IN` rule would have made the number worthless, so no rule was
+dropped after it was read.
+
+What that exclusion was worth can be measured, and round 5 of the review asked
+for it, so it was: all fourteen runnable `IN` rules over the same 1,738
+invocations, prespecified to be reported whatever it showed and not to change
+which rules ship. Adding predicates cannot lower a union, so this is a
+conservative envelope around the eleven.
+
+| Rule | Held back on | Hits |
+|---|---|---:|
+| `ATR-2026-00111`, Shell Metacharacter Injection in Tool Arguments | 4 of 2,937 tool results | **45 of 1,738** |
+| `ATR-2026-00064`, Over-Permissioned MCP Skill | 81 of 2,937 tool results | **17 of 1,738** |
+| `ATR-2026-00110`, RCE via eval() and Dynamic Code Injection | 27 of 2,937 tool results | **1 of 1,738** |
+| **Fourteen-rule union** | | **61 of 1,738, u95 4.33%** |
+
+Read this in both directions. The exclusion was right: 4.33% is eight times the
+`ADVISE` ceiling, so shipping those three would have held the whole bundle in
+`RECORD`, and the cross-surface evidence pointed the correct way even though it
+came from the wrong surface. `ATR-2026-00111` looks for shell metacharacters in
+tool arguments, and an agent's own `Bash` calls are full of them.
+
+The exclusion was also **load-bearing**, which the zero on its own does not
+show. The eleven rules are quiet partly because three noisy ones were taken out
+first, on evidence from another surface that no longer exists to re-derive. That
+is prior selection rather than selection on the held-out half, and it is still
+selection. A reader who wants the number for the runnable `IN` surface as a
+whole should take 4.33%, not 0.172%.
+
+**This is the second reading of the held-out half.** The first established the
+`OUT` bound. Adding `IN` is a new question asked of the same held-out material,
+which is the cost this split was set up to control and not a cost it removes.
+
+### The result
+
+The 11 `IN` rules fired on none of the 1,738 invocations, a nominal one-sided
+95% Clopper-Pearson upper bound of **0.172%**. The lane is gated on whichever
+surface bounds worse, which is `OUT` at 0.272%, so admitting `IN` did not move
+what the bundle may do.
+
+Three rule-and-surface pairs fired across surfaces, and none of them counts:
+
+| Rule | Its surface | Fired on | Hits |
+|---|---|---|---:|
+| `ATR-2026-00118` | `IN` | `OUT` | 1 of 1,743 |
+| `ATR-2026-02106` | `OUT` | `IN` | 1 of 1,738 |
+| `ATR-2026-00296` | `OUT` | `IN` | 2 of 1,738 |
+
+A fourth, `ATR-2026-00554` on `IN`, was there while the envelope was being
+matched and is gone now that the leaves are. It was matching the serialization
+rather than any string the hook would scan, which is the defect above showing
+itself in the one place it was visible from outside.
+
+The hook evaluates a rule only on its own surface, so none of these would have
+run where it matched, and `bench` counts a bundle hit only when the rule's
+surface matches the unit's. They are recorded because the alternative is a
+reader assuming the number covers something it does not. What they do show is
+that the two bodies of text are not interchangeable: a rule written for one
+finds things in the other, at rates that would matter if either set were ever
+run against both.
 
 ## Two gates, and the one this uses
 
@@ -187,8 +323,9 @@ lying across lines inside one block. And **an assertion is not the only thing
 that can make a match vanish** once a leaf sits inside more text: an atomic
 group or possessive quantifier commits, and removing an assertion that carries
 a quantifier moves the quantifier onto the token before it. The script names
-those constructs and probes such a rule without pruning it; the shipped 205
-contain none of them.
+those constructs and probes such a rule without pruning it, and the quantifier
+it looks for need not sit against the assertion: verbose-mode whitespace and
+comment groups can come between. None of the 216 shipped rules carries one.
 
 The last limit is the one no computation on this corpus can lift. The corpus
 records `tool_result.content` from a transcript. The hook walks `tool_response`,
@@ -203,8 +340,10 @@ So the two numbers below **are diagnostics rather than bounds on the deployed
 hook, and they are not admission evidence.** They compare two evaluation
 procedures over one fixed body of retained text.
 
-On the held-out corpus, over the shipped 205-rule set, 102 of which carry a
-zero-width assertion (`scripts/leaf-traversal-diagnostic.json`):
+On the held-out corpus, over the bundle's 205 `OUT` rules, 102 of which carry a
+zero-width assertion (`scripts/leaf-traversal-diagnostic.json`). The 11 `IN`
+rules are left out because the units are tool results and an `IN` rule never
+sees one:
 
 | Procedure | Hits in 1,743 | Nominal u95 |
 |---|---:|---:|
@@ -277,14 +416,14 @@ the test probed one and never U+00A0. `CONTENT_FREE` now says all of this where
 it is defined, it has grown from 7 fixtures to 20, and the test imports it
 rather than restating it.
 
-The shipped artifact was built against the 7-fixture list. It has not been
-rebuilt, because rebuilding needs the pinned archive on the corpus host, and it
-does not need to be: `tests/test_shipped_bundle.py` runs all 20 fixtures
-against the committed bundle and no rule fires on any of them. The wider list
-is a policy for the next build and a check on this one.
+The shipped artifact has since been rebuilt against the 20-fixture list, in the
+build that added the `IN` rules, and its `screen_refusals` metadata names the
+single-space witness the wider list found. `tests/test_shipped_bundle.py` runs
+all 20 fixtures against the committed bundle as well, so the list is both the
+build filter and a check on the artifact that filter produced.
 
 Trimming sample text out of the bundle also means `bench` can no longer verify
-reachability at measurement time, and reports `no_examples` for the 205 ATR
+reachability at measurement time, and reports `no_examples` for the 216 ATR
 rules. The reachability result is checked at build time instead and travels in
 each record under `extra.reachability`, per `SAMPLES.md` rule 3.
 

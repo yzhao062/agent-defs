@@ -97,7 +97,13 @@ def test_the_reachability_result_travels_instead(shipped):
 def test_every_shipped_rule_is_one_this_hook_can_run(shipped):
     rules, meta = shipped
     assert rules
-    assert {r.surface for r in rules} == {Surface.OUT}
+    # Against what the bundle declares rather than a literal, because the set of
+    # shipped surfaces is a build decision. The second line is the constraint
+    # that does not move: read_config accepts no other surface, so a rule on one
+    # would be shipped into a hook with no event that reaches it.
+    declared = {Surface(s) for s in meta["surfaces"]}
+    assert {r.surface for r in rules} == declared
+    assert declared <= {Surface.IN, Surface.OUT}
     assert all(r.runnable for r in rules)
     assert all(r.shippable for r in rules)
     assert len({r.id for r in rules}) == len(rules)

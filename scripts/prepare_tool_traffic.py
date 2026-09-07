@@ -25,6 +25,18 @@ def text_content(content):
     return None, "nontext-content"
 
 
+#: Content topic, which is a stratum rather than a verdict. Exported because
+#: the IN measurement classifies invocations with it, and two copies of this
+#: expression would drift into two definitions of the same stratum.
+TOPIC = re.compile(
+    r"\b(security|vulnerabilit\w*|malware|prompt injection|penetration|exploit\w*)\b", re.I)
+
+
+def prose(text):
+    """Which prose stratum this text belongs to. Topic, not maliciousness."""
+    return "security-adjacent" if TOPIC.search(text) else "ordinary"
+
+
 def exposure(name, arguments):
     command = arguments.get("command", "") if isinstance(arguments, dict) else ""
     if name in {"WebFetch", "WebSearch"}:
@@ -110,9 +122,7 @@ def parse_files(paths, root):
             identifier = file_id + "/" + digest((key[0] + "/" + key[1]).encode())[:20]
             args = call.get("input", {})
             origin = exposure(call["name"], args)
-            # This labels content topic, not whether a result is malicious.
-            topic = "security-adjacent" if re.search(r"\b(security|vulnerabilit\w*|malware|prompt injection|penetration|exploit\w*)\b", payload, re.I) else "ordinary"
-            strata = {"file_type": "tool-result", "prose": topic, "tool": call["name"],
+            strata = {"file_type": "tool-result", "prose": prose(payload), "tool": call["name"],
                       "exposure": origin, "result_status": "error" if result.get("is_error") else "success"}
             results.append({"id": identifier, "text": payload, "sha256": digest(payload_bytes),
                             "size_bytes": len(payload_bytes), "surface": "OUT", "strata": strata,

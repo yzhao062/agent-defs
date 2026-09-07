@@ -139,6 +139,27 @@ def test_pre_deny_and_advise(config):
     assert "permissionDecision" not in response["hookSpecificOutput"]
 
 
+def test_advise_says_something_the_reader_can_act_on_for_each_surface(config):
+    """One sentence per surface, because the two situations differ.
+
+    On OUT the matched text came from outside and the advice is not to act on
+    it. On IN the match is in a call this agent is about to make, and "treat it
+    as untrusted data" names nothing it can do about that.
+    """
+    inbound = tuple(replace(r, surface=Surface.IN) for r in STARTER_RULES)
+    measured(config, inbound)
+    config["sources"]["builtin"] = "ADVISE"
+    said = hook.process(payload({"command": attack()}, "PreToolUse"), config, inbound)
+    assert said["hookSpecificOutput"]["additionalContext"] == hook.ADVICE["IN"]
+
+    measured(config, STARTER_RULES)
+    returned = hook.process(payload({"content": attack()}), config, STARTER_RULES)
+    assert returned["hookSpecificOutput"]["additionalContext"] == hook.ADVICE["OUT"]
+    assert hook.ADVICE["IN"] != hook.ADVICE["OUT"]
+    assert "untrusted data" not in hook.ADVICE["IN"], (
+        "the OUT wording tells a PreToolUse reader to distrust text it is not being shown")
+
+
 def test_disabled_source_and_surface(config):
     config["sources"]["builtin"] = "DO_NOT_SHIP"
     assert hook.process(payload(attack()), config) == {}

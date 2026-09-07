@@ -1,1004 +1,804 @@
-<!-- Round 4 -->
+<!-- Round 5 -->
 
 Verification notes:
 
-All shell commands below ran in `C:/Users/yuezh/PycharmProjects/agent-defs`. The prescribed Python is CPython 3.12.12. PowerShell probes used `/c/Program Files/PowerShell/7/pwsh`. Root `AGENTS.md` and `AGENTS.local.md` were absent; the supplied instructions applied. Bootstrap and shared configuration refresh were skipped as instructed. The initial working tree was clean. Helpers are reproduced at the end of this review so the commands remain reproducible after cleanup.
+All commands ran in `C:/Users/yuezh/PycharmProjects/agent-defs`. Root `AGENTS.md` and `AGENTS.local.md` were absent; the supplied instructions applied. Bootstrap, configuration refresh, and the session banner were skipped. Python commands used the prescribed interpreter, and subsequent PowerShell commands used `/c/Program Files/PowerShell/7/pwsh`. The verification helper is reproduced below; it never executes transcript commands or extracts archive members to disk.
 
-1. These scope and environment commands completed successfully. HEAD was `199f5bbfc5b6d86fa8d2fae76a31d5f4860fa3c2`; the log contained exactly `199f5bb`, `eb745f7`, and `86534c7`. The whitespace check had no output. The historical review was Round 3.
+1. Scope and whitespace commands completed with exit 0. HEAD was `36bd8fbbb2b2686726cacd2a4731355ae02808c4`, the fourteen requested files were modified, and there were no staged changes. The whitespace check reported no errors; Git emitted its existing LF-to-CRLF notices for the two diagnostic JSON files.
 
 ~~~powershell
-git status --short
-git log --oneline 869ccd2..HEAD
-git diff --stat 869ccd2..HEAD
-git diff --name-only 869ccd2..HEAD
-git diff --check 869ccd2..HEAD
 git rev-parse HEAD
-git show HEAD~3:Review-Codex.md
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' --version
+git status --short
+git diff HEAD --stat
+git diff --check HEAD
+git diff --cached --stat
+git show HEAD:Review-Codex.md
 ~~~
 
-The complete diff was read in these two batches:
+The non-bundle diff was read with these commands. Bundle review used parsed metadata and semantic comparisons instead of reviewing thousands of reordered rule-body lines.
 
 ~~~powershell
-git diff 869ccd2..HEAD -- src/agent_defs/sources.py src/agent_defs/hooks/_claude_code_impl.py src/agent_defs/hooks/_core.py tests/test_sources.py tests/test_hook_core.py
-git diff 869ccd2..HEAD -- src/agent_defs/lanes.py scripts/bound_leaf_discrepancy.py tests/test_bound_within.py tests/test_leaf_discrepancy_probes.py docs/calibration.md SAMPLES.md
+git diff HEAD -- scripts/measure_tool_traffic.py scripts/prepare_tool_traffic.py src/agent_defs/hooks/_claude_code_impl.py scripts/bound_leaf_discrepancy.py
+git diff HEAD -- README.md docs/calibration.md docs/claude-code.md scripts/artifact-scan.json scripts/leaf-traversal-diagnostic.json tests/test_claude_code_hook.py tests/test_leaf_discrepancy_probes.py tests/test_shipped_bundle.py tests/test_tool_traffic.py
 ~~~
 
-2. Full-suite command, exit 0: **717 passed, 6 skipped, 1 warning in 42.48 seconds**. The warning was the existing possible nested regex set in `test_evaluate_adversarial.py`. The source tests mock downloads and block unexpected network access; no real corpus was fetched by this suite. The reported nine-runner CI result was supplied by the requester, not independently rerun here.
+2. Full suite, exit 0: **736 passed, 6 skipped, 1 warning in 41.87 seconds**. The warning was the existing possible nested regex set in `test_evaluate_adversarial.py`. Source tests use synthetic archives and mocked downloads; no real corpus was fetched.
 
 ~~~powershell
 $env:PYTHONPATH = 'src'
 & 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' -m pytest -q
 ~~~
 
-3. Archive-control probe, exit 0. Both a tar symlink and a tar hardlink materialized harmless marker bytes from excluded members under `rules/`; `verify()` returned `verified`. A second fetch was a cache hit. Six mutations were rejected by both `verify()` and `fetch()`: changed content, missing content, an extra file, an added excluded file, an added excluded directory, and removal of a required empty parent. Replaying the pre-range reader against this excluded-path cache raised `SourceError` without another download. The only `fetch()` calls outside the suite used this synthetic archive and a mocked response.
+3. Metadata inspection and evidence reconciliation, both exit 0. The first command captured hashes of the fourteen original working-tree files. The second reproduced current corpus construction, checked all 3,481 report material identities, digests, sizes and strata, reconstructed every per-rule and bundle stratum count, and independently checked bundle bounds with the binomial CDF. All 220 measured fingerprints matched the current enabled set. All 205 existing OUT records were semantically unchanged.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py sources
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py inspect
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py evidence
 ~~~
 
-4. Numerical commands, both exit 0. The helper was recovered unchanged from the embedded Round 3 numerical probe and executed against current code.
+4. IN representation probe, exit 0: **0/1,738** on serialized invocations and independently **0/1,738** on their reconstructed argument leaves, comprising **3,401 nonempty strings**. The leaf census used the real `_core.scan_payload` traversal with screened, cached predicates and generous offline limits. It does not measure production scan completion or latency. A separate controlled witness used isolated `evaluate.scan` and actual `process`: the shipped rule `ATR-2026-02525` missed the serialized invocation, matched its raw argument, and produced IN advice. No shell command in that witness was executed.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-numeric.py capped
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-numeric.py coefficient
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py leaf
 ~~~
 
-The search checked both adjacent integer trial counts at every positive-hit boundary below the cap for both lane ceilings. SciPy located the boundaries; 60-digit mpmath independently checked the largest observed errors and the three original witnesses.
-
-| Ceiling | Boundary pairs checked | Unresolved | Wrong resolved decisions | Largest observed absolute log-CDF error, checked with mpmath |
-|---|---:|---:|---:|---:|
-| 0.001 | 19,670 | 628 | 0 | 7.32850e-8 |
-| 0.005 | 99,264 | 1,415 | 0 | 8.35963e-8 |
-
-All three original witnesses returned `None`; actual adapter lane resolution returned ADVISE, RECORD, RECORD. The full suite exercised both out-of-domain witnesses through `bound_within` and `admit`, and the cap boundary. The coefficient probe reproduced **-8.3614283313323e-8** at `(n, k) = (9,892,023, 49,095)`. These are empirical checks on this interpreter, not a proof across platforms or arbitrary thresholds.
-
-5. Hook differential probe, exit 0: **1,200 generated cases, zero mismatches** between the actual pre-range `process` body and current `process`. Compared responses, ordered records, scanner calls, byte allowances, and supplied time budgets across nested payloads, IN/OUT, exhausted limits, empty and whitespace leaves, Unicode/surrogates, denied leaves, incomplete results, and scanner exceptions. The probe also rebound the adapter's `WITHHELD` and `INCOMPLETE`. Scalar NaN generated a spurious update in both versions; a nested NaN did not. A self-referential list returned in both versions under the tested depth limit.
+5. Contract probes, exit 0 on all three executions as probes were added. Isolated scans reproduced all five cross-surface hits across the four reported rule/surface pairs. Actual `process` selected only native rules for each event. Synthetic bench runs verified native-hit counting, the `(surface, sha256)` duplicate distinction, and identity/revision rejection. Replaying HEAD's OUT corpus reader showed the exact behavior change for duplicate results: it previously returned a refused diagnostic report; current code raises before measuring. Normal report import reproduced the supplied configuration's counts and fingerprints. Missing-aggregate probes demonstrated N15, including a real RECORD-to-ADVISE lane change; the exact proposed guard rejected that case and preserved normal import. Config/report writes were intercepted in memory.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py hooks
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py contracts
 ~~~
 
-6. Diagnostic probe, final command exit 0. Two evaluator-accepted patterns each produced an actual leaf hit but zero joined, newline-diagnostic, and substring-diagnostic hits through the diagnostic's main entry point. The 205 shipped rules reproduced the committed classification: 102 probed, zero unprunable, identical construct census. This did not rerun the 1,743-unit corpus replay.
+6. In-memory rebuild, exit 0. The local ATR tarball matched the lock's sha256 `5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5`. Reading its 793 regular rule YAML members into memory reproduced 793 loaded rules, 57 IN rules, 14 runnable/shippable/screened IN rules, the three held-back IN identities, every drop count, the screen refusal, and all 216 trimmed shipped rule fingerprints and reachability records. No tar member was extracted to the filesystem, and `sources.fetch` was not called.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py regex
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py archive
 ~~~
 
-The initial direct rewrite probe succeeded. Its first extension to evaluator execution exited 1 because the capture-renumbering witness was rejected by the evaluator as an unsupported backreference. The corrected probe records that rejection and exercises the two accepted witnesses. The rejected witness is not reported as a reachable evaluator failure.
-
-7. Mutation probe, exit 0 because the assertions confirm the test gap: removing only the node/depth/time guard's `return node` left **all 12 tests in `test_hook_core.py` passing**, although the scanner ran with all three budgets exhausted. As a control, the existing adapter integration test failed on the same in-memory mutation, observing budgets `[1.0, 0]` instead of `[1.0]`. No implementation file was mutated.
+7. Diagnostic reconciliation, exit 0. Recomputed every relaxed candidate and newline probe from the retained OUT text: joined/newline/substring totals **1/1/489**, with substring gains **485/2/1** for `02007`/`00266`/`02106`. The joined hits came from the verified report, not a rerun of the base detector. The 205-rule subset, 102 probed rules, construct census, empty unprunable list, whole-bundle digest and subset-ID digest matched the committed diagnostic.
 
 ~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-probes.py vacuity
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py diagnostic
 ~~~
 
-8. These PowerShell commands ran the real scanner script with a harmless review artifact and mocked directory creation. No scanner ran, no artifact scan copy was created, and cleanup validated its temporary targets.
+8. Provenance checks, exit 0. All 1,743 rows declare `file_type=tool-result`; the extracted topic regex is identical to HEAD's expression; canonicalizing invocation object-key order still leaves 1,738 distinct invocations. Modification times were inspected, with their limitations discussed below. Verified evidence hashes:
+
+| File within the supplied scratchpad | SHA-256 |
+|---|---|
+| `in-evidence/local-claude-unique-holdout-units.jsonl` | `bd429d68174135bab674426bea82e0e58f504241002c3e589202f8c1a828893e` |
+| `in-evidence/local-claude-unique-holdout-out-in-report.json` | `7ff4ce5b564a6de4928e4e9f8b71abfa64395f89d4954e6c2107a2d422b3adb3` |
+| `enabled-in-out.json` | `9b208767fb8e47f7e87b3956abea1b6c75c2d15e1286ebbd4b147764439b2f77` |
+| `in-config.json` | `42796932e1e27fc134c04ba7864789ca77e51f46e0adc757d4dced462b694dc0` |
 
 ~~~powershell
-& ./.Review-Codex-round4-scan.ps1 -Mode setup
-exit $LASTEXITCODE
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-probes.py provenance
 ~~~
 
-Exit 2 as expected: a synthetic setup failure replaced the prior clean record with an inconclusive result.
+9. Finalization command, exit 0: checked the original working-tree hashes, HEAD and index, embedded the helpers, flushed the complete sibling temporary review, replaced `Review-Codex.md` with `os.replace`, and verified the saved bytes. It removed only the named review helpers. The final additional tracked change is `Review-Codex.md`.
 
 ~~~powershell
-& ./.Review-Codex-round4-scan.ps1 -Mode locked
-exit $LASTEXITCODE
-~~~
-
-Exit 3 as expected: `File.Replace` failed against a destination opened without delete sharing, preserved the prior bytes, and reported publication failure.
-
-~~~powershell
-& ./.Review-Codex-round4-scan.ps1 -Mode missing-parent
-exit $LASTEXITCODE
-~~~
-
-Exit 1, the defect witness: `WriteAllText` raised outside the publication guard when the destination's parent did not exist. No result was published at that destination. The harness's separate control record remained unchanged; it is not evidence of a stale record at the missing destination.
-
-9. Pinned ATR inspection command, exit 0 on its final execution. The archive was downloaded into a `BytesIO`-backed tar reader and never written. Its 42,260,904 bytes matched `sources.lock` sha256 `5d00c6b4b01cc2543277dc9b6ca9b3ec4bb205639621d66bdd8701639e54daf5`. Rule loading used in-memory file objects. Sample inspection computed digests and JSON schemas in memory; neither sample bytes nor sample text were written or printed. The final run also evaluated the proposed policy in memory and read CFG gates from its four explicitly selected source files.
-
-~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-atr.py
-~~~
-
-Results: 20,015 tar members, 19,405 regular files, 793 YAML rules, zero loader errors, zero archive links. Current policy excludes 1,602 files and would materialize 17,803. The proposed ATR policy retains 798 files: 793 rules, the licence, and four gate inputs. CFG gate reading succeeded with that selection. Using a different source name retained the current non-ATR selection on the same archive. The earlier inspection executions completed successfully; the final helper corrects its initial coarse refusal categorization and adds the policy check.
-
-The independent `IN` count is **57 total, 14 runnable/shippable/evaluator-screened, 16 refused only for multiple fields, 25 refused on measurement, and two additional refusals**. Details appear below. The requester’s 26 measured refusals was not reproduced.
-
-10. Finalization command, exit 0 on the completed run: checked HEAD and the unchanged 11-file range, confirmed implementation and index remained unchanged, embedded the verification helpers, flushed the complete sibling temporary review, atomically replaced `Review-Codex.md` with `os.replace`, read it back, and removed only the named review helpers. Final tracked change: `Review-Codex.md` only.
-
-~~~powershell
-& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round4-finalize.py
+& 'C:\Users\yuezh\miniforge3\envs\py312\python.exe' .Review-Codex-round5-finalize.py
 ~~~
 
 Verification status: VERIFIED
 
 Commit verdict: BLOCK
 
-The archive control still materializes known attack collections, and excluded bytes can bypass it through links. The leaf diagnostic also still prunes real matches. The numerical cap and hook refactor passed the relevant checks; neither passing tests nor an empirical numerical margin establishes the broader security and rewrite claims.
+N15 permits an incomplete surface aggregate to grant a lane that the complete report refuses. The supplied report has both aggregates and does not exhibit that defect: its zero survives independent reconstruction and the argument-leaf census. No cross-surface execution bug was found.
 
-File/diff scope: **`git diff 869ccd2..199f5bbfc5b6d86fa8d2fae76a31d5f4860fa3c2`**, not the index. Eleven changed files: `SAMPLES.md`, `docs/calibration.md`, `scripts/bound_leaf_discrepancy.py`, `src/agent_defs/hooks/_claude_code_impl.py`, `src/agent_defs/hooks/_core.py`, `src/agent_defs/lanes.py`, `src/agent_defs/sources.py`, `tests/test_bound_within.py`, `tests/test_hook_core.py`, `tests/test_leaf_discrepancy_probes.py`, and `tests/test_sources.py`. Ancillary review of unchanged base files was limited to verifying Round 3 repairs, caller dependencies, and the committed diagnostic census, including `scripts/scan_artifact.ps1` and `scripts/build_bundle.py`. New findings identify retained defects when they predate the range.
+File/diff scope: **the uncommitted `git diff HEAD` at `36bd8fb`**, not a committed range or the index. Fourteen files: `README.md`, `docs/calibration.md`, `docs/claude-code.md`, `scripts/artifact-scan.json`, `scripts/bound_leaf_discrepancy.py`, `scripts/leaf-traversal-diagnostic.json`, `scripts/measure_tool_traffic.py`, `scripts/prepare_tool_traffic.py`, `src/agent_defs/bundle.json`, `src/agent_defs/hooks/_claude_code_impl.py`, `tests/test_claude_code_hook.py`, `tests/test_leaf_discrepancy_probes.py`, `tests/test_shipped_bundle.py`, and `tests/test_tool_traffic.py`. Ancillary reads covered their benchmark, evaluator, traversal, builder, extraction and calibration dependencies, and the earlier review. N15 identifies retained importer logic newly exposed by shipping both surfaces; N17 includes a stale reference in unchanged `SAMPLES.md`.
 
-Review lens: code correctness and whether the security control and diagnostic guarantees follow from their implementation. This is not an antivirus clearance, attack-recall evaluation, or publication approval.
+Review lens: code correctness, evidence completeness, and whether the measured quantity supports the artifact's stated behavior. This is not an attack-recall evaluation, fresh holdout certification, or independent antivirus clearance.
 
 ## New
 
-### N10. High: links bypass the excluded-source guard, and the shared verifier accepts the result
+### N15. High: a missing native bundle aggregate silently weakens admission
 
-Location: `src/agent_defs/sources.py:88`.
+Locations: `src/agent_defs/hooks/_claude_code_impl.py:660` and `src/agent_defs/hooks/_claude_code_impl.py:690`.
 
-`_layout` resolves each link to a regular `TarInfo`, but retains the link's destination as the dictionary key. `_kept` examines only that key. A symlink `rules/symlink.txt -> ../data/test-corpora/payload.txt` or a hardlink `rules/hardlink.txt -> repo/conformance/v1.0/fixtures/tp/marker.txt` therefore copies excluded bytes into `rules/`. Both were reproduced using harmless marker bytes; no actual attack sample was needed. The excluded directories did not exist, while the copies did, and both cache-hit `fetch()` and `verify()` accepted them.
+`bundle_rows` filters out missing surface rows, then requires only that at least one row survive. Per-rule coverage and the aggregate rule fingerprint can both pass while one surface's union is absent. The new `bundle_by_surface` dictionary records the omission, but admission still proceeds and the result says `measured`.
 
-The extraction bypass predates this range. The new shared filter preserves it and additionally makes the resulting excluded-member cache pass verification. The pinned ATR archive has no links, so this is a generic archive-control failure, not the cause of the particular ATR incident.
+The minimal probe against the supplied report removes only its OUT `stratum=all` bundle row. Import then reports `bundle_hits=0`, `trials=1738`, and `gating_surface=IN` while retaining all 220 per-rule measurements. Both lanes happen to be ADVISE in this particular corpus.
 
-Exact minimal rewrite at `src/agent_defs/sources.py:88`, replacing the `kept_files` comprehension:
+A separate authentic `bench.measure` fixture demonstrates the admission consequence:
 
-~~~python
-    kept_files = {
-        relative: member for relative, member in files.items()
-        if not _is_excluded(PurePosixPath(relative).parts)
-        and not _is_excluded(_safe_parts(member.name)[1:])
-    }
-~~~
+| Evidence | Trials | Hits | Nominal u95 |
+|---|---:|---:|---:|
+| Six IN rules' union | 1,000 | 6 | 1.180782% |
+| Each IN rule separately | 1,000 | 1 | 0.473499% |
+| OUT union | 1,000 | 0 | 0.299125% |
 
-This checks both the destination and the already-resolved source after removing the repository root. Preserve the shared writer/verifier policy and test symlinks and hardlinks in both directions. The larger rewrite under N11 includes this protection too.
+The complete report correctly resolves every rule to RECORD because of the IN union. Removing only the IN whole-corpus aggregate, leaving every fingerprint, per-rule row and other stratum unchanged, makes actual `effective_lanes` resolve every rule to ADVISE. A set of individually admissible rules does not replace its missing union measurement.
 
-### N11. High: the pinned ATR tree already contains further unexcluded attack collections
+This requires an incomplete or transformed report; it is not evidence that honest `bench.measure` omits aggregates or that the supplied report is corrupt. It is a completeness check at the same import boundary that already refuses missing rule evidence. A normal bench report explicitly refused for an unmeasured surface remains correctly rejected.
 
-Locations: `src/agent_defs/sources.py:59`, `src/agent_defs/sources.py:88`, `SAMPLES.md:85`.
-
-This is not merely a possibility on a future pin. At the locked revision, `_kept(*_layout(archive))` retains these regular files:
-
-| Retained archive-relative file | In-memory structural check |
-|---|---|
-| `data/autoresearch/adversarial-samples.json` | 1,054 records; fields include `payload`, `technique`, and `original_rule_id` |
-| `data/autoresearch/missed-payloads.json` | 895 records; fields include `payload`, `technique`, and `original_rule_id` |
-| `data/evasion-payloads.json` | 64 records; fields include `payload`, `expected`, and `detection_field` |
-| `data/semantic-validation/attacks.json` | 20 records; fields include `payload`, `label`, and `technique` |
-| `data/pint-benchmark/pint-corpus.json` | 850 corpus records; fields include `text`, `category`, and `label`; not all are asserted malicious |
-
-These are payload-bearing collections, not just filenames that sound suspicious. The present extraction loop would write them normally. This review makes no claim that a particular collection triggers Bitdefender, and did not test that by writing it. The bytes and selection were checked against the [pinned ATR archive](https://codeload.github.com/Agent-Threat-Rule/agent-threat-rules/tar.gz/faf743fee8a5018467959ec8ea7ccdb1a1aab333).
-
-Recommend an ATR-specific input allow-list now. The main tradeoff is declaring the small additional inputs needed by its CFG loader. A global `rules/`-and-licence rule is incompatible with other loaders: Netzilo reads `ai_agent/`, AAK reads `rules.json`, AVE reads `records/` and `crosswalks/`, and Guardana reads `docs/generated/rules.json`. ATR itself reads three TypeScript files and the interface contract to establish CFG gates; dropping those silently removes CFG bindings.
-
-Exact replacement for `_kept` at `src/agent_defs/sources.py:73`, including N10's source check:
+Exact rewrite at **`src/agent_defs/hooks/_claude_code_impl.py:660`**, replacing the `bundle_rows` comprehension and its following empty-list check, while retaining `surfaces` above and `bundle = max(...)` below:
 
 ~~~python
-def _kept(files, directories, *, name, license_path):
-    required = {
-        _portable_path(license_path),
-        "src/engine.ts",
-        "src/enforcement.ts",
-        "src/quality/rule-contract.ts",
-        "engines/typescript/INTERFACE-CONTRACT.md",
-    }
-
-    def allowed(relative):
-        parts = PurePosixPath(relative).parts
-        if _is_excluded(parts):
-            return False
-        return name != "atr" or parts[0] == "rules" or relative in required
-
-    kept_files = {
-        relative: member for relative, member in files.items()
-        if allowed(relative)
-        and allowed(_portable_path("/".join(_safe_parts(member.name)[1:])))
-    }
-    if name == "atr":
-        kept_dirs = {
-            str(parent) for relative in kept_files
-            for parent in PurePosixPath(relative).parents if str(parent) != "."
-        }
-    else:
-        kept_dirs = {relative for relative in directories if allowed(relative)}
-    return kept_files, kept_dirs
+    bundle_rows = []
+    for surface in sorted(surfaces):
+        row = _pooled(report.get("bundle", {}).get("measurements") or [], surface)
+        if row is None:
+            raise ValueError(f"the report carries no whole-corpus bundle measurement for {surface}")
+        bundle_rows.append(row)
+    if not bundle_rows:
+        raise ValueError("the report carries no whole-corpus bundle measurement")
 ~~~
 
-Exact replacement call at `src/agent_defs/sources.py:278`:
+The probe executed this replacement in memory: normal import was unchanged and the missing-IN case raised before evidence publication. Add the regression to `tests/test_calibrate_from_report.py`, including the disjoint-hit union case rather than checking only the printed surface map. No implementation patch was applied in this review.
 
-~~~python
-            files, directories = _kept(
-                *_layout(archive), name=name, license_path=entry["license_path"])
-~~~
+### N16. Medium: serialized invocation matching is not argument-leaf matching
 
-Exact replacement call at `src/agent_defs/sources.py:335`:
+Locations: `scripts/measure_tool_traffic.py:50`, `docs/calibration.md:133`, and `src/agent_defs/hooks/_claude_code_impl.py:255`.
 
-~~~python
-                files, directories = _kept(
-                    declared, all_directories, name=name,
-                    license_path=entry["license_path"])
-~~~
+The benchmark scans the JSON serialization of `{name, arguments}`. PreToolUse instead walks string values within `tool_input`; it does not scan the serialized envelope, object keys, or tool name. JSON escaping and added boundaries can change matches even without any surface mix-up.
 
-The standalone proposed filter was executed against the pinned layout in memory: 798 selected inputs, no `data/` members, and successful CFG gate parsing from the selected source files. This is a checked recommendation, not an applied implementation or a full regression test of the proposed patch. Update directory-policy fixtures accordingly and add the sample/link regressions.
+For the shipped `atr:ATR-2026-02525`, the controlled argument `${!REVIEW_CMD} /tmp/review-marker` matches at the beginning of the raw command. Wrapping it in the extractor's invocation JSON suppresses that match. Isolated scans and actual `process` reproduced the difference, including the resulting IN advisory. The marker was only scanned, never executed.
 
-Also replace the universal sentence at `SAMPLES.md:85` with this narrower statement:
+**This did not change the supplied zero:** scanning all reconstructed argument leaves also found zero hits in the same 1,738 distinct invocations. Therefore this is a measurement-contract defect, not a claim that this corpus secretly contains native hits.
 
-~~~text
-The selection materialized 793 rule files and the licence, and refused 18,611
-other regular files. An input allow-list prevents unrelated upstream directories
-from being extracted. It does not certify the contents of an allowed rule file.
-~~~
+Preserve the invocation JSON for provenance and one-trial-per-invocation accounting, but evaluate and union hits over its argument strings using the hook's traversal semantics. Do not turn 3,401 leaves into 3,401 trials. Record which matching procedure a report used, and require complete evaluation of every relevant leaf. Until that path exists, describe the stored result as a serialized-invocation diagnostic; the assertion that it is the text the hook sees is inaccurate. The existing OUT decomposition caveat does not explain this distinct, reconstructable IN mismatch.
 
-An upstream sample can be added under `rules/`, and existing rule YAML can contain positive examples. Consequently neither this cheap policy nor the uncommitted rules-only script warrants “a sample cannot reach disk ... whatever upstream grows.” The policy should promise a bounded selection of declared inputs.
+### N17. Low: rebuild and scan prose still describes the previous artifact
 
-### N12. Low: the claimed automatic re-download mechanism is not in `fetch`
+Locations: `docs/calibration.md:363` and `SAMPLES.md:155`.
 
-Locations: `SAMPLES.md:77`, `src/agent_defs/sources.py:80`, `src/agent_defs/sources.py:277`.
+Calibration still says the shipped bundle used seven fixtures and "has not been rebuilt." This bundle was rebuilt against the current twenty-fixture policy; the refusal metadata now identifies the single-space witness. The in-memory rebuild reproduced it.
 
-The old writer/verifier disagreement is real and the new shared layout fixes it. The stated consequence is wrong: `fetch()` immediately returns `_check()` for an existing cache, and a failed check raises `SourceError`. It does not fall through to download, remove the cache, or retry extraction. I executed the old reader against an excluded-path cache and confirmed zero additional requests. Repeated materialization requires a different/missing cache, external removal or retry logic, or failure before publication. The described cleanup failure could be relevant to the last case, but the verifier mismatch alone does not establish the incident's recurrence mechanism.
+`SAMPLES.md` names the previous 205-rule, 1,372,797-byte artifact and says the current `scripts/artifact-scan.json` is keyed by that old digest. The current record instead names the 216-rule, 1,456,844-byte artifact at `e6efd658a7f93eeef6ad1687a0e4782c3f3c2addc9cd2fd182eda0b3c96e3310`, with scan timestamp `2026-09-07T01:32:45.2398598Z`.
 
-Replace the causal claim with: “A cache containing excluded archive paths failed verification on reuse. Subsequent fetches raised `SourceError` until the cache state changed. Sharing the filter fixes that disagreement; repeated downloads require a separate explanation.” Apply the correction in all three locations. The new source tests establish a valid cache hit, not an old automatic retry loop.
-
-### N13. Low: the new budget tests can pass while scanning past every traversal limit
-
-Location: `tests/test_hook_core.py:122`.
-
-The parametrized budget test checks `incomplete` and unchanged output, but its clean scanner also returns unchanged output if it runs. Deleting only the budget guard's early return makes it continue scanning after setting `incomplete`; all 12 tests in this new module still pass. The existing adapter integration test detects that mutation, so the complete suite is not vacuous in this way.
-
-Add `assert scanner.seen == []` after the call at line 124. Retain the positive scanner-injection test, which prevents “never call the scanner” from satisfying the module. The finding concerns this test's claimed stopping contract; no corresponding runtime regression was found in HEAD.
-
-### N14. Low: temporary-record write failures escape the new publication exit contract
-
-Location: `scripts/scan_artifact.ps1:62` (Round 3 fix follow-up, unchanged within this range).
-
-`WriteAllText` is before the publication `try`. With `-Out` beneath a nonexistent directory, it throws without setting `PublishFailed`; the script invocation fails with exit 1, which the documented protocol assigns to a detection, instead of exit 3 for an unpublished result. The probe mocked setup failure so no scanner ran. This does not refute `File.Replace` atomicity or reproduce a false clean result.
-
-Move the temporary-file write inside the same `try` as `File.Replace`/`File.Move`, so ordinary write failures use the existing stderr message and exit-3 path. Keep the original record intact if publication cannot complete.
+Update these paragraphs for the rebuild, or preserve the old scan explicitly as history with a reference to its historical record. The new scan record and current artifact do match; the stale prose is the defect.
 
 ## Previously raised
 
 ### Fixed
 
-**N6:** The residual hook-frequency assertion was removed. `scripts/build_bundle.py:149` now states that the nonempty whitespace leaf matches and that the fixtures do not establish deployed frequency. The full suite passed the artifact/fixture checks.
+**N10 and N11:** Closed in `36bd8fb`, outside this diff. The shared source policy checks both destination and resolved source and applies ATR's declared-input allow-list. Source regression tests passed with mocked archives. The rebuilt artifact did not reopen either finding; this review did not fetch or extract a real source tree.
 
-**N8:** The demonstrated setup-failure hole is fixed. The run record exists before artifact lookup/hash/directory creation inside the guarded operation; an injected directory-creation failure replaced an existing clean record and returned exit 2. The wording now limits the record promise to handled failures and distinguishes publication failure. This is not a promise against interruption or an unwritable destination.
+**N4:** The distant quantified-lookaround cases were repaired in HEAD, and their candidate-selection regressions passed. Current diagnostic counts and construct classification reconcile with the named OUT subset.
 
-**N9:** The original destructive replacement failure is fixed. Actual `File.Replace` against a locked destination preserved the prior bytes and the script returned exit 3. The ordinary successful replacement was exercised by the setup-failure test. N14 is a separate residual failure to include the temporary write in that publication guard.
+**N5:** The numerical comments now distinguish the observed maxima, state approximately twelve-fold empirical headroom, and call the slack an empirical refusal band. Shared numerical tests passed; no new platform-wide numerical claim was established.
 
-**N1, N2, N3, N7:** No reopening evidence in the reviewed range or passing suite. The previously closed native-refusal, aggregate-set, post-selection-disclosure, and required-artifact-test findings remain closed for this review. Their entire earlier evidence base was not reconstructed again.
+**N12:** The automatic re-download explanation was withdrawn. The shared verifier repair remains separate from the cause of repeated materialization.
+
+**N13:** The traversal budget test now asserts that the scanner was never called. It passed.
+
+**N14:** `WriteAllText` is inside the publication guard. This was confirmed by code inspection; the external scanner was not rerun.
+
+**N1, N2, N3, N6, N7, N8 and N9:** Remain closed within this review. Existing aggregate-set validation and refusal handling passed relevant tests. N15 is missing aggregate *surface coverage*, not a reopening of N2's mismatched rule-set identity. The post-selection and deployment limitations remain disclosed rather than resolved by the new measurement.
 
 ### Still open
 
-#### N4. Medium: the unsupported-pattern detector still misses quantified lookarounds
-
-Locations: `scripts/bound_leaf_discrepancy.py:213`, `scripts/bound_leaf_discrepancy.py:260`, `docs/calibration.md:223`.
-
-The original directly adjacent quantified lookaround, atomic/possessive cases, and conditional classification are now refused from pruning. The 3.9-compatible classification tests correctly inspect syntax before attempting to compile constructs unavailable on that interpreter. The disclosure that all-lines splitting is not the hook decomposition is also fixed.
-
-However, checking only `pattern[end]` after the lookaround misses syntax the regex parser ignores before applying a quantifier. Both examples below compile through the actual evaluator, match the leaf `abc`, and fail on joined text `x\nabc\ny`. Both receive an empty unsupported set, then the rewrite moves `{0}` onto the preceding `b`:
-
-| Pattern | Incorrect relaxed pattern | Full diagnostic result |
-|---|---|---|
-| `(?x)^ab(?=x) {0} c$` | `(?x)ab {0} c` | leaf 1; joined/newline/substring 0/0/0 |
-| `^ab(?=x)(?#comment){0}c$` | `ab(?#comment){0}c` | leaf 1; joined/newline/substring 0/0/0 |
-
-The split probe itself finds `abc`; the false negative occurs when the relaxed candidate filter prevents that probe from running. Thus the `UNSUPPORTED` names are not sufficient to make the implemented classification complete. No additional assertion-free, evaluator-supported construct outside the named classes was established; the concrete failure is missing valid spellings of an existing class.
-
-A separate generic rewrite counterexample, `^(a)(?=(b))(bc)\2$`, loses its match on `abcb` when removing the lookahead renumbers captures. The evaluator rejects backreferences, so this is a limitation of the helper's general claim, not an accepted-rule counterexample in the deployed evaluator.
-
-A cheap conservative fix is to make every pattern containing a lookaround unprunable; otherwise classify parsed quantification with correct handling of verbose whitespace and comment groups. Add the two accepted examples through candidate selection and the full diagnostic entry point. Until then, withdraw the remaining “only widens” assertion in the script, JSON method string, and calibration paragraph. The regenerated 205-rule census matches the committed record; these examples do not establish that its stored 489 candidates change.
-
-#### N5. Low residual wording: the domain leak is fixed, but the stated empirical headroom is inconsistent
-
-Locations: `src/agent_defs/lanes.py:75`, `src/agent_defs/lanes.py:143`.
-
-The substantive cap repair passes: `bound_within` owns `MAX_SUPPORTED_TRIALS`, the adapter aliases it, both large-count witnesses are refused by the shared routine, and `admit` stays RECORD. The repeated capped search found zero wrong resolved decisions across 118,934 pairs. The old incorrect derivation is explicitly withdrawn.
-
-The replacement comment still says the worst observed coefficient error is about 2.7e-8 and the margin has roughly thirty-fold headroom, immediately after recording a larger in-domain error. The independently reproduced magnitude is 8.3614283313323e-8, leaving about **12-fold**, not thirty-fold, headroom over this known witness. A limited sweep can have a 2.7e-8 maximum; it is not the maximum over the observations now available. The docstring's “where `LOG_CDF_SLACK` bounds it” also states a guarantee the empirical disclaimer does not establish.
-
-State the two observed maxima with their scopes and call the slack an empirical refusal band throughout. For example: “A limited sweep observed about 2.7e-8; the adversarial witness above reaches 8.36e-8. The 1e-6 band is about twelve times that known error. This is empirical headroom, not a proved bound.” This residual wording is not a numerical counterexample inside the cap and is not itself a blocker.
-
-The revised inverted-bound test appropriately checks proximity to the ceiling and independent exact truth without requiring a particular floating-point side. Its tolerance admits both reported platform values, and it passed here. A direct comparison of the two supplied Windows/glibc and macOS values would indeed choose different sides; the claim about a lane determined that way is correct. This review did not execute macOS. The fixed witness's refusal is well inside the empirical band; do not generalize the observed cross-runner agreement into a guarantee for all comparisons near the band's edges.
+None of the previously numbered findings remains open on the evidence reviewed here. N15 to N17 are listed separately as new findings.
 
 ### Reopened
 
-None. N4 and N5 retain specifically identified unfinished parts. N9's original atomicity defect is closed; N14 identifies a different write-failure boundary.
+None.
 
 ### Deferred
 
-The original attack/benign corpus replay, actual antivirus execution, full deployed `tool_response` capture and calibration, and platform-wide numerical certification were not performed. The global migration of other corpus loaders to declared extraction inputs remains broader than the ATR-specific recommendation. The asynchronous RECORD design, unused Pre registration, capture/completion ledger, and interleaved latency work from prior reviews remain outside this change.
+Fresh evaluation grouped by session/task; recovery of the lost selection material; complete deployed OUT payload capture; production completion/latency measurement; attack recall; an independent antivirus run; and platform-wide numerical certification remain outside this change. The other sources' extraction-input declarations are also outside scope. The new leaf census is an offline check over retained IN arguments, not a substitute for those studies.
 
-## Hook and cache conclusions
+## Measurement and selection assessment
 
-The hot-path extraction preserves the old traversal for the supported payload shapes checked. Nodes are still charged before the limits check; empty strings skip scanning only after that check; scanner exceptions do not debit bytes; successful calls use the same UTF-8/surrogatepass byte arithmetic. Incomplete-detail records precede findings, and the aggregate incomplete record remains last. Withholding still requires DENY and OUT. JSON Pointer escaping still replaces `~` before `/`. No string leaf was scanned twice or omitted differently in the differential tests. Existing integration tests additionally exercise the advancing shared clock and truncated-result hashing.
+### The counts and deduplication
 
-Rebinding the adapter's `WITHHELD` still works because `process` explicitly passes `withheld=WITHHELD`. `INCOMPLETE` is read by the adapter when forming the response; traversal does not use it. Existing clock tests patch the attribute of the shared `time` module, so they still control the core clock. The feared marker-rebinding vacuity is not present in HEAD.
+The report and current material construction agree:
 
-`Outcome.changed` means inequality, not necessarily a withholding event. A scalar NaN is unequal to itself and triggers an update in both old and new code. Python's `json.loads` accepts the nonstandard `NaN` token, so this is reachable at the hook's raw input boundary even though valid JSON has no NaN. Nested NaNs are the same object in the reconstructed containers and do not necessarily produce inequality. JSON decoding cannot create a self-referential container; direct Python callers can. The tested cycle was bounded and returned in both versions, although a resulting cyclic object cannot be serialized as JSON. These are pre-existing boundary semantics, not a refactor regression. Rename the property's docstring to describe inequality if its implementation remains unchanged.
+| Surface | Enabled rules | Distinct units | Native bundle hits | Recomputed nominal u95 |
+|---|---:|---:|---:|---:|
+| IN | 11 | 1,738 | 0 | 0.172218% |
+| OUT | 209 | 1,743 | 1 | 0.271875% |
 
-For ordinary non-link members, `_kept` now correctly aligns extraction, cache hits, and `verify()`. A retained parent such as `data/` can remain empty after `data/test-corpora/` is excluded; that writes no sample and does not remove a loader input. Removing that expected parent is correctly rejected by the current exact-tree contract. I did not find a new acceptance of changed bytes, extra/missing regular paths, or inserted excluded directories. The policy-invalid link result in N10 is the demonstrated acceptance failure; it is not an attacker modifying the archive behind an unchanged digest. Files outside `tree/`, such as the informational `EXCLUDED` marker, are not newly brought into the verified-content contract by this change.
+The five removed occurrences belong to **three invocation groups**, of sizes two, two and four. Two removals are Bash and three are Read. All five are `exposure=file-origin-unknown` and `result_status=success`. No additional duplicates appeared after canonicalizing JSON key order. An exact repeated serialization has the same complete predicate outcome, so removing these rows cannot conceal a distinct hit in this run.
 
-## ATR count reconciliation
+Deduplication is appropriate for bench's declared **distinct-material** statistic. It is not a proof that the retained observations are independent, and repeated bytes are not inherently invalid independent draws when the intended population is invocation occurrences. The code's "second independent trial" rationale should be phrased as satisfying the distinct-payload contract. Here deduplication reduces the zero-hit denominator and slightly widens the nominal interval.
 
-The in-memory load used the actual ATR loader with only its file-discovery/read boundary replaced by memory objects. Its normalization, shippability property, and evaluator screen were unchanged. CFG reading was deliberately absent for the IN count; the separate proposed-profile check verified that the four selected source inputs suffice for gate reading.
+There is also an earlier selection to remember: this IN sample already passed OUT-result deduplication. Different invocations that returned identical output could have been removed before this additional IN deduplication. The 1,738 observations therefore represent distinct invocation serializations retained through an output-selected sample, not an occurrence-weighted sample of all calls. The existing conditional sampling disclaimer is necessary; none of these digest checks establishes representativeness.
 
-| Mutually exclusive outcome | Count |
-|---|---:|
-| Runnable, shippable, evaluator-screened | 14 |
-| Reason is exactly “multiple condition fields cannot be flattened into one text payload” | 16 |
-| Reason contains “refused on measurement” | 25 |
-| Other refusal | 2 |
-| Total IN | 57 |
+For the requested OUT regression witness, two distinct calls returning `ordinary repeated output`, plus one distinct security-topic result, suffice. HEAD's reader lets bench complete and report a duplicate-material refusal. Current `corpus()` raises `ValueError` instead. Thus a diagnostic measurement becomes an early failure, but **no previously admissible measurement becomes inadmissible**: the duplicate refusal was already fatal to calibration. This is a deliberate loss of diagnostic output, not a demonstrated lane regression.
 
-The two residual rules are `ATR-2026-01602`, refused for code-block suppression plus multiple condition fields, and `ATR-2026-02557`, refused for code-block suppression. Reasons overlap: 27 IN rules mention multiple condition fields in total, including 10 measurement refusals and `ATR-2026-01602`. Counting 16 exact field-only refusals is valid; counting 26 measurement refusals was not reproduced. No raw rule examples are included here.
+### Strata
+
+`tool` and `exposure` match recomputation from every retained call. The old OUT topic expression and exported `TOPIC` are identical, and all original OUT topic labels match current `prose(result)`.
+
+Across all 1,743 rows, 160 security-topic results become ordinary invocation text and 16 ordinary results become security-topic invocation text: 176 disagreements, or 10.10%. Among retained IN rows there are 175 disagreements, or 10.07%. Both support the rounded 10.1% disclosure.
+
+| Count | OUT result labels | IN after dedup, before topic correction | IN after topic correction |
+|---|---:|---:|---:|
+| Security-adjacent | 186 | 185 | 42 |
+| Ordinary | 1,557 | 1,553 | 1,696 |
+| Error episodes | 91 | 91 | 91 |
+
+The worst stratum does not move. On both surfaces, AskUserQuestion, Glob, Monitor and StructuredOutput each occur once and have zero native hits, giving u95=95%. IN Bash changes from 1,045 occurrences to 1,043 and Read from 130 to 127; neither becomes the worst stratum.
+
+Keeping `result_status` is defensible as a descriptive attribute of the retained episode. It is not an attribute derivable from the invocation itself. No duplicate group here mixes error and success, so the first-occurrence choice does not distort those counts. For future groups with differing statuses, record which episode was retained rather than implying the label belongs to the unique command. Bench adds marginal status rows to its maximum; it does not construct a full cross-product partition. Adding those rows cannot lower that maximum. I would retain the contextual diagnostic, with this qualification, rather than claim it repairs sampling.
+
+### One report and native surfaces
+
+The two corpus identities differ, their shared revision/hash truthfully names the source snapshot, and their material digests name different surface-specific text. The duplicate identity/revision guard still runs before scanning. `(surface, sha256)` is the right key for the material contract: identical bytes presented at different interception points are different measurements. Within a surface, exact duplicates still trigger refusal. Cross-corpus diagnostic totals are not used to turn these into 3,481 independent admission trials.
+
+All four cross-surface pairs were reproduced:
+
+| Rule | Native surface | Diagnostic surface | Hits |
+|---|---|---|---:|
+| `ATR-2026-00118` | IN | OUT | 1 |
+| `ATR-2026-02106` | OUT | IN | 1 |
+| `ATR-2026-00296` | OUT | IN | 2 |
+| `ATR-2026-00554` | OUT | IN | 1 |
+
+Excluding them from native union counts is correct. `process` filters at `_claude_code_impl.py:244` before traversal, and `bench.measure` forms `native_hits` at `bench.py:321` before incrementing bundle counts. Both halves were exercised. N16 concerns representation within IN, not cross-surface evaluation.
+
+### The three exclusions and the second reading
+
+The unchanged held-back list identifies these IN rules, all excluded using trace-commons tool-result counts:
+
+| IN rule | Recorded selection hits on OUT | Meaning of the record |
+|---|---:|---|
+| `ATR-2026-00064`, Over-Permissioned MCP Skill | 81/2,937 | Cross-surface diagnostic firing |
+| `ATR-2026-00110`, Remote Code Execution via eval() and Dynamic Code Injection | 27/2,937 | Cross-surface diagnostic firing |
+| `ATR-2026-00111`, Shell Metacharacter Injection in Tool Arguments | 4/2,937 | Cross-surface diagnostic firing |
+
+"Prior selection, rather than dropping rules after reading this IN outcome" is defensible given the unchanged list and reported chronology. It does not turn those counts into native-IN false-positive evidence, prove independence from correlated selection material, or reconstruct the lost selection corpora. In particular, 00111's title gives no reason to treat its OUT firing rate as its invocation firing rate. README's short description would be more accurate as "three held back after firing on selection-stage tool results."
+
+For primary characterization I would have measured **all fourteen runnable IN rules before reading IN results**, because the only available grounds for excluding three were on another surface. The tradeoff is a potentially wider union bound in exchange for showing the full runnable surface. The fixed eleven-rule deployment still needs its own exact-enabled-set report under this importer; the fourteen-rule report must not be silently imported as if its fingerprints described eleven. A prespecified fourteen-rule comparison can provide a conservative envelope because adding predicates cannot reduce the union at fixed units. I did not run the three held-back rules against the holdout or infer what that missing comparison would show.
+
+The second reading disclosure is sufficient for describing an exploratory, **nominal** result. It does not restore an untouched validation claim. A numerical adaptive-reuse penalty cannot be inferred from "second reading" alone: the target-selection process and earlier queries matter. Preserve the actual protocol and use fresh grouped data for a confirmatory claim; a generic correction is not a replacement for that history.
+
+There is a useful distinction from ordinary multiplicity. For **two fixed surface populations and valid marginal intervals**, taking `max(U_IN, U_OUT)` is a valid upper bound for the larger true rate without automatically halving alpha: for a fixed surface attaining the true maximum, failure of the maximum upper bound implies failure of that surface's own bound. No independence between the two surface samples is needed for that argument. This does not certify an adaptively chosen detector or the sampling assumptions here.
+
+If the desired claim instead covers both separate intervals simultaneously, a nominal Bonferroni calculation using alpha=0.025 gives IN 0.212023% and OUT 0.319239%, still within ADVISE. That prices two fixed comparisons only, not unknown adaptive selection. The current worst-surface gate is sensible for a per-interception false-advice rate; it is not automatically a bound on the probability of any intervention across an entire episode's multiple interceptions.
+
+## Remaining implementation and provenance checks
+
+The IN advice is actionable and actual `process` emitted the new sentence. OUT retains the original sentence. Existing assertions mentioning "untrusted data" concern OUT promotion/advice; the shared incomplete-scan message is a separate path. No assertion was found requiring the old OUT advisory for a completed IN ADVISE result.
+
+The supplied config's `bundle_by_surface` contains both populations, counts and corpus provenance, while `evidence.bundle` correctly stores OUT as the worse pooled row. Normal re-import reproduced these data and all per-rule evidence, apart from refreshed timestamps. The recorded dictionary is useful to a reader, but does not replace N15's missing completeness check.
+
+Bundle metadata reconciles exactly: **793 loaded = 216 shipped + 222 not runnable + 14 held back + 1 content-free refusal + 116 CFG + 218 PROMPT + 6 NONE**. For IN specifically, **57 = 11 shipped + 3 held back + 43 not runnable**. The non-runnable IN count includes 25 measured refusals, 16 multiple-field refusals and two other refusals. Every shipped rule's normalized fingerprint and reachability record reproduced from the pinned archive. All 205 OUT records are unchanged from HEAD; the refusal text's move from three spaces to one follows the already-fixed fixture order.
+
+The OUT diagnostic names the correct whole-bundle digest and the correct 205-rule subset digest. Its `--surface` default now selects the relevant OUT rules and leaves IN out of a tool-result diagnostic. Recomputed candidate counts agree with the stored 489; this remains a diagnostic, not deployed-hook admission evidence. The artifact scan record matches current bytes and size, but its scanner result was not independently rerun.
+
+The restored OUT `file_type` assignment is semantically inert for this snapshot: all 1,743 rows already carry `tool-result`, and **every current material row matches the stored report**, not just that label.
+
+It is not accurate to infer that this was the only subsequent edit. The report starts at `2026-09-07T01:18:08.058602Z` and its elapsed duration places completion at approximately `01:26:35.386602Z`. Current file modification times are later for twelve scoped files: the three Markdown documents; `artifact-scan.json`; `bound_leaf_discrepancy.py`; `leaf-traversal-diagnostic.json`; `measure_tool_traffic.py`; `bundle.json`; `_claude_code_impl.py`; and the hook, leaf-probe and shipped-bundle tests. Only `prepare_tool_traffic.py` and `test_tool_traffic.py` have earlier modification times.
+
+Modification times do not establish which individual lines changed or preserve execution history. The stronger checks are semantic: report materials and current transforms match; all enabled fingerprints match; OUT records and evaluator/bench implementations are unchanged in this diff; normal import reproduces the stored evidence; and the regenerated diagnostic reconciles. Those checks support consistency with current code. The report does not carry a source-code revision/diff digest sufficient to certify the exact historical script bytes.
 
 ## Reproducible verification helpers
 
-These are temporary review instrumentation, not proposed repository additions. A successful witness probe means it reproduced and asserted the reported defect. The policy helper is the unapplied recommendation checked in memory. The finalizer embeds these sources before removing the named helper files.
+The helpers below were used only for this review. Their temporary filesystem copies were removed after the complete review was published. The `inspect` phase creates the baseline hash file used by `provenance` and finalization; the evidence phases read the scratchpad path supplied in the request.
 
 <details>
-<summary>.Review-Codex-round4-probes.py</summary>
-
-~~~python
-import ast
-from contextlib import contextmanager
-from dataclasses import replace
-import hashlib
-import importlib.util
-import io
-import json
-from pathlib import Path
-import random
-import re
-import subprocess
-import sys
-import tarfile
-import tempfile
-from types import SimpleNamespace
-from unittest.mock import patch
-
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT / 'src'))
-from agent_defs import sources, bundle, evaluate
-from agent_defs.hooks import _core, _claude_code_impl as hook
-from agent_defs.model import Lane, PredicateKind, Rule, Surface
-
-
-def load_diagnostic():
-    spec = importlib.util.spec_from_file_location('diagnostic', ROOT / 'scripts/bound_leaf_discrepancy.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def archive_probe():
-    marker = b'harmless review marker, not an attack sample\n'
-    entries = [('repo/rules/ok.yaml', b'id: harmless\n', None),
-               ('repo/data/test-corpora/payload.txt', marker, None),
-               ('repo/conformance/v1.0/fixtures/tp/marker.txt', marker, None),
-               ('repo/rules/symlink.txt', b'', ('sym', '../data/test-corpora/payload.txt')),
-               ('repo/rules/hardlink.txt', b'', ('hard', 'repo/conformance/v1.0/fixtures/tp/marker.txt'))]
-    buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode='w:gz') as archive:
-        for name, data, link in entries:
-            member = tarfile.TarInfo(name)
-            if link:
-                member.type = tarfile.SYMTYPE if link[0] == 'sym' else tarfile.LNKTYPE
-                member.linkname = link[1]
-                archive.addfile(member)
-            else:
-                member.size = len(data)
-                archive.addfile(member, io.BytesIO(data))
-    blob = buf.getvalue()
-    entry = dict(name='synthetic', repo_url='https://github.com/fixture/review', commit='1'*40,
-                 archive_sha256=hashlib.sha256(blob).hexdigest(), fetched_at='2026-09-06T00:00:00Z',
-                 license_spdx='MIT', license_path='LICENSE', record_count=1)
-    calls = []
-
-    @contextmanager
-    def download(*args):
-        calls.append(args)
-        yield io.BytesIO(blob)
-
-    with tempfile.TemporaryDirectory(prefix='agent-defs-round4-synthetic-') as temporary:
-        root = Path(temporary)
-        lock = root / 'lock.json'
-        lock.write_text(json.dumps([entry]), encoding='utf-8')
-        with patch.object(sources, '_response', download):
-            tree = sources.fetch('synthetic', root / 'cache', lock_path=lock)
-            assert not (tree / 'data/test-corpora').exists()
-            assert not (tree / 'conformance').exists()
-            assert (tree / 'data').is_dir()
-            assert (tree / 'rules/symlink.txt').read_bytes() == marker
-            assert (tree / 'rules/hardlink.txt').read_bytes() == marker
-            assert sources.verify(root / 'cache', lock_path=lock)['synthetic']['status'] == 'verified'
-            assert sources.fetch('synthetic', root / 'cache', lock_path=lock) == tree
-            assert len(calls) == 1
-            rejected = []
-            for mode in ('edit', 'missing', 'extra', 'excluded_file', 'excluded_directory', 'missing_parent'):
-                target = tree / 'rules/ok.yaml'
-                original = target.read_bytes()
-                if mode == 'edit': target.write_bytes(b'tampered harmless marker')
-                if mode == 'missing': target.unlink()
-                if mode == 'extra': (tree / 'extra.txt').write_bytes(marker)
-                if mode == 'excluded_file':
-                    (tree / 'conformance').mkdir()
-                    (tree / 'conformance/extra.txt').write_bytes(marker)
-                if mode == 'excluded_directory': (tree / 'conformance').mkdir()
-                if mode == 'missing_parent': (tree / 'data').rmdir()
-                assert sources.verify(root / 'cache', lock_path=lock)['synthetic']['status'] == 'invalid', mode
-                try:
-                    sources.fetch('synthetic', root / 'cache', lock_path=lock)
-                except sources.SourceError:
-                    rejected.append(mode)
-                else:
-                    raise AssertionError(mode)
-                assert len(calls) == 1
-                if mode in ('edit', 'missing'): target.write_bytes(original)
-                if mode == 'extra': (tree / 'extra.txt').unlink()
-                if mode == 'excluded_file': (tree / 'conformance/extra.txt').unlink()
-                if mode in ('excluded_file', 'excluded_directory'): (tree / 'conformance').rmdir()
-                if mode == 'missing_parent': (tree / 'data').mkdir()
-            # Replay the pre-range reader against the same excluded-path cache.
-            old = subprocess.check_output(['git', 'show', '869ccd2:src/agent_defs/sources.py'], cwd=ROOT).decode()
-            namespace = {'__file__': str(ROOT / 'src/agent_defs/sources.py'), '__name__': 'old_sources'}
-            exec(compile(old, 'old_sources.py', 'exec'), namespace)
-            with patch.dict(namespace, {'_response': download}):
-                try:
-                    namespace['fetch']('synthetic', root / 'cache', lock_path=lock)
-                except namespace['SourceError']:
-                    pass
-                else:
-                    raise AssertionError('old cache check should reject this tree')
-            assert len(calls) == 1
-            print(json.dumps(dict(link_bytes_written=['symlink', 'hardlink'], unsafe_tree_status='verified',
-                                  tampering_rejected=rejected, requests=1, old_reader='raises without redownload')))
-
-
-def regex_probe():
-    diagnostic = load_diagnostic()
-    cases = [(r'^(a)(?=(b))(bc)\2$', 'abcb', 'x\nabcb\ny'),
-             (r'(?x)^ab(?=x) {0} c$', 'abc', 'x\nabc\ny'),
-             (r'^ab(?=x)(?#comment){0}c$', 'abc', 'x\nabc\ny')]
-    for pattern, leaf, joined in cases:
-        strict = re.compile(pattern)
-        relaxed, kinds = diagnostic.strip_assertions(pattern)
-        assert strict.search(leaf)
-        assert not strict.search(joined)
-        assert not diagnostic.unsupported_constructs(pattern)
-        assert relaxed is not None and not re.search(relaxed, joined)
-        fake = SimpleNamespace(id='t:probe', predicate_kind=PredicateKind.REGEX, predicate=pattern,
-                               case_sensitive=True)
-        loose, splits, census, unprunable = diagnostic.build_probes([fake])
-        assert not loose[0][1](joined)
-        assert splits[fake.id](joined.split('\n'))
-        real = Rule(id='t:probe', source='t', source_id='probe', source_rev='1'*40,
-                    source_path='rules/probe.yaml', upstream_url='https://example.test', title='probe',
-                    surface=Surface.OUT, predicate_kind=PredicateKind.REGEX, predicate=pattern,
-                    case_sensitive=True)
-        accepted = True
-        try:
-            evaluate.compile_rule(real)
-        except ValueError as exc:
-            accepted = False
-            print(json.dumps(dict(evaluator_rejection=str(exc))))
-        print(json.dumps(dict(pattern=pattern, leaf=leaf, relaxed=relaxed, assertion_kinds=sorted(kinds),
-                              unsupported=[], true_split=True, candidate=False,
-                              joined_match=bool(strict.search(joined)), evaluator_accepts=accepted)))
-        if not accepted:
-            continue
-        with tempfile.TemporaryDirectory(prefix='agent-defs-round4-regex-') as temporary:
-            temp = Path(temporary)
-            units, report = temp / 'units.jsonl', temp / 'report.json'
-            units.write_text(json.dumps({'text': joined}) + '\n', encoding='utf-8')
-            with patch.object(diagnostic.bundle, 'load', lambda _: [real]):
-                with patch.object(sys, 'stdout', io.StringIO()):
-                    assert diagnostic.main(['--units', str(units), '--rules', str(ROOT/'src/agent_defs/bundle.json'),
-                                            '--out', str(report)]) == 0
-            data = json.loads(report.read_text())
-            assert data['joined']['hits'] == data['newline_leaf_diagnostic']['hits'] == data['substring_leaf_diagnostic']['hits'] == 0
-            assert diagnostic.hits(leaf, [real]) == {'t:probe'}
-    shipped = bundle.load(ROOT / 'src/agent_defs/bundle.json')
-    relaxed, splits, census, unprunable = diagnostic.build_probes(shipped)
-    record = json.loads((ROOT / 'scripts/leaf-traversal-diagnostic.json').read_text())
-    assert len(shipped) == 205 and len(splits) == record['probed_rules'] == 102
-    assert unprunable == record['probed_without_pruning'] == []
-    assert {k: len(v) for k,v in sorted(census.items())} == record['construct_census']
-    print('VERIFIED: evaluator-accepted witnesses have leaf=1, joined/newline/substring=0; shipped 205-rule classification matches the committed record.')
-
-
-def hook_probe():
-    old = subprocess.check_output(['git', 'show', '869ccd2:src/agent_defs/hooks/_claude_code_impl.py'], cwd=ROOT).decode()
-    parsed = ast.parse(old)
-    process = next(n for n in parsed.body if isinstance(n, ast.FunctionDef) and n.name == 'process')
-    old_process = ast.Module(body=[process], type_ignores=[])
-    scope = hook.__dict__.copy()
-    exec(compile(old_process, 'old_process.py', 'exec'), scope)
-    prior = scope['process']
-    rule = SimpleNamespace(id='r', surface=SimpleNamespace(value='OUT'))
-    config = dict(surfaces=['OUT', 'IN'])
-    rng = random.Random(4606)
-
-    def payload(depth=0):
-        if depth > 3 or rng.random() < .5:
-            return rng.choice(['', ' ', 'abc', 'deny', 'partial', 'error', '\ud800', 'é🙂', None, 2, True])
-        if rng.random() < .5:
-            return [payload(depth+1) for _ in range(rng.randrange(5))]
-        return {f'a~/{i}': payload(depth+1) for i in range(rng.randrange(5))}
-
-    def one(fn, value, surface, limit):
-        records, calls = [], []
-        def scanner(text, rules, **kwargs):
-            calls.append((text, kwargs))
-            if text == 'error': raise MemoryError('synthetic')
-            finding = SimpleNamespace(rule_id='r', start=0, end=1)
-            return SimpleNamespace(complete=text != 'partial', rules_evaluated=0 if text == 'partial' else 1,
-                                   rules_skipped_budget=0, errors=(), worker_error=None, truncated_input=False,
-                                   partial_findings=[finding] if text == 'deny' else [])
-        changes = dict(active_rules=lambda c, r: r,
-                       effective_lanes=lambda c, r: {'r': (Lane.DENY, 'measured')},
-                       log_status=lambda c, r: records.extend(r) or True,
-                       scan=scanner, MAX_SCAN_BYTES=limit[0], MAX_NODES=limit[1],
-                       MAX_DEPTH=limit[2], SCAN_BUDGET_S=limit[3], WITHHELD='custom withheld',
-                       INCOMPLETE='custom incomplete')
-        field = 'tool_response' if surface == 'OUT' else 'tool_input'
-        event = 'PostToolUse' if surface == 'OUT' else 'PreToolUse'
-        rule.surface.value = surface
-        with patch.dict(fn.__globals__, changes), patch.object(hook.time, 'perf_counter', lambda: 0):
-            result = fn(dict(hook_event_name=event, **{field: value}), config, [rule])
-        return result, records, calls
-
-    for i in range(1200):
-        value = payload()
-        surface = rng.choice(['IN', 'OUT'])
-        limit = rng.choice([(20, 20, 3, 1), (0, 20, 3, 1), (20, 1, 3, 1), (20, 20, 0, 1), (20, 20, 3, 0)])
-        assert one(prior, value, surface, limit) == one(hook.process, value, surface, limit), i
-    nan = float('nan')
-    old_nan = one(prior, nan, 'OUT', (20, 20, 3, 1))[0]
-    new_nan = one(hook.process, nan, 'OUT', (20, 20, 3, 1))[0]
-    assert 'updatedToolOutput' in old_nan['hookSpecificOutput']
-    assert 'updatedToolOutput' in new_nan['hookSpecificOutput']
-    assert one(prior, {'n': nan}, 'OUT', (20, 20, 3, 1))[0] == {}
-    assert one(hook.process, {'n': nan}, 'OUT', (20, 20, 3, 1))[0] == {}
-    cycle = []
-    cycle.append(cycle)
-    outcomes = []
-    for fn in (prior, hook.process):
-        try: one(fn, cycle, 'OUT', (20, 20, 3, 1))
-        except RecursionError: outcomes.append('RecursionError')
-        else: outcomes.append('returned')
-    print(json.dumps(dict(differential_cases=1200, mismatches=0, root_nan='spurious update in both',
-                          nested_nan='unchanged in both', cycles=outcomes,
-                          adapter_markers='custom WITHHELD and INCOMPLETE injected and equivalent')))
-
-
-def vacuity_probe():
-    import inspect
-    import pytest
-    code = ast.parse(inspect.getsource(_core.scan_payload))
-    walk = next(n for n in ast.walk(code) if isinstance(n, ast.FunctionDef) and n.name == 'walk')
-    budget_guard = walk.body[2]
-    assert isinstance(budget_guard, ast.If) and isinstance(budget_guard.body[-1], ast.Return)
-    budget_guard.body.pop()
-    exec(compile(code, 'mutated_core.py', 'exec'), _core.__dict__)
-    status = pytest.main(['-q', 'tests/test_hook_core.py'])
-    assert status == 0, status
-    calls = []
-    def scanner(*args, **kwargs):
-        calls.append(args[0])
-        return SimpleNamespace(complete=True, rules_evaluated=0, partial_findings=[])
-    outcome = _core.scan_payload({'a': 'content'}, rules=[], lanes={}, surface='OUT', event='e',
-                                 limits=_core.Limits(100, 0, 0, 0), scanner=scanner)
-    assert calls == ['content'] and outcome.incomplete
-    print('VERIFIED WITNESS: all core tests pass after removing the node/depth/time early return; the scanner still ran with all three budgets exhausted.')
-    status = pytest.main(['-q', 'tests/test_hook_integration.py::test_event_budget_is_shared_and_exhaustion_warns_the_model'])
-    assert status == 1, status
-    print('VERIFIED CONTROL: the existing adapter integration test detects this mutation.')
-
-
-if __name__ == '__main__':
-    {'sources': archive_probe, 'regex': regex_probe, 'hooks': hook_probe, 'vacuity': vacuity_probe}[sys.argv[1]]()
-~~~
-
-</details>
-
-<details>
-<summary>.Review-Codex-round4-numeric.py</summary>
+<summary>.Review-Codex-round5-probes.py</summary>
 
 ~~~python
 import argparse
-from dataclasses import replace
+import ast
+from collections import Counter, defaultdict
+import copy
+from dataclasses import asdict, replace
+from datetime import datetime, timezone
+import hashlib
+import importlib.util
+import inspect as inspect_module
 import json
 import math
-import sys
 from pathlib import Path
+import subprocess
+import sys
+import tarfile
+from unittest.mock import patch
 
-import numpy as np
-from scipy.special import betaincc
-import mpmath as mp
-
-sys.path.insert(0, str(Path(__file__).resolve().parent / 'src'))
-from agent_defs import lanes
-from agent_defs.builtin import STARTER_RULES
+ROOT = Path(__file__).resolve().parent
+S = Path('C:/Users/yuezh/AppData/Local/Temp/claude/C--Users-yuezh-PycharmProjects-agent-startup-thesis/0c2c85fb-d0d8-49d1-a9cd-a3b2dc006ecd/scratchpad')
+E = S / 'in-evidence'
+NAME = 'local-claude-unique-holdout'
+sys.path[:0] = [str(ROOT / 'src'), str(ROOT / 'scripts')]
+from agent_defs import bench, bundle, evaluate, lanes
 from agent_defs.hooks import _claude_code_impl as hook
-from agent_defs.model import BenignFiring
+from agent_defs.model import Surface, Lane
+import measure_tool_traffic as traffic
+import prepare_tool_traffic as prepare
 
 
-def boundary_pairs(hits, p):
-    low = (hits / p).astype(np.int64)
-    high = np.ceil((hits + 10 * np.sqrt(hits) + 100) / p).astype(np.int64)
-    while np.any(high - low > 1):
-        mid = (low + high) // 2
-        above = betaincc(hits + 1, mid - hits, p) > .05
-        low = np.where(above, mid, low)
-        high = np.where(above, high, mid)
-    return low, high
+def read(path):
+    return json.loads(path.read_text(encoding='utf-8-sig'))
 
 
-def reference(n, k, p):
-    mp.mp.dps = 60
-    prob = mp.mpf(p)
-    term = total = mp.mpf(1)
-    for i in range(k, 0, -1):
-        term *= mp.mpf(i) / (n - i + 1) * (1 - prob) / prob
-        total += term
-        if term < total * mp.mpf('1e-55'):
-            break
-    log_cdf = (mp.loggamma(n + 1) - mp.loggamma(k + 1) - mp.loggamma(n - k + 1)
-               + k * mp.log(prob) + (n - k) * mp.log1p(-prob) + mp.log(total))
-    return log_cdf - mp.log(mp.mpf('.05'))
+def emit(tag, value):
+    print(tag + ': ' + json.dumps(value, ensure_ascii=True, sort_keys=True), flush=True)
 
 
-def capped():
-    for p in (.001, .005):
-        hits = np.arange(1, int(hook.MAX_TRIALS * p), dtype=np.int64)
-        low, high = boundary_pairs(hits, p)
-        valid = high <= hook.MAX_TRIALS
-        results = []
-        unresolved = wrong = checked = 0
-        max_error = (0, None)
-        for ns in (low, high):
-            ref = np.log(betaincc(hits + 1, ns - hits, p)) - math.log(.05)
-            for i in np.where(valid)[0]:
-                n, k = int(ns[i]), int(hits[i])
-                delta = lanes.log_binomial_cdf(n, k, p) - math.log(.05)
-                decision = lanes.bound_within(n, k, p)
-                error = abs(delta - float(ref[i]))
-                if error > max_error[0]:
-                    max_error = error, (n, k, delta, float(ref[i]))
-                checked += 1
-                unresolved += decision is None
-                if decision is not None and decision != (ref[i] <= 0):
-                    wrong += 1
-                    results.append((n, k, delta, float(ref[i]), decision))
-        print(json.dumps(dict(ceiling=p, checked=checked, unresolved=unresolved,
-                              wrong_resolved=wrong, max_log_error_vs_scipy=max_error,
-                              wrong=results)), flush=True)
-        n, k, local, _ = max_error[1]
-        precise = reference(n, k, p)
-        print(json.dumps(dict(ceiling=p, max_error_high_precision=dict(n=n, k=k,
-                             reference_delta=str(precise), local_delta=local,
-                             error=str(mp.mpf(local)-precise)))), flush=True)
-        assert wrong == 0
-    for n, k, p in [(5023741, 4907, .001), (1268982, 6214, .005), (9733435, 48305, .005)]:
-        m = dict(trials=n, hits=k, u95=lanes.binomial_u95(n, k), corpus='numeric', measured_at='2026-09-06')
-        rule = STARTER_RULES[0]
-        config = hook.default_config()
-        config.update(surfaces=['OUT'], bundle='')
-        config['sources']['builtin'] = 'DENY'
-        config['evidence'] = dict(fingerprint=hook.fingerprint([rule], config['surfaces']),
-                                  bundle=m.copy(), rules={rule.id: m.copy()})
-        lane = hook.effective_lanes(config, [rule])[rule.id][0].value
-        print(json.dumps(dict(n=n, k=k, ceiling=p, comparison=lanes.bound_within(n,k,p),
-                              reference_delta=str(reference(n,k,p)), effective_lane=lane)), flush=True)
-        assert lane == ('ADVISE' if p == .001 else 'RECORD')
+def inputs():
+    rows = [json.loads(line) for line in (E / f'{NAME}-units.jsonl').read_bytes().splitlines()]
+    report = read(E / f'{NAME}-out-in-report.json')
+    return rows, report
 
 
-def uncapped():
-    rng = np.random.default_rng(20260906)
-    hits = rng.integers(100000, 10000000, size=200, dtype=np.int64)
-    for p in (.001, .005):
-        low, high = boundary_pairs(hits, p)
-        witnesses = []
-        for ns in (low, high):
-            for nv, kv in zip(ns, hits):
-                n, k = int(nv), int(kv)
-                local = lanes.bound_within(n, k, p)
-                ref = float(betaincc(k+1,n-k,p))
-                if local is True and ref > .05:
-                    precise = reference(n,k,p)
-                    if precise <= 0:
-                        continue
-                    u95 = lanes.binomial_u95(n,k)
-                    rule = replace(STARTER_RULES[0], benign=BenignFiring(n,k,u95,'numeric','2026-09-06'))
-                    witnesses.append(dict(n=n,k=k,ceiling=p,decision=local,
-                        local_delta=lanes.log_binomial_cdf(n,k,p)-math.log(.05),
-                        reference_delta=str(precise),u95=u95,
-                        admit=lanes.admit(rule,bundle_ok=True)[0].value,
-                        hook_measurement_accepted=hook.measurement(dict(trials=n,hits=k,u95=u95,
-                                                             corpus='numeric',measured_at='2026-09-06')) is not None))
-                    break
-            if witnesses:
-                break
-        print(json.dumps(dict(uncapped_ceiling=p,witnesses=witnesses)),flush=True)
+def inspect():
+    tracked = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD'], cwd=ROOT).decode().splitlines()
+    baseline = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in tracked}
+    (ROOT / '.Review-Codex-round5-baseline.json').write_text(json.dumps(baseline), encoding='utf-8')
+    rows, report = inputs()
+    meta = read(ROOT / 'src/agent_defs/bundle.json')
+    previous = json.loads(subprocess.check_output(['git', 'show', 'HEAD:src/agent_defs/bundle.json'], cwd=ROOT))
+    for label, value in [('bundle', meta), ('previous_bundle', previous)]:
+        emit(label + '_metadata', {k: v for k, v in value.items() if k != 'rules'})
+        emit(label + '_counts', dict(Counter(r['surface'] for r in value['rules'])))
+    emit('IN_rules', [{k: r.get(k) for k in ('id', 'title', 'predicate', 'predicate_kind')} for r in meta['rules'] if r['surface'] == 'IN'])
+    emit('report_keys', list(report))
+    emit('report_summary', report['summary'])
+    emit('report_execution', report['method'])
+    emit('report_corpora', report['corpora'])
+    emit('report_bundle', {k: v for k, v in report['bundle'].items() if k not in ('measurements', 'diagnostic_measurements', 'rule_sha256')})
+    emit('input_inventory', {k: v for k, v in read(E / f'{NAME}-inventory.json').items() if k != 'files'})
+    emit('row_schema', {k: type(v).__name__ for k, v in rows[0].items()})
+    emit('config_evidence', {k: v for k, v in read(S / 'in-config.json')['evidence'].items() if k != 'rules'})
 
 
-def coefficient():
-    mp.mp.dps = 70
-    for n,k in [(9388513,9229),(9892023,49095)]:
-        terms=[n+1,k+1,n-k+1]
-        errors=[str(mp.mpf(math.lgamma(x))-mp.loggamma(x)) for x in terms]
-        local=math.lgamma(n+1)-math.lgamma(k+1)-math.lgamma(n-k+1)
-        exact=mp.loggamma(n+1)-mp.loggamma(k+1)-mp.loggamma(n-k+1)
-        assert abs(mp.mpf(local)-exact) > mp.mpf('5e-8')
-        print(json.dumps(dict(n=n,k=k,lgamma_errors=errors,
-                              coefficient_error=str(mp.mpf(local)-exact))))
+def exact_upper(n, k, alpha=.05):
+    if not k:
+        return -math.expm1(math.log(alpha) / n)
+    low, high = 0., 1.
+    for _ in range(80):
+        p = (low + high) / 2
+        cdf = sum(math.comb(n, j) * p ** j * (1-p) ** (n-j) for j in range(k+1))
+        if cdf > alpha:
+            low = p
+        else:
+            high = p
+    return (low + high) / 2
+
+
+def evidence():
+    rows, report = inputs()
+    raw = (E / f'{NAME}-units.jsonl').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'bd429d68174135bab674426bea82e0e58f504241002c3e589202f8c1a828893e'
+    corpora = [traffic.corpus(E, NAME, s) for s in (Surface.OUT, Surface.IN)]
+    rules = bench.load_rules(S / 'enabled-in-out.json')
+    config = read(S / 'in-config.json')
+    current = hook.active_rules(config, hook.hook_rules(config)[0])
+    fingerprints = {r.id: bench.rule_fingerprint(r) for r in rules}
+    assert fingerprints == {r.id: bench.rule_fingerprint(r) for r in current}
+    assert fingerprints == report['bundle']['rule_sha256']
+    assert fingerprints == {rid: v['rule_sha256'] for rid, v in report['rules'].items()}
+    assert len(rules) == 220 and Counter(r.surface.value for r in rules) == {'OUT': 209, 'IN': 11}
+    surface_by_id = {r.id: r.surface.value for r in rules}
+    report_mats = {(m['corpus'], m['id']): m for m in report['materials']}
+    cross = Counter()
+    for corpus in corpora:
+        totals, hits, all_hits = Counter(), Counter(), Counter()
+        per_rule = defaultdict(Counter)
+        for unit in corpus.units:
+            m = report_mats.pop((corpus.identity, unit.id))
+            assert (m['surface'], m['sha256'], m['bytes'], m['strata']) == (
+                unit.surface.value, unit.sha256, unit.size_bytes, unit.strata)
+            native = [rid for rid in m['rule_ids'] if surface_by_id[rid] == m['surface']]
+            cross.update((rid, m['surface']) for rid in m['rule_ids'] if rid not in native)
+            for stratum in bench._strata(unit):
+                totals[stratum] += 1
+                hits[stratum] += bool(native)
+                all_hits[stratum] += bool(m['rule_ids'])
+                for rid in m['rule_ids']:
+                    per_rule[rid][stratum] += 1
+        corpus_report = next(c for c in report['corpora'] if c['identity'] == corpus.identity)
+        assert corpus_report['revision'] == corpus.revision
+        assert corpus_report['manifest_sha256'] == corpus.manifest_sha256
+        assert corpus_report['duplicate_units'] == 0
+        assert corpus_report['trials'] == len(corpus.units)
+        assert {s['stratum']: s['trials'] for s in corpus_report['strata']} == totals
+        for group, expected_hits in [('measurements', hits), ('diagnostic_measurements', all_hits)]:
+            measurements = [m for m in report['bundle'][group] if m['corpus'] == corpus.identity]
+            assert len(measurements) == len(totals)
+            for m in measurements:
+                n, k = totals[m['stratum']], expected_hits[m['stratum']]
+                assert (m['trials'], m['hits']) == (n, k)
+                assert abs(m['u95'] - exact_upper(n, k)) < 1e-12
+        for rid, rule in report['rules'].items():
+            for m in rule['measurements']:
+                if m['corpus'] == corpus.identity:
+                    assert (m['trials'], m['hits']) == (totals[m['stratum']], per_rule[rid][m['stratum']])
+                    assert m['admission_eligible_surface'] == (m['surface'] == surface_by_id[rid])
+        worst = max(exact_upper(totals[s], hits[s]) for s in totals)
+        emit('surface', dict(surface=corpus.units[0].surface.value, trials=totals['all'],
+             hits=hits['all'], u95=exact_upper(totals['all'], hits['all']),
+             strata={s: [n, hits[s]] for s, n in sorted(totals.items())},
+             worst=[s for s in totals if exact_upper(totals[s], hits[s]) == worst], worst_u95=worst))
+    assert not report_mats
+    emit('cross_surface_hits', {f'{rid}@{s}': k for (rid, s), k in cross.items()})
+    groups = defaultdict(list)
+    mismatches = Counter()
+    for r in rows:
+        inv = json.loads(r['invocation'])
+        assert r['strata']['file_type'] == 'tool-result'
+        assert r['strata']['tool'] == inv['name']
+        assert r['strata']['exposure'] == prepare.exposure(inv['name'], inv['arguments'])
+        assert r['strata']['prose'] == prepare.prose(r['text'])
+        groups[r['invocation']].append(r)
+        mismatches[(r['strata']['prose'], prepare.prose(r['invocation']))] += 1
+    repeat_groups = []
+    for inv, rr in groups.items():
+        if len(rr) > 1:
+            repeat_groups.append({'invocation_sha256': hashlib.sha256(inv.encode()).hexdigest(),
+                                  'rows': [{'id': r['id'], 'strata': r['strata']} for r in rr]})
+    emit('deduplication', dict(rows=len(rows), unique=len(groups), repeat_groups=repeat_groups))
+    emit('topic_transition_all_rows', {f'{a}->{b}': n for (a, b), n in mismatches.items()})
+    emit('topic_transition_dedup', dict(Counter(f"{rr[0]['strata']['prose']}->{prepare.prose(inv)}" for inv, rr in groups.items())))
+    old = json.loads(subprocess.check_output(['git', 'show', 'HEAD:src/agent_defs/bundle.json'], cwd=ROOT))
+    artifact_path = ROOT / 'src/agent_defs/bundle.json'
+    artifact = read(artifact_path)
+    assert {r['id']: r for r in old['rules']} == {r['id']: r for r in artifact['rules'] if r['surface'] == 'OUT'}
+    assert artifact['shipped'] + sum(artifact['dropped'].values()) == artifact['loaded'] == 793
+    assert artifact['held_back'] == read(ROOT / 'scripts/bundle-held-back.json')
+    artifact_sha = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+    scan = read(ROOT / 'scripts/artifact-scan.json')
+    leaf = read(ROOT / 'scripts/leaf-traversal-diagnostic.json')
+    assert scan['sha256'] == leaf['inputs']['rules_sha256'] == artifact_sha
+    assert scan['bytes'] == artifact_path.stat().st_size
+    assert leaf['inputs']['surface'] == 'OUT'
+    assert leaf['inputs']['units_sha256'] == hashlib.sha256(raw).hexdigest()
+    import bound_leaf_discrepancy as probes
+    outbound = [r for r in bundle.load(artifact_path) if r.surface is Surface.OUT]
+    relaxed, splits, census, unprunable = probes.build_probes(outbound)
+    emit('diagnostic_census', dict(rules=len(outbound), probed=len(splits), census=census, unprunable=unprunable))
+    emit('diagnostic_record', leaf)
+    emit('bundle_verified', dict(sha256=artifact_sha, rules=len(artifact['rules']), unchanged_OUT=205,
+                                measured_at=report['measured_at'], elapsed_s=report.get('elapsed_s'),
+                                config_evidence={k: v for k, v in config['evidence'].items() if k != 'rules'}))
+    emit('modified_after_measurement', {p: (ROOT / p).stat().st_mtime for p in json.loads((ROOT / '.Review-Codex-round5-baseline.json').read_text())})
+
+
+def leaf():
+    from agent_defs.hooks import _core
+    rows, report = inputs()
+    inbound = [r for r in bundle.load(ROOT / 'src/agent_defs/bundle.json') if r.surface is Surface.IN]
+    compiled = {r.id: evaluate.compile_rule(r) for r in inbound}
+    assert all(r.predicate_kind.value == 'REGEX' for r in inbound)
+    unique = {r['invocation']: r for r in reversed(rows)}
+    wrapped_hits, leaf_hits = {}, {}
+    count_leaves = 0
+    def scanner(text, rules, *, max_bytes, budget_s):
+        nonlocal count_leaves
+        count_leaves += 1
+        return evaluate.scan_trusted(text, rules, max_bytes=max_bytes)
+    lane_map = {r.id: (Lane.RECORD, 'review complete leaf census') for r in inbound}
+    with patch.object(evaluate, 'compile_rule', side_effect=lambda r: compiled[r.id]):
+        for text, row in unique.items():
+            wrapped = evaluate.scan_trusted(text, inbound, max_bytes=len(text.encode()))
+            assert wrapped.complete and wrapped.rules_evaluated == 11
+            if wrapped.findings:
+                wrapped_hits[row['id']] = sorted({f.rule_id for f in wrapped.findings})
+            args = json.loads(text)['arguments']
+            outcome = _core.scan_payload(args, rules=inbound, lanes=lane_map, surface='IN',
+                event='PreToolUse', location='/tool_input', scanner=scanner,
+                limits=_core.Limits(max_bytes=10_000_000, max_nodes=100_000, max_depth=1000, budget_s=60))
+            assert not outcome.incomplete
+            rr = [r for r in outcome.records if 'rule_id' in r]
+            if rr:
+                leaf_hits[row['id']] = [{k: r[k] for k in ('rule_id', 'path', 'text_sha256')} for r in rr]
+    emit('IN_leaf_census', dict(units=len(unique), leaves=count_leaves, wrapped_hits=wrapped_hits,
+                                leaf_hits=leaf_hits, IN_rule_ids=[r.id for r in inbound]))
+    fixture = '${!REVIEW_CMD} /tmp/review-marker'
+    rule = next(r for r in inbound if r.id == 'atr:ATR-2026-02525')
+    text = json.dumps({'name': 'Bash', 'arguments': {'command': fixture}}, ensure_ascii=False, separators=(',', ':'))
+    wrapped = evaluate.scan(text, [rule], max_bytes=10000, budget_s=10)
+    raw = evaluate.scan(fixture, [rule], max_bytes=10000, budget_s=10)
+    assert wrapped.complete and raw.complete
+    assert not wrapped.findings and [f.rule_id for f in raw.findings] == [rule.id]
+    config = read(S / 'in-config.json')
+    actual_rules = hook.hook_rules(config)[0]
+    records = []
+    with patch.object(hook, 'log_status', side_effect=lambda c, r: records.extend(r) or True):
+        response = hook.process({'hook_event_name': 'PreToolUse', 'tool_name': 'Bash',
+                                 'tool_input': {'command': fixture}}, config, actual_rules)
+    assert response['hookSpecificOutput']['additionalContext'] == hook.ADVICE['IN']
+    assert any(r.get('rule_id') == rule.id for r in records)
+    emit('representation_witness', dict(rule=rule.id, literal=fixture, serialized_hits=0,
+         isolated_raw_hits=1, actual_process_response=response, actual_process_records=records))
+
+
+def contracts():
+    rows, report = inputs()
+    config = read(S / 'in-config.json')
+    rules = hook.hook_rules(config)[0]
+    by_id = {r.id: r for r in rules}
+    material = {(m['surface'], m['id']): m for m in report['materials']}
+    by_unit = {r['id']: r for r in rows}
+    isolated_cross = Counter()
+    for m in material.values():
+        for rid in m['rule_ids']:
+            rule = by_id[rid]
+            if rule.surface.value == m['surface']:
+                continue
+            text = by_unit[m['id']]['text' if m['surface'] == 'OUT' else 'invocation']
+            scan = evaluate.scan(text, [rule], max_bytes=len(text.encode()), budget_s=10)
+            assert scan.complete and [f.rule_id for f in scan.findings] == [rid]
+            isolated_cross[f'{rid}@{m["surface"]}'] += 1
+    captured = []
+    def inspect_scanner(text, chosen, **kwargs):
+        captured.append({r.surface.value for r in chosen})
+        return evaluate.ScanResult(partial_findings=(), rules_evaluated=len(chosen),
+            rules_skipped_budget=0, elapsed_s=0, truncated_input=False, errors=(), worker_error=None)
+    for event, surface, field in [('PreToolUse', 'IN', 'tool_input'), ('PostToolUse', 'OUT', 'tool_response')]:
+        captured.clear()
+        with patch.object(hook, 'scan', side_effect=inspect_scanner), patch.object(hook, 'log_status', return_value=True):
+            assert hook.process({'hook_event_name': event, field: {'x': 'ordinary review fixture'}}, config, rules) == {}
+        assert captured == [{surface}]
+    emit('cross_surface_verification', dict(isolated_hits=isolated_cross, process_selected_only_native=True))
+
+    proto = rules[0]
+    def rule(rid, surface, token):
+        return replace(proto, id=rid, source='review', surface=surface,
+                       predicate_kind=type(proto.predicate_kind).REGEX, predicate=token,
+                       examples_positive=(token,), examples_negative=(), extra={})
+    rr = [rule('review:IN', Surface.IN, 'REVIEW_IN_TOKEN'), rule('review:OUT', Surface.OUT, 'REVIEW_OUT_TOKEN')]
+    def unit(uid, surface, text, topic='ordinary'):
+        return bench.Unit(uid, text, surface, {'file_type': 'review', 'prose': topic},
+                          hashlib.sha256(text.encode()).hexdigest(), len(text.encode()))
+    text = 'REVIEW_IN_TOKEN'
+    units = tuple(unit(f'{s.value}-{i}', s, text + str(i), topic)
+                  for s in (Surface.OUT, Surface.IN)
+                  for i, topic in enumerate(('ordinary', 'security-adjacent')))
+    c = bench.Corpus('review/mixed', 'sha256:'+'a'*64, units, 'a'*64, ())
+    measured = bench.measure(rr, [c])
+    pooled = {m['surface']: (m['trials'], m['hits']) for m in measured['bundle']['measurements'] if m['stratum'] == 'all'}
+    assert pooled == {'IN': (2, 2), 'OUT': (2, 0)}
+    assert measured['corpora'][0]['duplicate_units'] == 0
+    duplicate = bench.measure(rr, [replace(c, units=units + (units[0],))])
+    assert duplicate['corpora'][0]['duplicate_units'] == 1
+    assert any('duplicate material units' in f for f in duplicate['bundle']['failures'])
+    try:
+        bench.measure(rr, [c, c])
+    except ValueError as exc:
+        assert str(exc) == 'duplicate corpus identity/revision'
+    else:
+        raise AssertionError('duplicate identity/revision was accepted')
+    emit('bench_duplicate_contract', dict(cross_surface_identical_bytes_allowed=True,
+                                         same_surface_repeat_refused=True, repeat_identity_refused=True,
+                                         native_pooled_counts=pooled))
+    duplicate_rows = []
+    for i, payload in enumerate(('ordinary repeated output', 'ordinary repeated output', 'security review note')):
+        duplicate_rows.append(dict(id=str(i), text=payload,
+            invocation=json.dumps({'name': 'Bash', 'arguments': {'command': f'review command {i}'}}),
+            sha256=hashlib.sha256(payload.encode()).hexdigest(), size_bytes=len(payload.encode()),
+            strata=dict(file_type='tool-result', prose=prepare.prose(payload), tool='Bash',
+                        exposure='attacker-reachable' if i == 2 else 'locally-generated', result_status='success')))
+    body = b'\n'.join(json.dumps(r).encode() for r in duplicate_rows)
+    digest = hashlib.sha256(body).hexdigest()
+    metadata = {'units_sha256': digest, 'revision': 'sha256:' + digest}
+    class MemorySnapshot:
+        def __truediv__(self, name): return self
+        def read_text(self): return json.dumps(metadata)
+        def read_bytes(self): return body
+    old_source = subprocess.check_output(['git', 'show', 'HEAD:scripts/measure_tool_traffic.py'], cwd=ROOT).decode()
+    old_namespace = {'__name__': 'review_previous_traffic', '__file__': str(ROOT / 'scripts/measure_tool_traffic.py')}
+    exec(compile(old_source, 'HEAD:scripts/measure_tool_traffic.py', 'exec'), old_namespace)
+    old_corpus = old_namespace['corpus'](MemorySnapshot(), 'review', Surface.OUT)
+    old_report = bench.measure([rr[1]], [old_corpus])
+    assert any('duplicate material units' in f for f in old_report['bundle']['failures'])
+    try:
+        traffic.corpus(MemorySnapshot(), 'review', Surface.OUT)
+    except ValueError as exc:
+        current_error = str(exc)
+    else:
+        raise AssertionError('repeated OUT result was accepted')
+    emit('repeated_OUT_behavior_change', dict(old_measurement_completed=True,
+        old_admission=old_report['bundle']['bundle_ok'], old_failures=old_report['bundle']['failures'],
+        current_error=current_error))
+
+    def import_in_memory(document, local_config=None, chosen_rules=None, guarded=False):
+        candidate = ROOT / '.Review-Codex-round5-memory-report.json'
+        actual_read = Path.read_text
+        actual_hook_rules = hook.hook_rules
+        saved = []
+        def read_candidate(path, *args, **kwargs):
+            return json.dumps(document) if path == candidate else actual_read(path, *args, **kwargs)
+        with patch.object(hook, 'read_config', return_value=copy.deepcopy(local_config or config)), \
+             patch.object(Path, 'read_text', read_candidate), \
+             patch.object(hook, 'hook_rules', side_effect=lambda c: (chosen_rules, []) if chosen_rules is not None else actual_hook_rules(c)), \
+             patch.object(hook, 'atomic_json', side_effect=lambda p, c: saved.append(c)):
+            run_import = hook.calibrate_from_report
+            if guarded:
+                source = inspect_module.getsource(run_import)
+                start = source.index('    bundle_rows = [row for row in')
+                end = source.index('    bundle = max(bundle_rows', start)
+                replacement = '''    bundle_rows = []
+    for surface in sorted(surfaces):
+        row = _pooled(report.get("bundle", {}).get("measurements") or [], surface)
+        if row is None:
+            raise ValueError(f"the report carries no whole-corpus bundle measurement for {surface}")
+        bundle_rows.append(row)
+    if not bundle_rows:
+        raise ValueError("the report carries no whole-corpus bundle measurement")
+'''
+                namespace = dict(vars(hook))
+                exec(compile(source[:start] + replacement + source[end:], 'proposed_surface_guard', 'exec'), namespace)
+                run_import = namespace['calibrate_from_report']
+            outcome = run_import(ROOT / '.Review-Codex-round5-memory-config.json', candidate, accept_pooled_bound=True)
+        return outcome, saved[0]
+    result, saved = import_in_memory(report)
+    assert result['gating_surface'] == 'OUT' and result['surfaces'] == {'IN': '0/1738', 'OUT': '1/1743'}
+    assert saved['evidence']['fingerprint'] == config['evidence']['fingerprint']
+    for rid, row in config['evidence']['rules'].items():
+        assert {k: v for k, v in row.items() if k != 'measured_at'} == {
+            k: v for k, v in saved['evidence']['rules'][rid].items() if k != 'measured_at'}
+    emit('import_normal', result)
+    missing = copy.deepcopy(report)
+    missing['bundle']['measurements'] = [m for m in missing['bundle']['measurements']
+                                         if not (m['surface'] == 'OUT' and m['stratum'] == 'all')]
+    result, saved = import_in_memory(missing)
+    assert result['gating_surface'] == 'IN' and result['surfaces'] == {'IN': '0/1738'}
+    assert saved['evidence']['bundle']['hits'] == 0
+    emit('import_missing_OUT_aggregate_accepted', result)
+    partial = copy.deepcopy(report)
+    partial['bundle']['failures'].append('unmeasured enabled surfaces: IN')
+    try:
+        import_in_memory(partial)
+    except ValueError as exc:
+        emit('actual_unmeasured_surface_refused', str(exc))
+    else:
+        raise AssertionError('a bench missing-surface failure was relaxed')
+
+    synthetic = [replace(rule(f'builtin:review-IN-{i}', Surface.IN, f'REVIEW_INPUT_{i}'), source='builtin') for i in range(6)]
+    synthetic.append(replace(rule('builtin:review-OUT', Surface.OUT, 'REVIEW_UNSEEN_OUTPUT'), source='builtin'))
+    corpora = []
+    for s in (Surface.IN, Surface.OUT):
+        uu = tuple(unit(str(i), s, f'ordinary {s.value} unit {i}' +
+                        (f' REVIEW_INPUT_{i}' if s is Surface.IN and i < 6 else ''),
+                        'ordinary' if i % 2 else 'security-adjacent') for i in range(1000))
+        corpora.append(bench.Corpus('review/' + s.value, 'sha256:'+'a'*64, uu, 'a'*64, ()))
+    authentic = bench.measure(synthetic, corpora)
+    local = hook.default_config()
+    local['sources']['builtin'] = 'ADVISE'
+    whole, good = import_in_memory(authentic, local, synthetic)
+    good_lanes = {lane.value for lane, _ in hook.effective_lanes(good, synthetic).values()}
+    assert whole['reaches'] == 'RECORD' and good_lanes == {'RECORD'}
+    damaged = copy.deepcopy(authentic)
+    damaged['bundle']['measurements'] = [m for m in damaged['bundle']['measurements']
+                                          if not (m['surface'] == 'IN' and m['stratum'] == 'all')]
+    accepted, bad = import_in_memory(damaged, local, synthetic)
+    bad_lanes = {lane.value for lane, _ in hook.effective_lanes(bad, synthetic).values()}
+    assert accepted['reaches'] == 'ADVISE' and bad_lanes == {'ADVISE'}
+    guarded_good, _ = import_in_memory(authentic, local, synthetic, guarded=True)
+    assert guarded_good == whole
+    try:
+        import_in_memory(damaged, local, synthetic, guarded=True)
+    except ValueError as exc:
+        assert str(exc) == 'the report carries no whole-corpus bundle measurement for IN'
+        guard_message = str(exc)
+    else:
+        raise AssertionError('proposed guard accepted the missing native aggregate')
+    emit('missing_aggregate_changes_actual_lanes', dict(
+        authentic_IN={'trials': 1000, 'hits': 6, 'u95': lanes.binomial_u95(1000, 6)},
+        authentic_OUT={'trials': 1000, 'hits': 0, 'u95': lanes.binomial_u95(1000, 0)},
+        each_IN_rule={'trials': 1000, 'hits': 1, 'u95': lanes.binomial_u95(1000, 1)},
+        whole_report_reaches=whole['reaches'], whole_report_effective_lanes=sorted(good_lanes),
+        removed_only_IN_all_row_reaches=accepted['reaches'], removed_only_IN_all_row_effective_lanes=sorted(bad_lanes),
+        proposed_guard_refuses=guard_message))
+
+
+def archive():
+    from agent_defs.loaders import atr
+    import build_bundle
+    pin = next(p for p in read(ROOT / 'sources.lock') if p['name'] == 'atr')
+    archive_path = S / 'atr-pinned.tar.gz'
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    assert archive_sha == pin['archive_sha256']
+    class MemoryFile:
+        def __init__(self, content): self.content = content
+        def read_bytes(self): return self.content
+    files = []
+    with tarfile.open(archive_path) as tar:
+        for member in tar.getmembers():
+            relative = '/'.join(member.name.split('/')[1:])
+            if member.isfile() and relative.startswith('rules/') and Path(relative).suffix in ('.yml', '.yaml'):
+                files.append((MemoryFile(tar.extractfile(member).read()), relative))
+        files.sort(key=lambda pair: pair[1])
+        with patch.object(atr, '_source_files', return_value=(pin['commit'], files, 'MIT', {})), \
+             patch.object(atr.atr_skill_gates, 'read_skill_gates', side_effect=atr.atr_skill_gates.GateReadError('in-memory rules-only build view')):
+            loaded = atr.load(ROOT, source_rev=pin['commit'])
+    assert not loaded.delta.entry_errors and len(loaded.rules) == 793
+    inbound = [r for r in loaded.rules if r.surface is Surface.IN]
+    runnable = [r for r in inbound if r.runnable and r.shippable and not build_bundle.screened(r)]
+    held = read(ROOT / 'scripts/bundle-held-back.json')
+    keep, dropped, refused = build_bundle.select(loaded.rules, ('OUT', 'IN'), held)
+    trimmed, reachable = build_bundle.trim(keep)
+    artifact = read(ROOT / 'src/agent_defs/bundle.json')
+    assert dropped == artifact['dropped'] and refused == artifact['screen_refusals']
+    assert {r.id: bench.rule_fingerprint(r) for r in trimmed} == {
+        r.id: bench.rule_fingerprint(r) for r in bundle.load(ROOT / 'src/agent_defs/bundle.json')}
+    emit('in_memory_build', dict(archive_sha256=archive_sha, rule_files=len(files), loaded=len(loaded.rules),
+        IN=len(inbound), runnable_IN=len(runnable), held_IN=[{'id': r.id, 'title': r.title, 'reason': held[r.id]} for r in runnable if r.id in held],
+        dropped=dropped, shipped=len(trimmed), reachable=reachable, files_extracted=0,
+        measured_refusals=sum('refused on measurement' in r.not_runnable_reason for r in inbound),
+        multiple_fields=sum(r.not_runnable_reason == 'multiple condition fields cannot be flattened into one text payload' for r in inbound)))
+
+
+def diagnostic():
+    import bound_leaf_discrepancy as probes
+    rows, report = inputs()
+    rules = [r for r in bundle.load(ROOT / 'src/agent_defs/bundle.json') if r.surface is Surface.OUT]
+    native_ids = {r.id for r in rules}
+    prior_hits = {m['id']: set(m['rule_ids']) & native_ids for m in report['materials'] if m['surface'] == 'OUT'}
+    relaxed, splits, census, unprunable = probes.build_probes(rules)
+    joined = newline = substring = 0
+    gained_newline, gained_substring = Counter(), Counter()
+    for row in rows:
+        found = prior_hits[row['id']]
+        candidates = {rid for rid, test in relaxed if rid not in found and test(row['text'])}
+        lines = row['text'].split('\n')
+        confirmed = {rid for rid in candidates if splits[rid](lines)}
+        joined += bool(found)
+        newline += bool(found | confirmed)
+        substring += bool(found | candidates)
+        gained_newline.update(confirmed)
+        gained_substring.update(candidates)
+    record = read(ROOT / 'scripts/leaf-traversal-diagnostic.json')
+    assert (joined, newline, substring) == (record['joined']['hits'], record['newline_leaf_diagnostic']['hits'], record['substring_leaf_diagnostic']['hits'])
+    assert gained_newline == record['newline_leaf_diagnostic']['rules_gaining']
+    assert gained_substring == record['substring_leaf_diagnostic']['rules_gaining']
+    assert {k: len(v) for k, v in census.items()} == record['construct_census']
+    assert len(splits) == record['probed_rules'] and unprunable == record['probed_without_pruning']
+    emit('diagnostic_recomputed', dict(trials=len(rows), joined=joined, newline=newline,
+        substring=substring, gained_newline=gained_newline, gained_substring=gained_substring,
+        original_joined_hits='reused verified report; base detector not rerun',
+        all_newline_and_relaxed_candidates='recomputed from unit text'))
+
+
+def provenance():
+    rows, report = inputs()
+    old_source = subprocess.check_output(['git', 'show', 'HEAD:scripts/prepare_tool_traffic.py'], cwd=ROOT).decode()
+    topic_calls = [n for n in ast.walk(ast.parse(old_source)) if isinstance(n, ast.Call)
+                   and isinstance(n.func, ast.Attribute) and n.func.attr == 'search'
+                   and n.args and isinstance(n.args[0], ast.Constant)
+                   and isinstance(n.args[0].value, str) and 'vulnerabilit' in n.args[0].value]
+    assert len(topic_calls) == 1 and topic_calls[0].args[0].value == prepare.TOPIC.pattern
+    assert prepare.TOPIC.flags & 2
+    completed = datetime.fromisoformat(report['measured_at']).timestamp() + report['elapsed_s']
+    paths = json.loads((ROOT / '.Review-Codex-round5-baseline.json').read_text())
+    newer = {p: datetime.fromtimestamp((ROOT / p).stat().st_mtime, timezone.utc).isoformat()
+             for p in paths if (ROOT / p).stat().st_mtime > completed}
+    relevant = [E / f'{NAME}-out-in-report.json', S / 'enabled-in-out.json', S / 'in-config.json']
+    emit('provenance', dict(report_started=report['measured_at'],
+        report_completed_estimate=datetime.fromtimestamp(completed, timezone.utc).isoformat(),
+        newer_worktree_mtimes=newer, file_hashes={str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in relevant},
+        OUT_file_type_all_tool_result=all(r['strata']['file_type'] == 'tool-result' for r in rows),
+        original_topic_regex_identical=True,
+        unique_canonical_invocations=len({json.dumps(json.loads(r['invocation']), sort_keys=True, ensure_ascii=False) for r in rows}),
+        per_surface_97_5_percent_bounds={s: exact_upper(n, k, .025) for s, n, k in [('IN',1738,0),('OUT',1743,1)]}))
 
 
 if __name__ == '__main__':
-    parser=argparse.ArgumentParser()
-    parser.add_argument('phase',choices=['capped','uncapped','coefficient'])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('phase')
     globals()[parser.parse_args().phase]()
 ~~~
 
 </details>
 
 <details>
-<summary>.Review-Codex-round4-scan.ps1</summary>
-
-~~~powershell
-param([ValidateSet('setup', 'locked', 'missing-parent')][string]$Mode)
-$ErrorActionPreference = 'Stop'
-$reviewRoot = [IO.Path]::GetFullPath((Get-Location).Path)
-$reviewRecord = Join-Path $reviewRoot '.Review-Codex-round4-scan-record.json'
-$reviewArtifact = Join-Path $reviewRoot '.Review-Codex-round4-harmless.txt'
-$reviewMissing = Join-Path $reviewRoot '.Review-Codex-round4-absent-parent'
-if ([IO.Directory]::Exists($reviewMissing)) { throw 'expected missing parent already exists' }
-$reviewOld = '{"verdict":"clean","review_marker":true}'
-[IO.File]::WriteAllText($reviewRecord, $reviewOld)
-[IO.File]::WriteAllText($reviewArtifact, 'harmless review artifact')
-$reviewLock = $null
-function New-Item {
-    [CmdletBinding()]
-    param($ItemType, $Path)
-    throw 'synthetic scan directory setup failure'
-}
-function Remove-Item {
-    [CmdletBinding()]
-    param($LiteralPath, [switch]$Recurse, [switch]$Force)
-    $resolved = [IO.Path]::GetFullPath($LiteralPath)
-    if ($Recurse) {
-        $tempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
-        if (-not $resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or
-            [IO.Path]::GetFileName($resolved) -notmatch '^agent-defs-scan-[0-9a-f]{8}$') {
-            throw 'cleanup escaped the expected temporary scan directory'
-        }
-        if ([IO.Directory]::Exists($resolved)) { throw 'mock unexpectedly created scan directory' }
-        return
-    }
-    if ([IO.Path]::GetDirectoryName($resolved) -ne $reviewRoot -or
-        [IO.Path]::GetFileName($resolved) -notlike '.Review-Codex-round4-scan-record.json.*.tmp') {
-        throw 'cleanup escaped review temporary files'
-    }
-    [IO.File]::Delete($resolved)
-}
-try {
-    if ($Mode -eq 'locked') {
-        $reviewLock = [IO.File]::Open($reviewRecord, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-    }
-    $destination = if ($Mode -eq 'missing-parent') { Join-Path $reviewMissing 'result.json' } else { $reviewRecord }
-    try {
-        & ./scripts/scan_artifact.ps1 -Path $reviewArtifact -Out $destination
-        $reviewExit = $LASTEXITCODE
-    } catch {
-        $reviewExit = 1
-        Write-Output ('Unhandled exception: ' + $_.Exception.Message)
-    }
-    $after = [IO.File]::ReadAllText($reviewRecord)
-    $parsed = $after | ConvertFrom-Json
-    if ($Mode -eq 'setup' -and ($parsed.verdict -notlike 'inconclusive:*' -or $reviewExit -ne 2)) {
-        throw 'setup failure did not replace the old record with exit 2'
-    }
-    if ($Mode -eq 'locked' -and ($after -ne $reviewOld -or $reviewExit -ne 3)) {
-        throw 'locked destination was not preserved with exit 3'
-    }
-    if ($Mode -eq 'missing-parent' -and $reviewExit -ne 1) { throw 'temporary-write witness changed' }
-    [ordered]@{ mode=$Mode; script_exit=$reviewExit; previous_record_unchanged=($after -eq $reviewOld);
-                verdict=$parsed.verdict; actual_scanner_executed=$false } | ConvertTo-Json -Compress
-    exit $reviewExit
-} finally {
-    if ($reviewLock) { $reviewLock.Dispose() }
-    [IO.File]::Delete($reviewRecord)
-    [IO.File]::Delete($reviewArtifact)
-}
-~~~
-
-</details>
-
-<details>
-<summary>.Review-Codex-round4-atr.py</summary>
+<summary>.Review-Codex-round5-finalize.py</summary>
 
 ~~~python
-from collections import Counter
 import hashlib
-import io
-import importlib.util
 import json
-from pathlib import Path, PurePosixPath
-import sys
-import tarfile
-from unittest.mock import patch
-import urllib.request
-
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT / 'src'))
-from agent_defs import evaluate, sources
-from agent_defs.loaders import atr
-from agent_defs.model import Surface
-
-
-class MemoryFile:
-    def __init__(self, data): self.data = data
-    def read_bytes(self): return self.data
-
-
-entry = sources.load_lock()['atr']
-url = entry['archive_http']['url']
-with urllib.request.urlopen(url, timeout=90) as response:
-    assert response.status == 200
-    blob = response.read()
-assert hashlib.sha256(blob).hexdigest() == entry['archive_sha256']
-print(json.dumps(dict(url=url, sha256=entry['archive_sha256'], archive_bytes=len(blob))), flush=True)
-with tarfile.open(fileobj=io.BytesIO(blob), mode='r:gz') as archive:
-    members = archive.getmembers()
-    root = members[0].name.split('/')[0]
-    files, directories = sources._layout(archive)
-    kept, kept_dirs = sources._kept(files, directories)
-    counts = Counter('/'.join(PurePosixPath(p).parts[:3]) for p in kept)
-    possible = [p for p in kept if not p.startswith('rules/') and
-                any(token in p.lower() for token in ('malicious', 'payload', 'fixture', 'sample', 'attack', 'test-corp', 'benchmark'))]
-    print(json.dumps(dict(members=len(members), declared_files=len(files), kept_files=len(kept),
-                          excluded_files=len(files)-len(kept),
-                          possible_sample_paths=[p for p in possible if p.startswith('data/') and '/benign/' not in p],
-                          actual_links=sum(m.issym() or m.islnk() for m in members))), flush=True)
-    # Read only approved regular rule YAML and LICENSE. No archive bytes or members are written.
-    rule_files = []
-    license_text = None
-    for member in members:
-        rel = member.name.removeprefix(root + '/')
-        if not member.isfile(): continue
-        if rel == entry['license_path']:
-            license_text = archive.extractfile(member).read().decode('utf-8')
-        elif rel.startswith('rules/') and PurePosixPath(rel).suffix in ('.yaml', '.yml'):
-            rule_files.append((MemoryFile(archive.extractfile(member).read()), rel))
-    rule_files.sort(key=lambda row: row[1])
-    assert license_text.startswith('MIT License')
-    def memory_source(*args): return entry['commit'], rule_files, 'MIT', {}
-    with patch.object(atr, '_source_files', memory_source), patch.object(
-            atr.atr_skill_gates, 'read_skill_gates', side_effect=atr.atr_skill_gates.GateReadError('rules-only in-memory view')):
-        result = atr.load(ROOT, source_rev=entry['commit'])
-    inbound = [r for r in result.rules if r.surface == Surface.IN]
-    categories = Counter()
-    details = []
-    for rule in inbound:
-        if not rule.runnable:
-            reason = rule.not_runnable_reason
-            category = ('multiple fields' if 'multiple condition fields cannot be flattened' in reason else
-                        'measured backtracking' if 'refused on measurement' in reason else 'other refusal')
-        elif not rule.shippable:
-            category, reason = 'not shippable', rule.restricted_reason
-        else:
-            try:
-                compiled = evaluate.compile_rule(rule)
-                assert compiled is not None
-            except (ValueError, NotImplementedError) as exc:
-                category, reason = 'evaluator rejection', str(exc)
-            else:
-                category, reason = 'runnable shippable screened', ''
-        categories[category] += 1
-        details.append(dict(id=rule.id, category=category, reason=reason))
-    measured = [r for r in inbound if 'refused on measurement' in r.not_runnable_reason]
-    exact_fields = [r for r in inbound if r.not_runnable_reason == 'multiple condition fields cannot be flattened into one text payload']
-    residual = [r for r in inbound if not r.runnable and r not in measured and r not in exact_fields]
-    print(json.dumps(dict(yaml_files=len(rule_files), loaded=len(result.rules), errors=len(result.delta.entry_errors),
-                          inbound=len(inbound), runnable_shippable_screened=categories['runnable shippable screened'],
-                          measured_refusal=len(measured), exact_fields_only=len(exact_fields),
-                          residual=[dict(id=r.id, reason=r.not_runnable_reason) for r in residual])), flush=True)
-    # Only digests are compared for non-allow-listed members, without printing their contents.
-    excluded_hashes = {}
-    for path, member in files.items():
-        if path not in kept:
-            excluded_hashes.setdefault(hashlib.sha256(archive.extractfile(member).read()).hexdigest(), []).append(path)
-    aliases = []
-    for path in possible:
-        member = kept[path]
-        digest = hashlib.sha256(archive.extractfile(member).read()).hexdigest()
-        same = excluded_hashes.get(digest, [])
-        if any('/tp/' in p or '/malicious/' in p for p in same):
-            aliases.append(dict(kept=path, sha256=digest, excluded=same[:3], bytes=member.size))
-    print(json.dumps(dict(kept_identical_to_excluded_positive=aliases)), flush=True)
-    for path in ['data/autoresearch/adversarial-samples.json', 'data/autoresearch/missed-payloads.json',
-                 'data/evasion-payloads.json', 'data/pint-benchmark/pint-corpus.json',
-                 'data/semantic-validation/attacks.json', 'data/fn-mining/skill-benchmark-malicious.json']:
-        member = kept[path]
-        value = json.loads(archive.extractfile(member).read())
-        schema = ({key: dict(type=type(val).__name__, length=len(val) if isinstance(val, (list, dict, str)) else None)
-                   for key, val in value.items()} if isinstance(value, dict) else
-                  dict(type=type(value).__name__, length=len(value), first_keys=list(value[0]) if value and isinstance(value[0], dict) else None))
-        print(json.dumps(dict(kept_json=path, bytes=member.size, schema=schema)), flush=True)
-    spec = importlib.util.spec_from_file_location('proposed_policy', ROOT / '.Review-Codex-round4-policy.py')
-    policy = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(policy)
-    selected, selected_dirs = policy._kept(files, directories, name='atr', license_path=entry['license_path'])
-    assert len(selected) == 798
-    assert not any(path.startswith('data/') for path in selected)
-    other, other_dirs = policy._kept(files, directories, name='synthetic_other', license_path='LICENSE')
-    assert other == kept and other_dirs == kept_dirs
-    class MemoryPath:
-        def __init__(self, name=''): self.name = name
-        def __truediv__(self, segment): return MemoryPath(self.name + '/' + segment if self.name else segment)
-        def is_file(self): return self.name in selected
-        def read_text(self, **kwargs): return archive.extractfile(selected[self.name]).read().decode('utf-8')
-        def __str__(self): return self.name
-    with patch.object(atr.atr_skill_gates, 'Path', lambda _: MemoryPath()):
-        gates = atr.atr_skill_gates.read_skill_gates('memory', source_rev=entry['commit'])
-    assert gates.source_rev == entry['commit']
-    print(json.dumps(dict(proposed_policy_keeps=len(selected), unchanged_other_source_policy=True,
-                          cfg_gates_read=True, cfg_scan_context=gates.scan_context)), flush=True)
-~~~
-
-</details>
-
-<details>
-<summary>.Review-Codex-round4-policy.py</summary>
-
-~~~python
-from pathlib import PurePosixPath
-from agent_defs.sources import _is_excluded, _portable_path, _safe_parts
-
-
-def _kept(files, directories, *, name, license_path):
-    required = {
-        _portable_path(license_path),
-        "src/engine.ts",
-        "src/enforcement.ts",
-        "src/quality/rule-contract.ts",
-        "engines/typescript/INTERFACE-CONTRACT.md",
-    }
-
-    def allowed(relative):
-        parts = PurePosixPath(relative).parts
-        if _is_excluded(parts):
-            return False
-        return name != "atr" or parts[0] == "rules" or relative in required
-
-    kept_files = {
-        relative: member for relative, member in files.items()
-        if allowed(relative)
-        and allowed(_portable_path("/".join(_safe_parts(member.name)[1:])))
-    }
-    if name == "atr":
-        kept_dirs = {
-            str(parent) for relative in kept_files
-            for parent in PurePosixPath(relative).parents if str(parent) != "."
-        }
-    else:
-        kept_dirs = {relative for relative in directories if allowed(relative)}
-    return kept_files, kept_dirs
-~~~
-
-</details>
-
-<details>
-<summary>.Review-Codex-round4-finalize.py</summary>
-
-~~~python
-import hashlib
 import os
 from pathlib import Path
 import subprocess
 
 root = Path('C:/Users/yuezh/PycharmProjects/agent-defs').resolve()
-temporary = root / '.Review-Codex-round4.tmp'
+temporary = root / '.Review-Codex-round5.tmp'
 target = root / 'Review-Codex.md'
-expected_head = '199f5bbfc5b6d86fa8d2fae76a31d5f4860fa3c2'
+baseline_path = root / '.Review-Codex-round5-baseline.json'
+expected_head = '36bd8fbbb2b2686726cacd2a4731355ae02808c4'
 expected_paths = {
-    'SAMPLES.md', 'docs/calibration.md', 'scripts/bound_leaf_discrepancy.py',
-    'src/agent_defs/hooks/_claude_code_impl.py', 'src/agent_defs/hooks/_core.py',
-    'src/agent_defs/lanes.py', 'src/agent_defs/sources.py',
-    'tests/test_bound_within.py', 'tests/test_hook_core.py',
-    'tests/test_leaf_discrepancy_probes.py', 'tests/test_sources.py',
+    'README.md', 'docs/calibration.md', 'docs/claude-code.md',
+    'scripts/artifact-scan.json', 'scripts/bound_leaf_discrepancy.py',
+    'scripts/leaf-traversal-diagnostic.json', 'scripts/measure_tool_traffic.py',
+    'scripts/prepare_tool_traffic.py', 'src/agent_defs/bundle.json',
+    'src/agent_defs/hooks/_claude_code_impl.py', 'tests/test_claude_code_hook.py',
+    'tests/test_leaf_discrepancy_probes.py', 'tests/test_shipped_bundle.py',
+    'tests/test_tool_traffic.py',
 }
 
 
@@ -1006,27 +806,27 @@ def git(*args):
     return subprocess.check_output(['git', *args], cwd=root)
 
 
+baseline = json.loads(baseline_path.read_text(encoding='utf-8'))
+assert set(baseline) == expected_paths
 assert git('rev-parse', 'HEAD').decode().strip() == expected_head
-assert set(git('diff', '--name-only', '869ccd2..HEAD').decode().splitlines()) == expected_paths
-git('diff', '--check', '869ccd2..HEAD')
-git('diff', '--exit-code', '--', '.', ':!Review-Codex.md')
 assert git('diff', '--cached', '--binary') == b''
+assert set(git('diff', '--name-only', 'HEAD').decode().splitlines()) == expected_paths
+for path, digest in baseline.items():
+    assert hashlib.sha256((root / path).read_bytes()).hexdigest() == digest, path
+assert target.read_bytes() == git('show', 'HEAD:Review-Codex.md') or (
+    target.read_bytes().replace(b'\r\n', b'\n') == git('show', 'HEAD:Review-Codex.md'))
+git('diff', '--check', 'HEAD')
 review = temporary.read_text(encoding='utf-8')
-assert review.startswith('<!-- Round 4 -->\n\nVerification notes:\n')
+assert review.startswith('<!-- Round 5 -->\n\nVerification notes:\n')
 assert review.splitlines().count('Verification status: VERIFIED') == 1
 assert review.splitlines().count('Commit verdict: BLOCK') == 1
-for heading in ['## New', '## Previously raised', '### Fixed', '### Still open', '### Reopened', '### Deferred']:
+for heading in ('## New', '## Previously raised', '### Fixed', '### Still open', '### Reopened', '### Deferred'):
     assert heading in review
 assert not any(c in review for c in ('\u202f', '\u2013', '\u2014'))
-helpers = [
-    '.Review-Codex-round4-probes.py', '.Review-Codex-round4-numeric.py',
-    '.Review-Codex-round4-scan.ps1', '.Review-Codex-round4-atr.py',
-    '.Review-Codex-round4-policy.py', '.Review-Codex-round4-finalize.py',
-]
+helpers = ['.Review-Codex-round5-probes.py', '.Review-Codex-round5-finalize.py']
 for name in helpers:
     source = (root / name).read_text(encoding='utf-8')
-    language = 'powershell' if name.endswith('.ps1') else 'python'
-    review += f'\n<details>\n<summary>{name}</summary>\n\n~~~{language}\n{source.rstrip()}\n~~~\n\n</details>\n'
+    review += f'\n<details>\n<summary>{name}</summary>\n\n~~~python\n{source.rstrip()}\n~~~\n\n</details>\n'
 assert temporary.parent.resolve() == target.parent.resolve() == root
 data = review.encode('utf-8')
 with temporary.open('wb') as stream:
@@ -1036,16 +836,18 @@ with temporary.open('wb') as stream:
 os.replace(temporary, target)
 assert target.read_bytes() == data
 assert not temporary.exists()
-for name in helpers:
+for name in helpers + [baseline_path.name]:
     helper = root / name
-    assert helper.resolve().parent == root and helper.name.startswith('.Review-Codex-round4-')
+    assert helper.resolve().parent == root and helper.name.startswith('.Review-Codex-round5-')
     helper.unlink()
 assert git('rev-parse', 'HEAD').decode().strip() == expected_head
-git('diff', '--exit-code', '--', '.', ':!Review-Codex.md')
 assert git('diff', '--cached', '--binary') == b''
-status = git('status', '--porcelain').decode().splitlines()
-assert status == [' M Review-Codex.md'], status
-print('VERIFIED: complete Round 4 review atomically replaced and read back; verification helpers removed; HEAD and index unchanged; only Review-Codex.md modified.')
+for path, digest in baseline.items():
+    assert hashlib.sha256((root / path).read_bytes()).hexdigest() == digest, path
+assert set(git('diff', '--name-only', 'HEAD').decode().splitlines()) == expected_paths | {'Review-Codex.md'}
+git('diff', '--check', 'HEAD')
+assert not list(root.glob('.Review-Codex-round5-*'))
+print('VERIFIED: complete Round 5 review atomically replaced and read back; helpers removed; all fourteen reviewed files unchanged; HEAD and index unchanged.')
 print('Review bytes:', len(data), 'sha256:', hashlib.sha256(data).hexdigest())
 ~~~
 

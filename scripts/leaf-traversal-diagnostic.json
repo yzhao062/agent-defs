@@ -3,8 +3,9 @@
   "units": "C:\\Users\\yuezh\\AppData\\Local\\Temp\\claude\\C--Users-yuezh-PycharmProjects-agent-startup-thesis\\0c2c85fb-d0d8-49d1-a9cd-a3b2dc006ecd\\scratchpad\\holdout-units-2.jsonl",
   "units_sha256": "bd429d68174135bab674426bea82e0e58f504241002c3e589202f8c1a828893e",
   "units_from": "scripts/rebuild_holdout_units.py replaying the 1743 pinned unit ids of the local-claude-unique-holdout corpus from the OUT report at sha256 3106c49d2a220616b8ef8f9b02eba0c389a76b7c24c37bfaa04678a14658ee1f; all 1743 recovered with matching digests",
-  "rules": "src\\agent_defs\\bundle.json",
-  "rules_sha256": "2611b05684f17848406fbb20c3fe0fe2701be24f3d567b1b61db00889a091fa1",
+  "rules": "C:\\Users\\yuezh\\PycharmProjects\\agent-defs\\src\\agent_defs\\bundle.json",
+  "rules_sha256": "e6efd658a7f93eeef6ad1687a0e4782c3f3c2addc9cd2fd182eda0b3c96e3310",
+  "surface": "OUT",
   "rule_count": 205,
   "rule_ids_sha256": "f0b848547e8ecaa2224f678cc70c5c5f9b11bdf3baaa0925f9ab05ededed97f8",
   "python": "3.12.12"
@@ -42,7 +43,7 @@
  "probed_without_pruning": [],
  "method": {
   "newline_leaf": "joined hits unioned with an all-lines probe, evaluated with each rule's own flags and conjunction. NOT an exact leaf count and NOT a bound: the extractor joined blocks with newlines but a block can contain newlines of its own, so this cuts at a superset of the real boundaries and destroys a match that spans lines inside one block",
-  "substring_leaf": "the same rules matched with every zero-width assertion removed. The rewrite is sound only for patterns free of atomic groups, possessive quantifiers, conditionals and quantified lookarounds; a pattern carrying one is counted as a candidate on every unit rather than rewritten. Loose by construction",
+  "substring_leaf": "the same rules matched with every zero-width assertion removed. The rewrite is sound only for patterns free of atomic groups, possessive quantifiers, conditionals, quantified lookarounds and backreferences; a pattern carrying one of the first four is counted as a candidate on every unit rather than rewritten, and the quantifier that makes a lookaround unsafe need not sit against it. Backreferences are absent by evaluator screening rather than by detection here: removing a lookahead can renumber the groups after it. Loose by construction",
   "not_covered": "string values of tool_response the extractor never rendered into tool_result.content; no computation on this corpus reaches them, so neither number is a bound on the deployed hook and neither is admission evidence"
  }
 }

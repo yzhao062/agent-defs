@@ -197,24 +197,37 @@ def test_a_distant_quantifier_reaches_candidate_selection_unpruned(probes, patte
     assert not re.compile(pattern).search("z\n" + leaf + "\ny")
 
 
-def test_no_shipped_rule_carries_a_construct_the_rewrite_cannot_handle(probes):
+def test_the_committed_diagnostic_still_describes_the_shipped_bundle(probes):
     """Keeps the committed record honest as the bundle changes.
 
-    `scripts/leaf-traversal-diagnostic.json` records `probed_without_pruning: []`
-    and `docs/calibration.md` says the shipped rules carry none of these. Both
-    are claims about a bundle that a later build can change under them, so the
-    claim is checked against the bundle rather than restated.
+    `scripts/leaf-traversal-diagnostic.json` reports counts over one rule set,
+    and `docs/calibration.md` quotes them. A later build can change the bundle
+    under both. The record names the bytes it read, so that is what is checked,
+    rather than the numbers being restated here.
     """
+    import hashlib
     import json
 
-    bundle = json.loads((SCRIPT.parents[1] / "src" / "agent_defs" / "bundle.json")
+    raw = (SCRIPT.parents[1] / "src" / "agent_defs" / "bundle.json").read_bytes()
+    record = json.loads((SCRIPT.parent / "leaf-traversal-diagnostic.json")
                         .read_text(encoding="utf-8"))
-    assert len(bundle["rules"]) == 205, "the bundle changed; regenerate the diagnostic record"
-    patterns = [(rule["id"], rule["predicate"]) for rule in bundle["rules"]
-                if rule.get("predicate_kind") == "REGEX"]
-    assert len(patterns) == 201, "the four STRUCTURED rules carry no pattern to classify"
-    carrying = {rule_id: sorted(probes.unsupported_constructs(pattern))
-                for rule_id, pattern in patterns if probes.unsupported_constructs(pattern)}
+    inputs = record["inputs"]
+    assert hashlib.sha256(raw).hexdigest() == inputs["rules_sha256"], (
+        "the bundle was rebuilt; rerun scripts/bound_leaf_discrepancy.py")
+
+    bundle = json.loads(raw.decode("utf-8"))
+    probed = [r for r in bundle["rules"] if r["surface"] == inputs["surface"]]
+    assert len(probed) == inputs["rule_count"]
+    assert hashlib.sha256("\n".join(sorted(r["id"] for r in probed)).encode()).hexdigest() \
+        == inputs["rule_ids_sha256"]
+
+    # Claimed by the record and by docs/calibration.md, and true of every rule
+    # rather than only the probed surface: the rewrite is unsound on these
+    # wherever it runs.
+    assert record["probed_without_pruning"] == []
+    carrying = {rule["id"]: sorted(probes.unsupported_constructs(rule["predicate"]))
+                for rule in bundle["rules"] if rule.get("predicate_kind") == "REGEX"
+                and probes.unsupported_constructs(rule["predicate"])}
     assert carrying == {}, "a shipped rule is now unprunable; the recorded counts are stale"
 
 

@@ -15,12 +15,12 @@ the one threat here an individual cannot defend against alone, and it is what th
 at.
 
 It acts at the moment the text arrives rather than producing a report you have to read. Three moments
-are reachable in principle; one is wired.
+are reachable in principle; two are wired.
 
 | Moment | What is caught | State here |
 |---|---|---|
 | A tool result comes back | instructions addressed to your agent, carried in the returned text | **wired and measured.** 209 rules on Claude Code's `PostToolUse`, being 205 from the corpus plus 4 starter rules, calibrated on real traffic; see [`docs/calibration.md`](docs/calibration.md) |
-| A tool call is about to run | the call does something you did not authorise | scanner reachable, no measured rules. The 57 `IN` rules in the corpus have no benign corpus to calibrate against, so none ships |
+| A tool call is about to run | the call does something you did not authorise | **wired and measured.** 11 rules on `PreToolUse`, which fired on none of 1,738 real tool invocations. Of the corpus's 57 `IN` rules, 43 do not run and 3 are held back after firing on selection-stage tool *results*, which is not the surface they run on |
 | A skill or server is added | an install step piping a download into a shell, a plaintext secret, a declaration of no `tools` beside authority over all of them | `cfg.py` scans a document, and nothing calls it. No installer hook, and `read_config` accepts no surface but `IN` and `OUT` |
 
 Claude Code, Codex and Copilot each expose all three interception points. Only Claude Code has an
@@ -66,10 +66,15 @@ of the set you actually have installed, and then saying so once:
 ```sh
 agent-defs export-bundle --out enabled.json      # the exact enabled set
 python scripts/measure_tool_traffic.py --evidence <dir> --names <corpus> \
-    --surface OUT --rules enabled.json --workers 4
-agent-defs calibrate --report <corpus>-out-report.json --accept-pooled-bound
+    --surface OUT --surface IN --rules enabled.json --workers 4
+agent-defs calibrate --report <corpus>-out-in-report.json --accept-pooled-bound
 agent-defs promote --source atr --lane ADVISE
 ```
+
+Both surfaces go in one report. A bundle that enables `IN` and `OUT` is refused
+whole if either is unmeasured, so measuring one at a time produces a report
+`calibrate` will not take. The lane is then gated on whichever surface bounds
+worse, and `calibrate` prints both so you can see which one that was.
 
 `--accept-pooled-bound` is there because a personal corpus will not carry the
 roughly 600 clean trials per stratum the benchmark's own gate wants for a
@@ -78,12 +83,13 @@ takes the weaker pooled claim in writing. Drop it and the step above will
 refuse.
 
 `promote` refuses a lane the imported evidence does not support and prints what
-the change does. The shipped bundle fired once on 1,743 held-out tool results.
-Treating those as independent representative trials gives a nominal one-sided
-95% bound of 0.272%, which the importer maps to `ADVISE` and not `DENY`. That
-sampling, and a rule removed from the bundle after the evaluation was read, are
-both reasons the number is not established as a bound on what the deployed hook
-does. [`docs/calibration.md`](docs/calibration.md) has the procedure, the
+the change does. The shipped bundle fired once on 1,743 held-out tool results
+and on none of the 1,738 tool invocations from the same episodes. Treating those
+as independent representative trials gives a nominal one-sided 95% bound of
+0.272% on `OUT` and 0.172% on `IN`, and the worse of the two decides the lane:
+the importer maps 0.272% to `ADVISE` and not `DENY`. That sampling, and a rule
+removed from the bundle after the evaluation was read, are both reasons the
+number is not established as a bound on what the deployed hook does. [`docs/calibration.md`](docs/calibration.md) has the procedure, the
 corpora, the two gates that disagree about it, and what none of it settles.
 
 ## Seeing what an install is doing

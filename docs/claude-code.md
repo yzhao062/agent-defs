@@ -30,10 +30,12 @@ site initialization is needed because the hook has no third-party dependencies.
 Edit **`~/.claude/agent-defs.json`** for all agent-defs configuration. Each source
 has a lane: `DO_NOT_SHIP` disables it, `RECORD` logs findings, `ADVISE` adds a
 fixed advisory, and `DENY` blocks matching tool inputs or withholds matching tool
-result text. Enabled surfaces are `IN` and `OUT`; other surfaces require other
-adapters. This starter release contains four package-authored OUT rules. Entries
-for the six corpora reserve their configuration names and do not load those
-corpora yet.
+result text. The advisory is fixed per surface and there are two of them, because
+a tool result and a tool call give the reader different things to do. Enabled
+surfaces are `IN` and `OUT`; other surfaces require other adapters. Four
+package-authored OUT rules ship in the package itself, and `bundle.json` carries
+216 ATR rules, 205 on `OUT` and 11 on `IN`. The other five corpora reserve their
+configuration names and are not loaded yet.
 
 First install is RECORD. Completed findings cause no prompts, blocks, advisories, or output
 rewrites. Findings are JSON lines in `~/.claude/agent-defs/findings.jsonl`, with

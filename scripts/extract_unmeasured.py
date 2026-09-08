@@ -1,8 +1,21 @@
+"""Collect the ATR regex conditions that carry no timing measurement.
+
+Produces ``unmeasured-cfg.json`` in the working directory, which is the input
+``hazards.json`` names for the CFG condition sweep. Run it from the repository
+root so that path resolves where the record says it does:
+
+    python scripts/extract_unmeasured.py <path to a pinned ATR checkout>
+
+The corpus root is an argument rather than a constant because this file ships in
+the package and the checkout lives wherever the operator put it.
+"""
 import sys, json, hashlib; sys.path.insert(0,"src")
 from pathlib import Path
 import yaml
 from agent_defs import evaluate as ev
-ROOT=Path(r"C:/atrx/Agent-Threat-Rule-agent-threat-rules-faf743f")
+if len(sys.argv) != 2:
+    raise SystemExit(__doc__)
+ROOT=Path(sys.argv[1])
 out={}; total=0; ported_total=0
 for f in sorted((ROOT/"rules").rglob("*.yaml")):
     d=yaml.safe_load(f.read_text(encoding="utf-8"))

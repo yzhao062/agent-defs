@@ -134,8 +134,9 @@ scripts/audit_atr.py <atr-checkout>` reproduces the admission side from any
 checkout: which rules the dispatcher admits, which gate refused each of the rest,
 and every partial binding with the conditions it dropped.
 
-The scoring scripts and their outputs are preserved at
-`spark-37f2:~/agent-defs-work/round4-cfg/`: `upstream-skill.mts` runs ATR's
+The scoring scripts and their outputs are preserved off this repository, on the
+Linux host the corpora live on, under `agent-defs-work/round4-cfg/`:
+`upstream-skill.mts` runs ATR's
 unmodified `scanSkill()` through `tsx` to produce the reference,
 `measure-cfg.py` produces the five steps in the table, `compare-upstream.py`
 diffs the two document by document, and `crosscheck-a8a4146.py` reproduces round

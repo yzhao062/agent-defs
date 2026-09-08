@@ -53,3 +53,12 @@ agent_defs = ["hazards.json", "bundle.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# An exception that escapes a thread reaches pytest as a warning, and a warning
+# keeps the run green. That is how a test whose subject failed off the main
+# thread reports a pass, which happened here twice: a worker launch that raised
+# inside the supervisor, and a reader that died before it could observe anything.
+# Promoted here rather than in one file, because the class is not confined to one
+# and a suite that spawns workers has threads everywhere. Only this category is
+# promoted; the suite carries unrelated deprecation warnings that a blanket
+# ``error`` would turn into failures with nothing to fix.
+filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]

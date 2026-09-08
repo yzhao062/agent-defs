@@ -53,11 +53,27 @@ def _cfg(request):
         print(json.dumps(record, ensure_ascii=True), flush=True)
 
 
-def main():
-    request = json.loads(sys.stdin.buffer.read().decode("utf-8", "surrogatepass"))
-    if request.get("mode") == "cfg":
-        return _cfg(request)
-    payload = request["payload"]
+#: The protocol this worker speaks, as a literal rather than an import. A
+#: half-installed tree whose evaluator moved on must fail closed here, and an
+#: imported constant would agree with itself.
+_PROTOCOL = 2
+
+
+def _emit(record):
+    print(json.dumps(record, ensure_ascii=True), flush=True)
+
+
+def _leaves(request):
+    """Sweep every rule over every leaf, rule-major, one row at a time.
+
+    Compilation is hoisted out of the leaf loop, which carries the saving, and
+    stays inside the rule loop, which carries the incrementality: a kill still
+    leaves the rows that already finished, and their hits, on the wire.
+
+    A row does not stop at its first hit. Withholding is decided per leaf, so
+    every leaf must receive every rule's verdict.
+    """
+    leaves = request["leaves"]
     for index, item in enumerate(request["rules"]):
         try:
             rule = Rule(id=item["id"], source=item.get("source", ""), source_id="", source_rev="",
@@ -65,16 +81,44 @@ def main():
                         predicate_kind=PredicateKind(item["kind"]), predicate=item["predicate"],
                         case_sensitive=item["case_sensitive"])
             runtime = compile_rule(rule)
-            if rule.predicate_kind in (PredicateKind.REGEX, PredicateKind.STRUCTURED):
-                hit = runtime.search(payload)
-                span = [hit.start(), hit.end()] if hit else None
-            else:
-                hit = _search_substrings(rule, runtime, payload)
-                span = [hit.start, hit.end] if hit else None
-            record = ["ok", index, span]
         except Exception as exc:
-            record = ["error", index, f"{type(exc).__name__}: {exc}"[:512]]
-        print(json.dumps(record, ensure_ascii=True), flush=True)
+            _emit(["err", index, f"{type(exc).__name__}: {exc}"[:512]])
+            continue
+        swept = True
+        for leaf_index, leaf in enumerate(leaves):
+            try:
+                if rule.predicate_kind in (PredicateKind.REGEX, PredicateKind.STRUCTURED):
+                    hit = runtime.search(leaf)
+                    span = [hit.start(), hit.end()] if hit else None
+                else:
+                    hit = _search_substrings(rule, runtime, leaf)
+                    span = [hit.start, hit.end] if hit else None
+            except Exception as exc:
+                _emit(["err", index, f"{type(exc).__name__}: {exc}"[:512]])
+                swept = False
+                break
+            if span is not None:
+                _emit(["hit", index, leaf_index, span[0], span[1]])
+        if swept:
+            _emit(["done", index, len(leaves)])
+
+
+def main():
+    # Read stdin to EOF before the first byte of output. This is what makes a
+    # pipe deadlock structurally impossible now that a request carries every
+    # leaf of an event: the worker cannot fill its stdout pipe while the parent
+    # is still writing stdin, because it has not started writing.
+    request = json.loads(sys.stdin.buffer.read().decode("utf-8", "surrogatepass"))
+    mode = request.get("mode")
+    if mode == "cfg":
+        return _cfg(request)
+    # Fail closed and loudly on anything else: no frame, nonzero exit, and the
+    # parent reports worker failure rather than an empty scan.
+    if request.get("protocol") != _PROTOCOL or mode != "leaves":
+        raise SystemExit(2)
+    if request.get("stride") != len(request["leaves"]):
+        raise SystemExit(2)
+    return _leaves(request)
 
 
 if __name__ == "__main__":

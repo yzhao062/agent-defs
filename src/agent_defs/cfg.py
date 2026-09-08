@@ -468,8 +468,14 @@ def scan_cfg_isolated(
             elif status == "ok":
                 if detail is not None:
                     condition, start, end, origin = detail
+                    # The document is the one text this side holds, so its spans
+                    # get the upper bound too. A base64 block was decoded inside
+                    # the killable process and never crosses back, so only the
+                    # ordering check is available for it; carrying the origin
+                    # length in the frame would be self-certifying.
                     if not (isinstance(condition, int) and isinstance(start, int)
                             and isinstance(end, int) and 0 <= start <= end
+                            and (end <= len(document) if origin == "document" else True)
                             and 0 <= condition < len(item["conditions"])
                             and origin in ("document", "base64")):
                         raise ValueError("invalid match span")

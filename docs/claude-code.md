@@ -85,28 +85,67 @@ hooks can still overwrite this hook; Claude Code does not run a redaction
 pipeline.
 
 Payload reads are capped at 1 MiB, scanned text at 4 MiB per event, and traversal
-at 4,096 nodes and 64 levels. Each string value is scanned in an isolated worker, under a
-shared one-second event budget, including preparation and worker startup, with up to
-100 ms additional cleanup. The installed command has a three-second harness timeout.
-The hook budget is defined once as `SCAN_BUDGET_S`; the standalone evaluator still
-defaults to 250 ms. These are resource limits, not promises of complete coverage or latency.
-Neither budget completes the full measured ATR OUT bundle on all real traffic: r1
-observed a 28 KB Gmail result with unfinished rules even at 30 seconds.
+at 4,096 nodes and 64 levels. Every string value of one event is scanned in **one**
+isolated worker, under a one-second event budget covering preparation and worker
+startup, with up to 100 ms additional cleanup. The installed command has a
+three-second harness timeout. The hook budget is defined once as `SCAN_BUDGET_S`;
+the standalone evaluator still defaults to 250 ms. These are resource limits, not
+promises of complete coverage or latency. Neither budget completes the full measured
+ATR OUT bundle on all real traffic: r1 observed a 28 KB Gmail result with unfinished
+rules even at 30 seconds.
+
+One worker per event replaces one worker per string value. A worker screens and
+compiles the whole bundle before it matches anything, and that cost is paid once per
+process: 341 ms of a 492 ms per-value floor was compilation, against 4.2 ms of
+matching. Under the old shape a three-value tool result exhausted the budget before
+the third value was reached, and 32.67% of measured tool results returned an
+incomplete scan, including every result carrying three or more values. The byte
+allowance is one running total across the values of an event, spent in traversal
+order; a value the allowance no longer covers is declined rather than sent, and the
+diagnostic log names it.
+
+Rules sweep rule-major: each rule is compiled once, then run against every value
+before the next rule begins. The honest cost is that under a timeout the first value
+is checked by fewer rules than it was, because each rule now finishes its whole
+sweep before the next starts. Every other value goes from unchecked to that same
+prefix. "The first value is checked most deeply" was the starvation rather than a
+security property. An attacker shapes the payload, so under the old order he could
+pad three values and keep every rule off the fourth while knowing nothing about the
+bundle. Under rule-major the schedule depends on the rule set alone, and evading it
+means reading the bundle for a hazard only a late rule detects.
 
 The evaluator searches each bounded string in full, preserving anchors, lookarounds, and
-substring conjunctions across the old 256 KiB boundary. It currently launches a worker
-for each string value, so many values can exhaust the shared event budget.
+substring conjunctions across the old 256 KiB boundary. Each value crosses to the
+worker as its own string and each rule searches that string alone. Nothing is
+joined, so a conjunction cannot be satisfied across two values, and an anchor still
+means the edge of its own value.
 
-The reader checks `ScanResult.complete`, worker and rule errors, truncation,
-skipped rules, and the evaluated-rule count. It explicitly consumes `partial_findings`
+The reader checks batch completeness, worker and rule errors, per-value truncation,
+unresolved (value, rule) pairs, and whether the scan scheduled every runnable rule it
+was handed. It explicitly consumes `partial_findings`
 so completed findings remain effective when later work fails. Incomplete coverage is
 logged and reported with fixed `systemMessage` text for the person and `INCOMPLETE`
-text in `additionalContext` for the model whenever the event is known. These warnings
+text in `additionalContext` for the model whenever the event is known. An incomplete
+event also writes one `scan_coverage` record naming how many values were seen,
+scheduled, declined and truncated, with the JSON Pointer path of each declined and
+each truncated value up to 32 of each; the counts beside those lists stay exact and
+`paths_elided` says when a list was cut. These warnings and records
 contain no payload excerpts or rule prose. PreToolUse asks for approval only if an
 enabled rule already qualifies for DENY; RECORD and ADVISE cannot acquire blocking
 power through a timeout. A completed DENY match still denies. PostToolUse keeps
 completed measured redactions and reports incomplete coverage without rewriting
 unscanned text. A logging failure does not discard a completed decision.
+
+**The admission evidence is still a joined-text measurement.** The shipped OUT
+benign bound, 1 hit in 1,743 trials, was measured over each unit's whole text rather
+than over the values a hook walks, and `docs/calibration.md` already records that
+neither leaf diagnostic bounds the deployed hook. Reaching every value inside the
+byte allowance enlarges that gap rather than creating it, because budget exhaustion
+used to skip values on about a third of tool results. Closing it needs an OUT corpus
+of the values themselves, which does not exist yet: the extractor never rendered
+`tool_response` string values into `tool_result.content`, and re-extracting would
+re-select from transcripts that have since changed. That extraction is the work that
+would make a real gate possible.
 
 Malformed input, argument errors, package imports, scanner exceptions, and
 broken stdout all remain behind an exit-zero boundary. There is no argparse in

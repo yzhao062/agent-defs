@@ -10,7 +10,7 @@ import sys
 import pytest
 
 from agent_defs.builtin import STARTER_RULES
-from agent_defs.evaluate import Finding, RuleError, ScanResult
+from agent_defs.evaluate import BatchScanResult, Finding, LeafScanResult, RuleError, ScanResult
 from agent_defs.hooks import _claude_code_impl as hook
 from agent_defs.lanes import u95_zero_hits
 from agent_defs.model import BenignFiring, Lane, Surface
@@ -43,25 +43,39 @@ def test_incomplete_scan_is_never_a_clean_allow(config, monkeypatch, event, requ
     config["sources"]["builtin"] = requested
     if measured:
         evidence(config, [rule])
-    result = ScanResult((), 1, 0, 0, False)
+    # One scheduled leaf, one scheduled rule, every pair resolved: the clean
+    # batch each fault is then injected into, one fault at a time.
+    result = BatchScanResult(leaves=(LeafScanResult((), 1, False, True),), leaves_offered=1,
+                             leaves_scheduled=1, rules_scheduled=1, pairs_scheduled=1,
+                             pairs_resolved=1, pairs_rejected=0, elapsed_s=0.0)
     if fault == "deadline":
-        result = replace(result, rules_evaluated=0, rules_skipped_budget=1)
+        # A worker killed mid-row terminates no row, so its pair goes unresolved.
+        result = replace(result, leaves=(LeafScanResult((), 0, False, True),), pairs_resolved=0)
     elif fault == "truncated":
-        result = replace(result, truncated_input=True)
+        result = replace(result, leaves=(LeafScanResult((), 1, True, True),))
     elif fault == "rejected":
         result = replace(result, errors=(RuleError(rule.id, "attacker-controlled diagnostic"),))
     elif fault == "worker":
         result = replace(result, worker_error="attacker-controlled diagnostic")
     elif fault == "short_count":
-        result = replace(result, rules_evaluated=0)
+        # The batch reports itself complete over a rule set smaller than the one
+        # handed in. This is the state the deleted ``rules_evaluated !=
+        # len(rules)`` comparison caught, asked of the number the scan reports.
+        result = replace(result, leaves=(LeafScanResult((), 0, False, True),),
+                         rules_scheduled=0, pairs_scheduled=0, pairs_resolved=0)
+        assert result.complete, "short_count must inject a batch that calls itself clean"
 
-    def scanner(*args, **kwargs):
+    calls = []
+
+    def scanner(leaves, rules, **kwargs):
+        calls.append(list(leaves))
         if fault == "exception":
             raise RuntimeError("attacker-controlled diagnostic")
         return result
 
-    monkeypatch.setattr(hook, "scan", scanner)
+    monkeypatch.setattr(hook, "scan_leaves", scanner)
     response = hook.process(payload(event), config, [rule])
+    assert calls == [["ordinary"]], "the injected batch scanner was not the one that ran"
     specific = response.get("hookSpecificOutput", {})
     assert response["systemMessage"]
     assert "updatedToolOutput" not in specific
@@ -81,8 +95,18 @@ def test_completed_measured_deny_survives_a_later_worker_error(config, monkeypat
     evidence(config, [rule])
     config["sources"]["builtin"] = "DENY"
     finding = Finding(rule.id, rule.surface.value, 0, 6)
-    monkeypatch.setattr(hook, "scan", lambda *a, **kw: ScanResult((finding,), 1, 0, 0, False, worker_error="crash"))
+    calls = []
+
+    def scanner(leaves, rules, **kwargs):
+        calls.append(list(leaves))
+        return BatchScanResult(leaves=(LeafScanResult((finding,), 1, False, True),),
+                               leaves_offered=1, leaves_scheduled=1, rules_scheduled=1,
+                               pairs_scheduled=1, pairs_resolved=1, pairs_rejected=0,
+                               elapsed_s=0.0, worker_error="crash")
+
+    monkeypatch.setattr(hook, "scan_leaves", scanner)
     response = hook.process(payload(event, "secret"), config, [rule])
+    assert calls == [["secret"]], "the injected batch scanner was not the one that ran"
     assert response["systemMessage"]
     specific = response["hookSpecificOutput"]
     if event == "PreToolUse":

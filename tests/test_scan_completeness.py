@@ -85,16 +85,36 @@ def config(tmp_path):
 
 
 @pytest.mark.parametrize("state", [
-    {"truncated_input": True}, {"rules_skipped_budget": 1},
+    {"truncated": True}, {"unresolved": True},
     {"errors": (evaluate.RuleError("bad", "MODEL_DIRECTIVE"),)}, {"worker_error": "MODEL_DIRECTIVE"},
 ])
 @pytest.mark.parametrize("event", ["PreToolUse", "PostToolUse"])
 def test_hook_reports_every_incomplete_state_without_echoing_errors(config, monkeypatch, state, event):
-    args = dict(rules_evaluated=0, rules_skipped_budget=0, elapsed_s=0, truncated_input=False)
-    args.update(state)
-    monkeypatch.setattr(hook, "scan", lambda *a, **kw: evaluate.ScanResult((), **args))
+    """Every way one batch can fall short, with nothing of the worker's text repeated.
+
+    The four states are the same four the per-leaf shape carried: the leaf was
+    cut short, its work went unresolved, a rule was rejected, or the worker
+    failed. They are batch-shaped now because the traversal reads a batch, and
+    each is injected alone so the state under test is the one that decides.
+    """
+    calls = []
+
+    def scanner(leaves, rules, **kwargs):
+        calls.append(list(leaves))
+        scheduled = len(rules)
+        return evaluate.BatchScanResult(
+            leaves=tuple(evaluate.LeafScanResult((), 0, state.get("truncated", False), True)
+                         for _ in leaves),
+            leaves_offered=len(leaves), leaves_scheduled=len(leaves),
+            rules_scheduled=scheduled, pairs_scheduled=scheduled * len(leaves),
+            pairs_resolved=0 if state.get("unresolved") else scheduled * len(leaves),
+            pairs_rejected=0, elapsed_s=0,
+            errors=state.get("errors", ()), worker_error=state.get("worker_error"))
+
+    monkeypatch.setattr(hook, "scan_leaves", scanner)
     rules = tuple(replace(r, surface=Surface.IN if event == "PreToolUse" else Surface.OUT) for r in hook.STARTER_RULES)
     result = hook.process({"hook_event_name": event, "tool_input": "text", "tool_response": "text"}, config, rules)
+    assert calls == [["text"]], "the injected batch scanner was not the one that ran"
     assert "incomplete" in result["hookSpecificOutput"]["additionalContext"]
     assert "MODEL_DIRECTIVE" not in json.dumps(result)
     assert "permissionDecision" not in result["hookSpecificOutput"]

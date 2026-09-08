@@ -10,6 +10,7 @@ from dataclasses import replace
 
 import pytest
 
+from agent_defs.evaluate import BatchScanResult, LeafScanResult
 from agent_defs.hooks import _core
 from agent_defs.model import Lane
 
@@ -21,27 +22,54 @@ class Finding:
         self.rule_id, self.start, self.end = rule_id, start, end
 
 
-class Result:
-    def __init__(self, findings=(), *, complete=True, evaluated=1, truncated=False):
+class Leaf:
+    """One leaf's share of a batch, in the shape ``_core`` reads."""
+
+    def __init__(self, findings=(), *, evaluated=1, truncated=False, scheduled=True):
         self.partial_findings = list(findings)
-        self.complete = complete
         self.rules_evaluated = evaluated
-        self.rules_skipped_budget = 0
+        self.truncated_input = truncated
+        self.scheduled = scheduled
+
+
+class Batch:
+    """A batch result, injected in place of one.
+
+    ``complete`` is settable independently of the pair counts, because the
+    verdict a caller acts on and the accounting it logs are two claims and a
+    fake that derived one from the other could not express a worker that
+    terminated fewer rows than it scheduled.
+    """
+
+    def __init__(self, count, findings=(), *, complete=True, evaluated=1, truncated=False,
+                 rules_scheduled=1):
+        self.leaves = [Leaf(findings, evaluated=evaluated, truncated=truncated)
+                       for _ in range(count)]
+        self.complete = complete
+        self.leaves_offered = count
+        self.leaves_scheduled = count
+        self.rules_scheduled = rules_scheduled
+        self.pairs_scheduled = rules_scheduled * count
+        self.pairs_resolved = self.pairs_scheduled
+        self.pairs_rejected = 0
+        self.rows_terminated = rules_scheduled
         self.errors = ()
         self.worker_error = None
-        self.truncated_input = truncated
 
 
 class Rule:
     id = "t:1"
+    runnable = True
 
 
 def scanner_for(*findings, **kwargs):
     seen = []
 
-    def scanner(text, rules, **_):
-        seen.append(text)
-        return Result(findings, **kwargs)
+    def scanner(leaves, rules, **_):
+        # The whole event's leaves per call, so an assertion on ``seen`` pins
+        # both which text was scanned and that it took exactly one scan.
+        seen.append(list(leaves))
+        return Batch(len(leaves), findings, **kwargs)
     scanner.seen = seen
     return scanner
 
@@ -57,7 +85,7 @@ def test_the_injected_scanner_is_the_one_that_runs():
     """The contract 61 adapter tests failed on when this defaulted silently."""
     scanner = scanner_for()
     run({"a": "text"}, scanner)
-    assert scanner.seen == ["text"], "the traversal used something other than the injected scanner"
+    assert scanner.seen == [["text"]], "the traversal used something other than the injected scanner"
 
 
 def test_limits_come_from_the_caller_not_from_this_module():
@@ -70,10 +98,10 @@ def test_limits_come_from_the_caller_not_from_this_module():
 def test_an_empty_leaf_is_skipped_but_a_blank_one_is_not():
     scanner = scanner_for()
     run({"stdout": "out", "stderr": ""}, scanner)
-    assert scanner.seen == ["out"]
+    assert scanner.seen == [["out"]]
     scanner = scanner_for()
     run({"stdout": " "}, scanner)
-    assert scanner.seen == [" "], "a whitespace leaf carries content and must be scanned"
+    assert scanner.seen == [[" "]], "a whitespace leaf carries content and must be scanned"
 
 
 def test_deny_withholds_the_whole_leaf_on_out_and_nothing_on_in():
@@ -100,7 +128,23 @@ def test_a_scanner_that_raises_is_recorded_as_incomplete_rather_than_clean():
 
 
 def test_an_evaluated_count_below_the_rule_count_is_incomplete():
-    outcome = run({"a": "text"}, scanner_for(evaluated=0))
+    """Short coverage is short pairs now, and the arithmetic decides it.
+
+    A real ``BatchScanResult`` rather than a fake, so nothing here can set
+    ``complete`` by hand: one rule scheduled over one leaf and no pair resolved
+    is the state a worker killed mid-row reports, and it must not be clean.
+    """
+    seen = []
+
+    def scanner(leaves, rules, **_):
+        seen.append(list(leaves))
+        return BatchScanResult(
+            leaves=tuple(LeafScanResult((), 0, False, True) for _ in leaves),
+            leaves_offered=len(leaves), leaves_scheduled=len(leaves), rules_scheduled=1,
+            pairs_scheduled=len(leaves), pairs_resolved=0, pairs_rejected=0, elapsed_s=0.0)
+
+    outcome = run({"a": "text"}, scanner)
+    assert seen == [["text"]], "the injected batch scanner was not the one that ran"
     assert outcome.incomplete
     assert any(r.get("status") == "scan_incomplete" for r in outcome.records)
 

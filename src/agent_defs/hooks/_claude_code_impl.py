@@ -16,7 +16,7 @@ import tempfile
 import time
 
 from ..builtin import STARTER_RULES
-from ..evaluate import DEFAULT_MAX_BYTES, scan
+from ..evaluate import DEFAULT_MAX_BYTES, scan, scan_leaves
 from . import _core
 from .. import lanes as admission
 from ..lanes import ADVISE_MAX_U95, DENY_MAX_U95, binomial_u95, bound_within
@@ -253,7 +253,7 @@ def process(payload, config, rules=STARTER_RULES):
     # module's constants still changes what the scan spends.
     outcome = _core.scan_payload(
         payload[field], rules=selected, lanes=lanes, surface=surface, event=event,
-        location="/" + field, withheld=WITHHELD, scanner=scan,
+        location="/" + field, withheld=WITHHELD, scanner=scan_leaves,
         limits=_core.Limits(max_bytes=MAX_SCAN_BYTES, max_nodes=MAX_NODES,
                             max_depth=MAX_DEPTH, budget_s=SCAN_BUDGET_S))
     updated, incomplete, found_lanes = outcome.updated, outcome.incomplete, outcome.lanes_fired
@@ -479,6 +479,14 @@ def calibrate(config_path, directory, label):
         except UnicodeDecodeError:
             skipped += 1
             continue
+        # This is the scalar path: one string, so pairs and rules coincide and
+        # the count comparison still means what it always meant. Keep it as an
+        # independent guard rather than folding it into ``complete``, which is
+        # satisfied by ScanResult((), 0, 0, 0, False) and so cannot by itself
+        # show that any expected rule was ever scheduled. ``active_rules``
+        # filters non-runnable rules upstream today, which is what makes
+        # ``len(rules)`` the right denominator; this check is what would catch
+        # a future scheduling omission rather than trusting that filter.
         found = scan(text, rules, budget_s=30)
         if not found.complete or found.rules_evaluated != len(rules):
             raise ValueError("incomplete calibration")

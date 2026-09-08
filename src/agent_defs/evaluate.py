@@ -32,6 +32,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Sequence as _SequenceABC
 from dataclasses import dataclass
 from itertools import islice
 from typing import Iterable, Mapping, Sequence
@@ -85,6 +86,20 @@ _MAX_RULES = 4096
 _MAX_NEEDLES = 64
 _MAX_BUNDLE_CHARS = 1024 * 1024
 _MAX_INPUT_BYTES = 4 * 1024 * 1024
+
+#: The request and response shapes the parent and its worker agree on. The
+#: worker checks it against a literal of its own rather than importing this
+#: name, so a half-installed tree or a stale ``__pycache__`` exits nonzero
+#: instead of being read as a scan that found nothing.
+SCAN_PROTOCOL = 2
+
+#: A backstop on the leaf count of one batch, derived rather than invented. The
+#: only in-tree caller is ``hooks._core``, whose ``max_nodes`` is 4096, so its
+#: leaf count can never reach this and its own node cap always binds first; the
+#: limit exists for a direct caller. A batch over it is refused whole, never
+#: truncated to a prefix, which is the rule ``_MAX_RULES`` already follows:
+#: truncation is the sampling this package refuses everywhere else.
+_MAX_LEAVES = 4096
 _CLEANUP_S = 0.1
 _SUPERVISORS = threading.BoundedSemaphore(4)
 HAZARD_TABLE_PATH = Path(__file__).with_name("hazards.json")
@@ -142,6 +157,143 @@ class IncompleteScanError(RuntimeError):
     def __init__(self, result: ScanResult):
         super().__init__("incomplete scan; use partial_findings only with an explicit incomplete-scan policy")
         self.result = result
+
+
+@dataclass(frozen=True)
+class LeafScanResult:
+    """One offered leaf's share of a batch.
+
+    Spans are relative to **this** capped leaf, and ``truncated_input`` is this
+    leaf's own flag rather than the request's. A caller that withholds per leaf
+    and hashes per leaf needs both answers per leaf; one request-level flag
+    destroys them.
+
+    A leaf the byte allowance never sent has ``scheduled=False``, no findings
+    and no evaluated rules. It is present by input position so a caller can
+    index by leaf, and it is not a work item, so it enters no denominator.
+    """
+
+    partial_findings: Sequence[Finding]
+    rules_evaluated: int
+    truncated_input: bool
+    scheduled: bool
+
+    def complete(self, batch: "BatchScanResult") -> bool:
+        """Whether every scheduled rule finished on this leaf.
+
+        Asked of the batch rather than of a rule count the caller is holding.
+        The denominator that decides is the one the scan reports; a caller
+        comparing against its own ``len(rules)`` is comparing against a
+        different number, which is the defect this signature exists to prevent.
+        """
+        return (batch.worker_error is None and not batch.errors
+                and self.scheduled and not self.truncated_input
+                and self.rules_evaluated == batch.rules_scheduled - len(batch.errors))
+
+    def require_complete(self, batch: "BatchScanResult") -> "LeafScanResult":
+        if not self.complete(batch):
+            raise IncompleteScanError(self)
+        return self
+
+    def findings(self, batch: "BatchScanResult") -> Sequence[Finding]:
+        """A negative result is meaningful only after every required check finished."""
+        self.require_complete(batch)
+        return self.partial_findings
+
+    def __bool__(self):
+        raise TypeError("use leaf.complete(batch) and leaf.findings(batch) explicitly")
+
+
+@dataclass(frozen=True)
+class BatchScanResult:
+    """What one worker did to one batch of leaves.
+
+    The unit of work is the ``(leaf, rule)`` pair, so every number here is
+    pair-shaped or leaf-shaped. There is deliberately no rule-shaped completion
+    count: a worker that finishes one leaf of five and terminates every row
+    would satisfy one, and an empty finding list would then read as clean.
+    """
+
+    leaves: Sequence[LeafScanResult]
+    leaves_offered: int
+    leaves_scheduled: int
+    rules_scheduled: int
+    pairs_scheduled: int
+    pairs_resolved: int
+    pairs_rejected: int
+    elapsed_s: float
+    errors: Sequence[RuleError] = ()
+    worker_error: str | None = None
+
+    @property
+    def leaves_declined(self) -> int:
+        return self.leaves_offered - self.leaves_scheduled
+
+    @property
+    def rows_terminated(self) -> int:
+        """Rules whose sweep terminated, counted from row 0 without a gap."""
+        if not self.leaves_scheduled:
+            return 0
+        return self.pairs_resolved // self.leaves_scheduled
+
+    @property
+    def pairs_evaluated(self) -> int:
+        return self.pairs_resolved - self.pairs_rejected
+
+    @property
+    def pairs_skipped_budget(self) -> int:
+        return self.pairs_scheduled - self.pairs_resolved
+
+    @property
+    def complete(self) -> bool:
+        # Every clause here exists because a shape without it read complete.
+        #
+        # The product identity closes the rule-shaped count sitting in a
+        # pair-shaped field: six rules over five leaves reporting
+        # pairs_scheduled == pairs_resolved == 6 satisfied every other clause
+        # while twenty-four of the thirty pairs never happened.
+        #
+        # Reconciling the aggregates against each other is not enough, because
+        # nothing then ties them to the leaf vector. Four further shapes read
+        # complete: every leaf saying scheduled=False and rules_evaluated=0
+        # while the aggregates claimed thirty resolved pairs; the same with
+        # scheduled=True; pairs_rejected equal to pairs_resolved, so nothing
+        # was evaluated; and a five-entry vector under metadata describing
+        # four. So each leaf must agree with the aggregate that summarises it.
+        #
+        # The identity and the per-leaf agreement both hold for the honest
+        # producer, including a truncated leaf, an exhausted budget,
+        # max_bytes=0, a NONE predicate and a rule refused before the wire.
+        # A declined leaf makes this false, which is the intended answer: its
+        # rules never ran. The type check is not pedantry either, since
+        # isinstance(True, int) is true and a bool must not pass as a count.
+        counts = (self.leaves_offered, self.leaves_scheduled, self.rules_scheduled,
+                  self.pairs_scheduled, self.pairs_resolved, self.pairs_rejected)
+        return (all(type(count) is int and count >= 0 for count in counts)
+                and self.worker_error is None and not self.errors
+                and self.leaves_scheduled == self.leaves_offered == len(self.leaves)
+                and self.pairs_scheduled == self.rules_scheduled * self.leaves_scheduled
+                and self.pairs_resolved == self.pairs_scheduled
+                and self.pairs_rejected == 0
+                and all(leaf.scheduled is True
+                        and leaf.truncated_input is False
+                        and type(leaf.rules_evaluated) is int
+                        and leaf.rules_evaluated == self.rules_scheduled
+                        for leaf in self.leaves))
+
+    def require_complete(self) -> "BatchScanResult":
+        if not self.complete:
+            raise IncompleteScanError(self)
+        return self
+
+    @property
+    def findings(self) -> Sequence[Finding]:
+        """A negative result is meaningful only after every required check finished."""
+        self.require_complete()
+        return tuple(f for leaf in self.leaves for f in leaf.partial_findings)
+
+    def __bool__(self):
+        raise TypeError("use batch.complete and batch.findings explicitly")
 
 
 class UnsafePattern(ValueError):
@@ -787,6 +939,260 @@ def _run_worker(request: bytes, deadline: float) -> tuple[bytes, bool, int | Non
     return state["output"], cancelled.is_set(), state["returncode"], state["error"]
 
 
+def _scan_leaves_impl(
+    leaves: Sequence[str],
+    rules: Iterable[Rule],
+    *,
+    max_bytes: int,
+    budget_s: float,
+    started: float,
+) -> BatchScanResult:
+    """One worker, one deadline, every rule against every scheduled leaf.
+
+    ``started`` is injected so ``scan`` can time from its own entry rather than
+    from this call, which keeps the stride-1 case exactly what it was.
+    """
+    if isinstance(leaves, (str, bytes, bytearray)):
+        # A str is itself a sequence of strings, so accepting one would scan a
+        # leaf per character and report a complete scan of nothing.
+        raise TypeError("leaves must be a sequence of strings, not one string")
+    if not isinstance(leaves, _SequenceABC):
+        raise TypeError("leaves must be a sequence of strings")
+    if any(not isinstance(leaf, str) for leaf in leaves):
+        raise TypeError("every leaf must be a string")
+    if not isinstance(max_bytes, int) or not 0 <= max_bytes <= _MAX_INPUT_BYTES:
+        raise ValueError(f"max_bytes must be between 0 and {_MAX_INPUT_BYTES}")
+    if not math.isfinite(budget_s) or budget_s < 0:
+        raise ValueError("budget_s must be finite and nonnegative")
+    deadline = started + budget_s
+    offered = len(leaves)
+
+    # Indexed by offered position.
+    scheduled: list[bool] = []
+    truncated: list[bool] = []
+    # Indexed by scheduled position, which is a prefix of the offered one
+    # because the byte allowance only ever runs down.
+    sent: list[str] = []
+    found: list[list] = []
+    errors: list = []
+    wire: list = []
+    rejected: set = set()
+    rows = 0
+    worker_error = None
+
+    def result() -> BatchScanResult:
+        count = sum(scheduled)
+        per_leaf, position = [], 0
+        for index in range(offered):
+            if index < len(scheduled) and scheduled[index]:
+                per_leaf.append(LeafScanResult(tuple(found[position]), rows - len(rejected),
+                                               truncated[index], True))
+                position += 1
+            else:
+                per_leaf.append(LeafScanResult((), 0, False, False))
+        return BatchScanResult(leaves=tuple(per_leaf), leaves_offered=offered,
+                               leaves_scheduled=count, rules_scheduled=len(wire),
+                               pairs_scheduled=len(wire) * count,
+                               pairs_resolved=rows * count,
+                               pairs_rejected=len(rejected) * count,
+                               elapsed_s=time.perf_counter() - started,
+                               errors=tuple(errors), worker_error=worker_error)
+
+    if offered > _MAX_LEAVES:
+        worker_error = f"batch exceeds {_MAX_LEAVES} leaves"
+        return result()
+
+    # One running remainder over the same total the caller gave, so the byte
+    # allowance is an event allowance rather than a per-leaf one. Capping stays
+    # on this side of the boundary: the worker never truncates, and there is no
+    # request-level flag to destroy a per-leaf answer.
+    remaining = max_bytes
+    for leaf in leaves:
+        if remaining <= 0:
+            scheduled.append(False)
+            truncated.append(False)
+            continue
+        text, cut = _cap_payload(leaf, remaining)
+        # Debit what the old traversal debited, not what was retained. The two
+        # differ only at a multi-byte boundary: with ["abé", "Z"] and three
+        # bytes, capping keeps "ab" and costs two, so charging the retained
+        # bytes leaves one for "Z", schedules it, and finds a match the old
+        # path never looked for. That is a detector change, and this change is
+        # a transport change whose equivalence evidence assumes there is none;
+        # what is scanned decides what fires, and the shipped benign-firing
+        # bound was measured under the old debit. Recovering the up-to-three
+        # unusable tail bytes is a real improvement and belongs in its own
+        # change, with its own measurement.
+        remaining -= min(remaining, len(leaf[:remaining].encode("utf-8", "surrogatepass")))
+        sent.append(text)
+        found.append([])
+        scheduled.append(True)
+        truncated.append(cut)
+
+    candidates = list(islice(rules, _MAX_RULES + 1))
+    if len(candidates) > _MAX_RULES:
+        worker_error = f"bundle exceeds {_MAX_RULES} rules"
+        return result()
+    chars = 0
+    for rule in candidates:
+        if rule.predicate_kind is PredicateKind.NONE:
+            continue
+        try:
+            item = _wire_rule(rule)
+        except ValueError as exc:
+            errors.append(RuleError(rule.id, str(exc)))
+            continue
+        pred = item["predicate"]
+        if item["kind"] == PredicateKind.STRUCTURED.value:
+            pred = next(iter(pred.values()))
+        chars += len(pred) if isinstance(pred, str) else sum(map(len, pred))
+        if chars > _MAX_BUNDLE_CHARS:
+            # Nothing was scheduled, so nothing is owed: an oversized bundle is
+            # refused whole rather than reported as a partly scheduled one.
+            wire.clear()
+            worker_error = f"bundle exceeds {_MAX_BUNDLE_CHARS} predicate characters"
+            return result()
+        wire.append(item)
+    errors.sort(key=lambda error: (error.rule_id, error.reason))
+    wire.sort(key=_schedule_key)
+    if not wire:
+        return result()
+    stride = sum(scheduled)
+    if not stride:
+        return result()
+    if time.perf_counter() >= deadline:
+        return result()
+    request = json.dumps(dict(protocol=SCAN_PROTOCOL, mode="leaves", stride=stride,
+                              leaves=sent, rules=wire),
+                         ensure_ascii=False).encode("utf-8", "surrogatepass")
+    if time.perf_counter() >= deadline:
+        return result()
+    output, timed_out, returncode, worker_error = _run_worker(request, deadline)
+
+    # The parent holds the leaves and the schedule, so it never learns from the
+    # worker *which* work items exist. ``rows`` is a cursor into an enumeration
+    # this side built, so N copies of one frame cannot advance it and a
+    # leaf-major worker cannot emit a well-formed stream at all.
+    #
+    # It does learn that the work happened, and only from the worker. A row
+    # terminator's leaf count is validated against this side's ``stride``, which
+    # checks the number and not the sweep, so a worker that searched leaf 0 and
+    # terminated every row reads complete. Nothing here can close that: the
+    # parent does not repeat the search. The shipped worker is honest by
+    # construction (it emits ``done`` only after the loop it did not break out
+    # of), the per-leaf protocol trusted its completion count the same way, and
+    # reaching the gap needs write access to _scan_worker.py, at which point the
+    # process is already lost. Treat this as a bound on what frame validation
+    # buys, not as a reason to skip a coverage check that can be made.
+    last_leaf = -1
+    for line in output.splitlines(keepends=True):
+        if not line.endswith(b"\n"):
+            break
+        try:
+            frame = json.loads(line)
+            if not isinstance(frame, list) or not frame:
+                raise ValueError("invalid frame")
+            tag = frame[0]
+            if tag == "hit":
+                if len(frame) != 5 or any(type(x) is not int for x in frame[1:]):
+                    raise ValueError("invalid hit frame")
+                index, leaf_index, start, end = frame[1:]
+                if index != rows or rows >= len(wire):
+                    raise ValueError("hit outside the row in progress")
+                if not last_leaf < leaf_index < stride:
+                    raise ValueError("leaf index out of order")
+                if not 0 <= start <= end <= len(sent[leaf_index]):
+                    raise ValueError("invalid match span")
+                item = wire[index]
+                found[leaf_index].append(Finding(item["id"], item["surface"], start, end))
+                last_leaf = leaf_index
+            elif tag == "done":
+                if len(frame) != 3 or any(type(x) is not int for x in frame[1:]):
+                    raise ValueError("invalid done frame")
+                index, swept = frame[1], frame[2]
+                if index != rows or rows >= len(wire) or swept != stride:
+                    raise ValueError("invalid row terminator")
+                rows += 1
+                last_leaf = -1
+            elif tag == "err":
+                if len(frame) != 3 or type(frame[1]) is not int or not isinstance(frame[2], str):
+                    raise ValueError("invalid err frame")
+                index = frame[1]
+                if index != rows or rows >= len(wire):
+                    raise ValueError("invalid row terminator")
+                errors.append(RuleError(wire[index]["id"], frame[2][:512]))
+                rejected.add(index)
+                rows += 1
+                last_leaf = -1
+            else:
+                raise ValueError("invalid frame tag")
+        except (ValueError, TypeError, IndexError):
+            worker_error = "invalid worker response"
+            break
+    # Row terminators are the coverage proof, and each was validated against this
+    # side's stride before it counted, so a full set means every scheduled rule
+    # reported sweeping every scheduled leaf.
+    #
+    # ``timed_out`` is ``cancelled.is_set()``, and cancellation races the finish
+    # rather than preceding it. The watchdog sets it at the deadline whether or
+    # not ``communicate`` has already returned, and the caller sets it when its
+    # own wait expires while the supervisor is still on its last statements. Both
+    # paths can end with every row parsed and an exit status of zero: the child
+    # was never killed, it just finished on the wrong side of a clock read.
+    # Consulting ``timed_out`` before the rows called that scan incomplete though
+    # its findings matched an untimed reference exactly. Measured at 44 of 200
+    # runs inside the window.
+    #
+    # A false incomplete is not free. ``_claude_code_impl`` escalates one to
+    # ``permissionDecision="ask"`` on PreToolUse, so the caller pays for it on a
+    # turn where nothing was wrong and learns to discount the signal.
+    #
+    # The relaxation is confined to the timeout branch. A child that ended on its
+    # own with a nonzero status is still a failure however many rows it sent,
+    # because there the status is the only account of what went wrong.
+    if timed_out:
+        if rows != len(wire):
+            worker_error = worker_error or "worker deadline exceeded"
+    elif returncode != 0 or rows != len(wire):
+        worker_error = worker_error or f"worker failed (exit {returncode}; {rows}/{len(wire)} rules completed)"
+    return result()
+
+
+def scan_leaves(
+    leaves: Sequence[str],
+    rules: Iterable[Rule],
+    *,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    budget_s: float = DEFAULT_BUDGET_S,
+) -> BatchScanResult:
+    """Scan several leaves in one disposable worker, under one deadline.
+
+    Each leaf crosses as its own JSON string and each rule searches that string
+    alone. There is no separator, no joined buffer and no offset rebasing, so a
+    conjunction cannot be satisfied across two leaves and an anchor still means
+    the edge of its own leaf. The batch is a transport change and nothing else.
+
+    Rules are swept rule-major: each rule is compiled once and then run against
+    every leaf before the next rule begins. Compilation is hoisted out of the
+    leaf loop, which is the whole saving, and stays inside the rule loop, so a
+    kill still returns the cheapest rules' findings. The schedule is a function
+    of the rule set alone, so no shaping of the payload moves a rule earlier or
+    later; under leaf-major, padding three leaves would keep every rule off the
+    fourth at no cost to an attacker.
+
+    A kill mid-row discards that row's accounting but keeps the hits it already
+    reported. Understating coverage is the fail-closed direction.
+
+    ``leaves`` must be a sequence of strings; a bare ``str`` raises TypeError.
+    Empty leaves are not filtered here, because the empty-leaf skip is the
+    caller's policy. ``max_bytes`` is one running total across the batch: leaves
+    are capped in order and a leaf the allowance no longer covers is declined
+    rather than sent, which the result reports per leaf.
+    """
+    return _scan_leaves_impl(leaves, rules, max_bytes=max_bytes, budget_s=budget_s,
+                             started=time.perf_counter())
+
+
 def scan(
     payload: str,
     rules: Iterable[Rule],
@@ -814,90 +1220,42 @@ def scan(
     optional stricter total limit; exceeding it makes ``result.findings`` raise.
     The legacy compiled mapping is accepted but ignored: re objects cannot cross
     the isolation boundary safely and an id-only cache can substitute stale rules.
+
+    This is the stride-1 case of ``scan_leaves`` rather than a second traversal.
+    At one leaf, ``pairs_scheduled - pairs_resolved`` is literally
+    ``len(wire) - len(completed)``, so ``rules_skipped_budget`` keeps its exact
+    meaning and every existing assertion here becomes a check that the batched
+    protocol did not move single-payload behaviour.
     """
     started = time.perf_counter()
     if not isinstance(payload, str):
         raise TypeError("payload must be a string")
     if not isinstance(max_bytes, int) or not 0 <= max_bytes <= _MAX_INPUT_BYTES:
         raise ValueError(f"max_bytes must be between 0 and {_MAX_INPUT_BYTES}")
-    if not math.isfinite(budget_s) or budget_s < 0:
-        raise ValueError("budget_s must be finite and nonnegative")
-    deadline = started + budget_s
-    payload, truncated = _cap_payload(payload, max_bytes)
-    findings = []
-    errors = []
-    evaluated = 0
-    skipped = 0
-    worker_error = None
-
-    def result():
-        return ScanResult(tuple(findings), evaluated, skipped, time.perf_counter() - started,
-                          truncated, tuple(errors), worker_error)
-
-    candidates = list(islice(rules, _MAX_RULES + 1))
-    if len(candidates) > _MAX_RULES:
-        worker_error = f"bundle exceeds {_MAX_RULES} rules"
-        return result()
-    wire = []
-    chars = 0
-    for rule in candidates:
-        if rule.predicate_kind is PredicateKind.NONE:
-            continue
-        try:
-            item = _wire_rule(rule)
-        except ValueError as exc:
-            errors.append(RuleError(rule.id, str(exc)))
-            continue
-        pred = item["predicate"]
-        if item["kind"] == PredicateKind.STRUCTURED.value:
-            pred = next(iter(pred.values()))
-        chars += len(pred) if isinstance(pred, str) else sum(map(len, pred))
-        if chars > _MAX_BUNDLE_CHARS:
-            worker_error = f"bundle exceeds {_MAX_BUNDLE_CHARS} predicate characters"
-            return result()
-        wire.append(item)
-    errors.sort(key=lambda error: (error.rule_id, error.reason))
-    wire.sort(key=_schedule_key)
-    if not wire:
-        return result()
-    if time.perf_counter() >= deadline:
-        skipped = len(wire)
-        return result()
-    request = json.dumps(dict(payload=payload, rules=wire), ensure_ascii=False).encode("utf-8", "surrogatepass")
-    if time.perf_counter() >= deadline:
-        skipped = len(wire)
-        return result()
-    output, timed_out, returncode, worker_error = _run_worker(request, deadline)
-    completed = set()
-    for line in output.splitlines(keepends=True):
-        if not line.endswith(b"\n"):
-            break
-        try:
-            status, index, detail = json.loads(line)
-            if not isinstance(index, int) or index != len(completed) or index >= len(wire):
-                raise ValueError("invalid completion index")
-            item = wire[index]
-            if status == "error" and isinstance(detail, str):
-                errors.append(RuleError(item["id"], detail))
-            elif status == "ok":
-                if detail is not None:
-                    start, end = detail
-                    if not (isinstance(start, int) and isinstance(end, int) and 0 <= start <= end <= len(payload)):
-                        raise ValueError("invalid match span")
-                    findings.append(Finding(item["id"], item["surface"], start, end))
-                evaluated += 1
-            else:
-                raise ValueError("invalid completion status")
-            completed.add(index)
-        except (ValueError, TypeError, IndexError):
-            worker_error = "invalid worker response"
-            break
-    skipped = len(wire) - len(completed)
-    if timed_out:
-        worker_error = worker_error or "worker deadline exceeded"
-    elif returncode != 0 or len(completed) != len(wire):
-        worker_error = worker_error or f"worker failed (exit {returncode}; {len(completed)}/{len(wire)} completed)"
-    return result()
+    # Cap here, the way the single-payload entry point always did, and hand the
+    # already-capped text on with a full allowance. ``scan_leaves`` declines a
+    # leaf once its allowance reaches zero, which is right for a batch: a leaf
+    # nobody can afford is a leaf nobody scanned. The scalar contract is not
+    # that. ``scan("", rules, max_bytes=0)`` capped to the empty string, scanned
+    # it, and reported complete and untruncated, so a ``^$`` rule matched at
+    # [0, 0]; routing it through the batch policy made the same call report
+    # nothing evaluated, truncated input and an incomplete scan. Callers that
+    # predate the batch read that verdict, ``bench`` and ``calibrate`` among
+    # them. So the leaf is always offered, and ``truncated_input`` comes from
+    # the cap rather than from whether anyone could afford to look.
+    text, cut = _cap_payload(payload, max_bytes)
+    batch = _scan_leaves_impl([text], rules, max_bytes=_MAX_INPUT_BYTES, budget_s=budget_s,
+                              started=started)
+    # ``if leaf`` would ask a LeafScanResult for its truth value, which it
+    # refuses on purpose. The identity test is the one that reads it.
+    leaf = batch.leaves[0] if batch.leaves else None
+    return ScanResult(partial_findings=leaf.partial_findings if leaf is not None else (),
+                      rules_evaluated=leaf.rules_evaluated if leaf is not None else 0,
+                      rules_skipped_budget=batch.pairs_skipped_budget,
+                      elapsed_s=batch.elapsed_s,
+                      truncated_input=bool(cut or (leaf is not None and leaf.truncated_input)),
+                      errors=batch.errors,
+                      worker_error=batch.worker_error)
 
 
 def scan_trusted(

@@ -5,9 +5,9 @@ rule came from, watched for changes, and preserved after the source disappears. 
 own agent checks the text it reads before the model acts on it.
 
 **Status: pre-alpha, nothing published beyond a name reservation.** `0.0.1` on PyPI and npm holds the
-name and carries no rules. An earlier 186-rule bundle caught 1.945% of a held-out attack pool, and
-today's bundle has not had its catch rate remeasured. [Measured attack catch
-rate](#measured-attack-catch-rate) has that result and its limits.
+name and carries no rules. The bundle that ships today catches **2.1173%** of a held-out attack pool,
+and the shipped hook catches the same samples the offline scanner does. [Measured attack catch
+rate](#measured-attack-catch-rate) has the result and its limits.
 
 ## What it is for
 
@@ -34,7 +34,7 @@ model sees until you explicitly promote its source to a lane a measurement suppo
 
 Benign firing and attack catch rate answer different questions, and a project like this can quietly
 report only the first. Measurements on selected traffic produced low observed firing rates and
-nominal binomial bounds, with their limits set out under [Using it](#using-it). A historical attack
+nominal binomial bounds, with their limits set out under [Using it](#using-it). The attack
 measurement produced a low catch rate on its test pool, described under [Measured attack catch
 rate](#measured-attack-catch-rate). Read them together rather than either alone.
 
@@ -49,34 +49,67 @@ never will. The policy is in [`SCHEMA.md`](SCHEMA.md) and the arithmetic is in `
 
 ## Measured attack catch rate
 
-One measurement exists and it is not a current one. Held out by origin, the 186 rules shipping when
-that run happened caught **417 of a 21,442-sample attack pool, 1.945%**. Across the whole historical
-306-rule set the figure was 1,003, 4.678%. A preregistration written before the run predicted 40% to
-75%, and the result is recorded as violating that prediction rather than as an occasion to
-reinterpret it. 228 of the 306 caught nothing on that pool, 74.5%. The run, its pinned corpora and
-the predictions it was scored against live in a research record outside this repository, so the
-attack experiments and the corpus census described here cannot be reproduced from what is in it.
+Held out by origin, the 209 `OUT` rules this hook enables today catch **454 of a 21,442-sample attack
+pool, 2.1173%**. Invoked as the harness invokes it, the shipped launcher catches the same 454. Not a
+similar number: the same samples, none lost and none gained against the offline scanner. The earlier
+run's preregistration predicted 40% to 75% and recorded that expectation as violated, and this result
+stays far below it.
 
-Three things bound what the number means.
+The measurement ran to a contract fixed and committed beforehand. Its report scores twelve numerical
+predictions, two precommitted readings and one standing commitment against post-hoc changes; all
+fifteen rows are recorded as held, and neither conditional reading was triggered.
 
-The pool is not this hook's surface, and the direction of that mismatch is unknown. Public attack
-corpora carry attacks delivered through the prompt: of the seventeen in the upstream source's own
-evaluation, sixteen are prompt-channel and the seventeenth is a document, with none being tool
-output. That evaluation is a different collection from the 21,442-sample pool, which was assembled
-here from six corpora and whose denominator also includes harmful-content benchmarks and many garak
-variants. Either way, rules watching returned text were scored against samples that mostly arrive
-somewhere else. What that does to the number is not established: matched data could raise the catch
-rate or lower it, and no matched-data measurement is reported here.
+The anchor is what makes the rest readable. Restricted to the 186 rules this bundle still shares with
+the earlier run, today's code catches exactly 417, with every per-rule hit count matching the earlier
+run's, identical shared predicates and no eligibility disagreement. On that same pool and scanner the
+added `OUT` rules catch 38, one of which the shared set already had, so 37 additional catches are
+attributable to those rules here rather than to a change in the plumbing.
 
-The bundle has moved since. It carried 186 rules for that run and carries 216 now, 220 with the
-starter set. Today's bundle has no attack measurement at all, so the figure above is the available
-historical result rather than a reading of what is installed.
+| Rules scored | Caught | Recall | Increment |
+|---|---:|---:|---:|
+| The 186 shared with the earlier run | 417 | 1.9448% | |
+| The 205 `OUT` rules in the bundle | 454 | 2.1173% | +37 |
+| Plus the 4 starter rules, as shipped | 454 | 2.1173% | **+0** |
+| Plus the 11 `IN` rules, which no single event scores | 460 | 2.1453% | +6 |
 
-An increment is sitting refused. On the same historical pool and the same 306-rule analysis, 42 rules
-that do catch attacks are held out of the bundle because their benign firing rate is unmeasured, which
-is the admission policy working as written. Adding them to the 186 would have reached 980 of 21,442,
-4.570%, which is 980 of the 1,003 the whole historical set caught. That is a property of that run, not
-a prediction for today's 216 rules, and the decision is open.
+174 of the 209 catch nothing on this pool. So do all four starter rules, which are hand-written, ship
+without a benign measurement of their own, and are the only rules here this package authored. Six
+rules account for 80% of the detections and five cover 80% of the distinct samples caught.
+
+Several things bound what the number means.
+
+The pool is almost never this hook's surface. Of the 21,442 samples, 21,043 are user turns and **84 are
+shaped like a tool result, 0.39%**. Seventy-nine of those 84 were authored by the upstream rule corpus
+itself, leaving five that came from anywhere else. On the surface this hook actually watches, then, the
+rules caught 5 of those 84, and 2 of the 5 external ones. The run also relays an expectation that a
+channel-matched pool would score higher, citing small origin bins whose catch fractions are higher than
+the pool's; those bins are not a representative sample of tool results, and the run puts no size on the
+correction. At 84 and at 5, neither the direction nor the magnitude of that change is established here.
+
+It measures detection and not prevention. Every enabled rule ships in the record-only lane, so a
+completed catch is a log line: it withholds nothing and adds no model context, and the interruption
+rate from these detections is zero by construction rather than by measurement. An incomplete scan is
+the exception and still speaks, to you and to the model both, as described under [Using it](#using-it).
+
+The scoring shape was the most generous one for the budget. Each sample arrived as one event of one
+leaf, the largest of them 12,240 bytes, and all 21,442 `OUT` trials completed with no truncation and no
+budget-skipped pairs, so no detection here was lost to the deadline. That is why the launcher and the
+offline scanner agree exactly on this pool and this host. It is also the reason the run does not
+estimate coverage on real tool results, where 16.48% of `OUT` events carry more than three leaves.
+
+An increment is sitting refused. On the earlier run's pool and rule set, 42 rules that do catch attacks
+were held out because their benign firing rate is unmeasured, which is the admission policy working as
+written. Adding them to that run's 186 would have reached 980 of 21,442, 4.570%. That is arithmetic
+about the earlier set rather than a prediction for today's, and the decision is open.
+
+There is no sampling frame behind the 21,442, and no confidence interval is quoted for any figure
+here. The pool is a convenience sample from six corpora with a documented composition bias, its
+clustering makes a binomial interval on 21,442 wrong, and the corpora were not exhaustively mined even
+within themselves. Counts are reported; precision is not claimed.
+
+The run report, the contract it was scored against, the pinned corpora and the attack pool live in a
+research record outside this repository, so none of the experiments in this section can be reproduced
+from this checkout alone.
 
 Quiet rules do not improve any of this. A bundle that matches nothing has zero observed benign hits
 and zero attack hits, and its benign upper bound still depends on the trial count: `lanes.binomial_u95`

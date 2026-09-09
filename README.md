@@ -1,4 +1,22 @@
+<a id="readme-top"></a>
+
+<div align="center">
+
 # agent-defs
+
+**Definitions for agent security.**
+
+[![PyPI](https://img.shields.io/pypi/v/agent-defs)](https://pypi.org/project/agent-defs/)
+[![Code licence: MIT](https://img.shields.io/badge/code_licence-MIT-green)](#licence)
+[![evaluator](https://github.com/yzhao062/agent-defs/actions/workflows/evaluator.yml/badge.svg?branch=main)](https://github.com/yzhao062/agent-defs/actions/workflows/evaluator.yml)
+
+[Install](#install-and-what-a-finding-does) &nbsp;•&nbsp;
+[What it is for](#what-it-is-for) &nbsp;•&nbsp;
+[Measured attack catch rate](#measured-attack-catch-rate) &nbsp;•&nbsp;
+[What it will not do](#what-it-will-not-do) &nbsp;•&nbsp;
+[Sources](#sources)
+
+</div>
 
 Definitions for agent security: public rule sets and risk corpora, normalized, carrying where each
 rule came from, watched for changes, and preserved after the source disappears. Install it and your
@@ -6,8 +24,14 @@ own agent checks the text it reads before the model acts on it.
 
 **Status: pre-alpha, nothing published beyond a name reservation.** `0.0.1` on PyPI and npm holds the
 name and carries no rules. The bundle that ships today catches **2.1173%** of a held-out attack pool,
-and the shipped hook catches the same samples the offline scanner does. [Measured attack catch
-rate](#measured-attack-catch-rate) has the result and its limits.
+one that is almost never this hook's surface. The shipped hook catches the same samples the offline
+scanner does. [Measured attack catch rate](#measured-attack-catch-rate) has the result and its limits.
+
+> [!WARNING]
+> This measures detection and not prevention. Every enabled rule ships in the record-only lane, so a
+> completed catch is a log line: it withholds nothing and adds no model context. The interruption
+> rate from these detections is zero by construction rather than by measurement. An incomplete scan
+> is the one exception: it warns you and the model both.
 
 ## What it is for
 
@@ -32,11 +56,62 @@ Wired does not yet mean acting. A registered hook scans and writes matches to th
 first call, and every rule starts in a record-only lane, so a completed match changes nothing the
 model sees until you explicitly promote its source to a lane a measurement supports.
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f4f4f5', 'primaryBorderColor': '#3f3f46', 'primaryTextColor': '#18181b', 'lineColor': '#3f3f46', 'textColor': '#18181b', 'edgeLabelBackground': '#ffffff', 'fontSize': '13px'}}}%%
+flowchart LR
+    E["A wired tool event:<br/>PreToolUse or PostToolUse"] --> T["Traversal: eligible leaves of<br/>tool_input or tool_response"]
+    T --> W["One worker per event,<br/>each rule compiled once"]
+    W --> D{"Coverage complete?<br/>Every required check finished,<br/>no truncation, declined leaves or errors"}
+    D -->|"complete, nothing matched"| N["No log write"]
+    D -->|"complete, rule matched"| R["Match written to the local log"]
+    R --> M["Changes nothing the model sees, until you<br/>promote the source to a lane<br/>a measurement supports"]
+    D -->|"incomplete"| I["Logs incomplete coverage and available findings;<br/>warns you and the model,<br/>and never calls unscanned leaves clean"]
+```
+
+This is the path a wired tool event takes. A complete scan with no finding writes nothing. The bundle
+fired once in 1,743 held-out tool results. That joined-text measurement does not establish how often
+the deployed hook will match or write a log; [Calibrating and promoting a
+source](#calibrating-and-promoting-a-source) gives its sampling and selection limits. Completed
+findings are logged when the log is writable. An incomplete scan also records its coverage and warns
+you and the model.
+
 Benign firing and attack catch rate answer different questions, and a project like this can quietly
 report only the first. Measurements on selected traffic produced low observed firing rates and
-nominal binomial bounds, with their limits set out under [Using it](#using-it). The attack
-measurement produced a low catch rate on its test pool, described under [Measured attack catch
-rate](#measured-attack-catch-rate). Read them together rather than either alone.
+nominal binomial bounds, with their limits set out under [Calibrating and promoting a
+source](#calibrating-and-promoting-a-source). The attack measurement produced a low catch rate on its
+test pool, described under [Measured attack catch rate](#measured-attack-catch-rate). Read them
+together rather than either alone.
+
+## Install, and what a finding does
+
+Read [Measured attack catch rate](#measured-attack-catch-rate) first: the bundle that ships today
+catches 2.1173% of a held-out attack pool.
+
+The checkout sets `requires-python = ">=3.9"`, and the core carries no third-party dependency. That
+is why the registered hook runs with `-I -S`: no project import path, no user site, no site
+initialization.
+
+```sh
+git clone https://github.com/yzhao062/agent-defs
+cd agent-defs
+python -m pip install -e .                               # into a persistent environment
+agent-defs install --settings ~/.claude/settings.json    # prints the diff
+agent-defs install --settings ~/.claude/settings.json --yes
+agent-defs status                                        # what it would do next call
+```
+
+Restart Claude Code after changing hook registration. The captured absolute interpreter and package
+paths must remain available, so a temporary checkout is suitable for testing rather than a lasting
+install. `agent-defs uninstall` prints the removal diff; `agent-defs uninstall --yes` removes this
+package's hook and nothing else. Every changing install or uninstall first saves any existing
+settings bytes to a backup file.
+
+Everything starts in `RECORD`. A completed `RECORD` finding is written to the local log and changes
+nothing the model sees. Findings are JSON lines in `~/.claude/agent-defs/findings.jsonl`, carrying
+rule IDs, effective lanes, JSON paths, original character spans and text hashes. Raw tool text is not
+logged, and the log is local and never enters the model context. Two other paths still speak, and
+they do not speak to the same audience: a scan that could not finish adds a line to the model's
+context and a warning to yours, while a diagnostic log that could not be written warns you alone.
 
 ## What it will not do
 
@@ -89,7 +164,8 @@ correction. At 84 and at 5, neither the direction nor the magnitude of that chan
 It measures detection and not prevention. Every enabled rule ships in the record-only lane, so a
 completed catch is a log line: it withholds nothing and adds no model context, and the interruption
 rate from these detections is zero by construction rather than by measurement. An incomplete scan is
-the exception and still speaks, to you and to the model both, as described under [Using it](#using-it).
+the exception and still speaks, to you and to the model both, as described under [Install, and what a
+finding does](#install-and-what-a-finding-does).
 
 The scoring shape was the most generous one for the budget. Each sample arrived as one event of one
 leaf, the largest of them 12,240 bytes, and all 21,442 `OUT` trials completed with no truncation and no
@@ -138,39 +214,10 @@ completeness verdict is checked against the per-leaf record rather than against 
 of it, while parsing the response and turning a large set of findings into records is caller-side work
 that sits outside it.
 
-## Layout
+## Calibrating and promoting a source
 
-| Path | What |
-|---|---|
-| `src/agent_defs/model.py` | the normalized record every loader emits |
-| `src/agent_defs/evaluate.py` | bounded predicate evaluation, with build-time pattern screening |
-| `src/agent_defs/_scan_worker.py` | the disposable child that compiles and matches, killed at an absolute deadline |
-| `src/agent_defs/hooks/_core.py` | the traversal: which strings of an event get scanned, and what is rewritten |
-| `src/agent_defs/hooks/claude_code.py` | the command hook itself: the exception boundary and the zero exit |
-| `src/agent_defs/hooks/_claude_code_impl.py` | the Claude Code adapter, and the only harness wired |
-| `src/agent_defs/hazards.json` | the measured regex timings the screen refuses on |
-| `src/agent_defs/cfg.py` | the configuration channel: a rule run the way its source runs it |
-| `src/agent_defs/lanes.py` | the four admission lanes and the binomial bound behind them |
-| `src/agent_defs/bundle.py` | the distribution format: normalized records frozen into one file |
-| `src/agent_defs/bundle.json` | the pinned rules the hook loads, written by `scripts/build_bundle.py` |
-| `src/agent_defs/cli.py` | the `agent-defs` command: install, calibrate, report state |
-| `SCHEMA.md` | the loader contract |
-| `docs/hazards.md` | why the screen refuses on measurement rather than on shape |
-
-## Using it
-
-```sh
-agent-defs install --settings ~/.claude/settings.json    # prints the diff
-agent-defs install --settings ~/.claude/settings.json --yes
-agent-defs status                                        # what it would do next call
-```
-
-Everything starts in `RECORD`. A completed `RECORD` finding is written to the
-local log and changes nothing the model sees. Two other paths still speak, and
-they do not speak to the same audience: a scan that could not finish adds a
-line to the model's context and a warning to yours, while a diagnostic log that
-could not be written warns you alone. Letting a source act takes a measurement
-of the set you actually have installed, and then saying so once:
+Letting a source act takes a measurement of the set you actually have installed, and then saying so
+once:
 
 ```sh
 agent-defs export-bundle --out enabled.json      # the exact enabled set
@@ -203,9 +250,9 @@ corpora, the two gates that disagree about it, and what none of it settles.
 
 ## Seeing what an install is doing
 
-`agent-defs status` answers it without guesswork: which bundle loaded, how many
-rules that leaves enabled on each surface, the lane each of them can reach on
-today's measurement, and whether a harness is registered to call any of it.
+`agent-defs status` reports which bundle loaded, counts of enabled rules by
+surface and effective lane, and whether the harness settings register this
+package's hook.
 
 The hook reads `bundle.json` and never a loader, because the machine running it
 has neither the pinned corpora nor a YAML parser, and a corpus fetched from
@@ -218,15 +265,67 @@ A pattern lifted out of the engine that dispatches it is a different artifact fr
 the rule its authors shipped. Measured on ATR's own skill benchmark: the same
 patterns matched flat against a skill document flag 155 of 466 benign documents,
 and run through ATR's own admission gates they flag 1, which is what ATR itself
-flags. Each record therefore carries its source's dispatch beside its pattern.
-[`docs/cfg.md`](docs/cfg.md) has the gates, where each was read from, and the
-before-and-after numbers.
+flags. ATR records loaded with readable engine sources carry the skill dispatch
+gates beside their patterns. The shipped hook bundle has no such bindings and
+uses flat predicates. [`docs/cfg.md`](docs/cfg.md) has the gates, where each was
+read from, and the before-and-after numbers.
 
 ## Sources
 
-Six public corpora, each pinned by commit. Redistribution terms are recorded per source and per field,
-and a source whose terms are unresolved ships no bytes until they are.
+Six public corpora, each pinned by commit. The shipped `bundle.json` is ATR-only: it carries 216 of
+ATR's 793 records, 205 on `OUT` and 11 on `IN`. Five of the six reserve their configuration names and
+are not loaded yet. Redistribution terms are recorded per source and per field, and a source whose
+terms are unresolved ships no bytes until they are.
+
+<details>
+<summary><b>The six pinned sources</b>, as recorded in <code>sources.lock</code></summary>
+
+Commits appear here as their first eight characters; `sources.lock` carries the full hash, the
+archive digest, the licence path and the counting method for each.
+
+| Source | Repository | Commit | Licence | Records at that commit |
+|---|---|---|---:|---:|
+| `atr` | [Agent-Threat-Rule/agent-threat-rules](https://github.com/Agent-Threat-Rule/agent-threat-rules) | `faf743fe` | MIT | 793 |
+| `netzilo` | [netzilo/aidr-sigma](https://github.com/netzilo/aidr-sigma) | `0139a664` | Apache-2.0 | 1156 |
+| `agentshield` | [agentshield-ai/agentshield](https://github.com/agentshield-ai/agentshield) | `1bd56f98` | Apache-2.0 | 69 |
+| `agent_audit_kit` | [sattyamjjain/agent-audit-kit](https://github.com/sattyamjjain/agent-audit-kit) | `75d1a155` | MIT | 332 |
+| `ave` | [aveproject/ave](https://github.com/aveproject/ave) | `3b9fcc00` | Apache-2.0 | 80 |
+| `guardana` | [guardana/guardana](https://github.com/guardana/guardana) | `5d6e4174` | Apache-2.0 | 51 |
+
+</details>
+
+## Repo layout
+
+<details>
+<summary><b>What each file is</b></summary>
+
+| Path | What |
+|---|---|
+| `src/agent_defs/model.py` | the normalized record every loader emits |
+| `src/agent_defs/evaluate.py` | bounded predicate evaluation, with build-time pattern screening |
+| `src/agent_defs/_scan_worker.py` | the disposable child that compiles and matches, killed at an absolute deadline |
+| `src/agent_defs/hooks/_core.py` | the traversal: which leaves of an event get scanned, and what is rewritten |
+| `src/agent_defs/hooks/claude_code.py` | the command hook itself: the exception boundary and the zero exit |
+| `src/agent_defs/hooks/_claude_code_impl.py` | the Claude Code adapter, and the only harness wired |
+| `src/agent_defs/hazards.json` | the measured regex timings the screen refuses on |
+| `src/agent_defs/cfg.py` | the configuration channel: a rule run the way its source runs it |
+| `src/agent_defs/lanes.py` | the four admission lanes and the binomial bound behind them |
+| `src/agent_defs/bundle.py` | the distribution format: normalized records frozen into one file |
+| `src/agent_defs/bundle.json` | the pinned rules the hook loads, written by `scripts/build_bundle.py` |
+| `src/agent_defs/cli.py` | the `agent-defs` command: install, calibrate, report state |
+| `SCHEMA.md` | the loader contract |
+| [`docs/hazards.md`](docs/hazards.md) | why the screen refuses on measurement rather than on shape |
+
+</details>
 
 ## Licence
 
-MIT for this package's own code. Rule content carries its source's licence, recorded per record.
+MIT for this package's own code, in [`LICENSE`](LICENSE). Rule content carries its source's licence,
+recorded per record. [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES) lists source licences and
+attributions and reproduces the Apache-2.0 text.
+
+<div align="center">
+
+<a href="#readme-top">↑ back to top</a>
+
+</div>

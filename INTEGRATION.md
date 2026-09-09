@@ -15,9 +15,16 @@ depth guard and strict evaluated-rule count. It also retains r2's bounded stdin,
 null hashes for truncated values, and model-visible incomplete-coverage warnings.
 The event budget is defined once as `SCAN_BUDGET_S = 1.0`; the standalone evaluator
 still defaults to 250 ms. This selects r3's startup allowance over r2's shorter
-hook deadline, without claiming the enabled bundle will complete. r1 measured
-unfinished work on a 28 KB Gmail result even with a 30-second budget. Timeout can
-request approval only for already-admitted PreToolUse DENY protection.
+hook deadline. It does not promise that the enabled bundle will finish, and r1
+measured unfinished work on a 28 KB Gmail result even at a 30-second budget. The
+traversal has changed since this section was written. One worker per event replaced
+one worker per string value in `45e6689` on 2026-09-07, after 32.67% of measured
+tool results returned an incomplete scan under the old shape. The 2026-09-08
+remeasurement then completed all 21,442 `OUT` trials with no truncation and no
+budget-skipped pair. Those samples carried one string value each and reached
+12,240 bytes at most. Events near the 45 to 55 KB per-event capacity that motivated
+the change are still unmeasured. Timeout can request approval only for
+already-admitted PreToolUse DENY protection.
 
 r4's flat regex conjunctions run as independent searches under r2's isolation and
 completeness contract. r1's isolated traffic measurements retain their diagnostics

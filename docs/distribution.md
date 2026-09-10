@@ -33,14 +33,19 @@ On 2026-09-04 Pacific, the gate verified all six archive digests against
 `sources.lock` and byte-compared every file used by the loaders, plus ATR's
 excluded directory and npm manifest. The result is `distribution-audit.json`.
 
-Two of the three ways this gate can be exercised have been run, and the third has
-not. On 2026-09-10 the five pytest checks above passed against the six real
-corpora and their pinned archives on a Linux host, over a full checkout, which is
-the layout a maintainer has. `tests/test_distribution_fetched_cache.py` covers the
-archive-memory path against a fixture archive and needs no corpus. An end-to-end
-run over a real tree `sources.fetch()` wrote is still outstanding; it skips unless
-`AGENT_DEFS_FETCHED_CORPORA` and `AGENT_DEFS_ARCHIVES` are both set. Until that
-runs, the fetched-cache layout rests on the fixture rather than on a pinned corpus.
+All three ways this gate can be exercised have now been run. On 2026-09-10 the
+five pytest checks above passed against the six real corpora and their pinned
+archives on a Linux host. That run used a full checkout, the layout a maintainer
+has. `tests/test_distribution_fetched_cache.py` covers the archive-memory path
+against a fixture archive and needs no corpus. The end-to-end check passed that
+same day over a real tree `sources.fetch()` wrote. There the fetcher itself
+downloaded and extracted the six pinned sources. `data/test-corpora/` and
+`data/skill-benchmark/malicious/` were absent because the extractor refused them
+rather than because anything deleted them afterwards. Zero files sit on disk
+under the excluded prefix while its 1,101 archived members are still counted.
+The run reproduces the same 2,481 loaded and 2,431 shipping records the checkout
+layout reports. That check skips unless `AGENT_DEFS_FETCHED_CORPORA` and
+`AGENT_DEFS_ARCHIVES` are both set.
 
 The sample census now comes from the archive while the loader's excluded-path delta
 still counts files on disk, and the gate requires those two to agree in a checkout.

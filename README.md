@@ -4,110 +4,51 @@
 
 # agent-defs
 
-**Definitions for agent security.**
+**`agent-defs` normalizes public agent-security rules from six commit-pinned corpora and runs the shipped subset from a hook over the text your agent reads, before the model acts on it.**
+
+*A pattern alone does not get to act here. A rule writes a log line and nothing else until its benign firing rate is measured, bounded by an exact Clopper-Pearson upper limit, and you promote its source yourself. One exception: an incomplete scan can still warn you and add model context, and some hook failures warn you alone.*
 
 [![PyPI](https://img.shields.io/pypi/v/agent-defs)](https://pypi.org/project/agent-defs/)
 [![Code licence: MIT](https://img.shields.io/badge/code_licence-MIT-green)](#licence)
 [![evaluator](https://github.com/yzhao062/agent-defs/actions/workflows/evaluator.yml/badge.svg?branch=main)](https://github.com/yzhao062/agent-defs/actions/workflows/evaluator.yml)
 
 [Install](#install-and-what-a-finding-does) &nbsp;•&nbsp;
+[Proof and limits](#proof-and-limits) &nbsp;•&nbsp;
+[What it will not do](#what-it-will-not-do) &nbsp;•&nbsp;
 [What it is for](#what-it-is-for) &nbsp;•&nbsp;
 [Measured attack catch rate](#measured-attack-catch-rate) &nbsp;•&nbsp;
-[What it will not do](#what-it-will-not-do) &nbsp;•&nbsp;
 [Sources](#sources)
+
+![agent-defs hero: the four admission lanes in one run, DO_NOT_SHIP, RECORD, ADVISE at U95 at most 0.5%, DENY at U95 at most 0.1%; the shipped bundle is tagged as shipping in RECORD, with a dashed arrow marked NOT PROMOTED running to ADVISE; a footer band gives 454 of 21,442 at 2.1173%, with 174 of 209 rules catching nothing](docs/hero.png)
 
 </div>
 
-Definitions for agent security: public rule sets and risk corpora, normalized, carrying where each
-rule came from, watched for changes, and preserved after the source disappears. Install it and your
-own agent checks the text it reads before the model acts on it.
+The figure shows the four admission lanes, the shipped bundle's nominal benign bound, and its measured
+attack catch rate. Every number in it appears again below, beside the paragraph that bounds it: the
+lane thresholds under [What it will not do](#what-it-will-not-do), the benign bound and its limits
+under [Calibrating and promoting a source](#calibrating-and-promoting-a-source), the attack
+measurement under [Measured attack catch rate](#measured-attack-catch-rate).
 
-**Status: pre-alpha, nothing published beyond a name reservation.** `0.0.1` on PyPI and npm holds the
-name and carries no rules. The bundle that ships today catches **2.1173%** of a held-out attack pool,
-one that is almost never this hook's surface. The shipped hook catches the same samples the offline
-scanner does. [Measured attack catch rate](#measured-attack-catch-rate) has the result and its limits.
+## What ships
 
-> [!WARNING]
-> This measures detection and not prevention. Every enabled rule ships in the record-only lane, so a
-> completed catch is a log line: it withholds nothing and adds no model context. The interruption
-> rate from these detections is zero by construction rather than by measurement. An incomplete scan
-> is the one exception: it warns you and the model both.
-
-## What ships, what it records, and what it catches
-
-![agent-defs hero: a four-lane admission ladder showing that the shipped bundle's measured benign firing rate, 0.272% U95 on OUT and 0.172% on IN, qualifies only for ADVISE while every enabled rule still ships in RECORD; the event path and the offset-and-hash fields a finding writes to the local log, never the matched text; and the measured catch rate of 454 of a 21,442-sample attack pool, 2.1173%](docs/hero.png)
-
-The top panel is the admission rule. Advice and denial require a measured benign firing rate that
-satisfies the lane's exact binomial upper limit. Every enabled rule
-ships in `RECORD`, the lane that needs no bound and writes only a local log line. That is why the
-black tag sits on `RECORD`. The teal tag one lane along marks where this measurement would admit the
-source, and nothing has promoted it there. Beneath the lanes, two percentages give the shipped
-bundle's own measurement. A closing line says why neither is established as a bound on what the
-deployed hook does.
-
-The middle panel is the event path, and the field list is exactly what a completed finding writes to
-the local log. Raw tool text is not among those fields. A band at the foot carries the attack
-measurement, which the figure asks you to read beside the panels above and never instead of them.
-
-Every number in the image is one the sections below already state. Lane gates and the two bounds sit
-under [Calibrating and promoting a source](#calibrating-and-promoting-a-source). Finding fields are
-under [Install, and what a finding does](#install-and-what-a-finding-does), and the catch rate under
-[Measured attack catch rate](#measured-attack-catch-rate). The figure carries none of the bounding
-paragraphs that sit beside those numbers in the text. Read it as an index into the sections below.
-
-## What it is for
-
-An agent reads tens of thousands of tokens you never see: web pages, issues, files, tool responses. If
-any of that carries instructions, the model may follow them, and you have no way to notice. That is
-the one threat here an individual cannot defend against alone, and it is what this package is aimed
-at.
-
-It acts at the moment the text arrives rather than producing a report you have to read. Three moments
-are reachable in principle; two are wired.
-
-| Moment | What is caught | State here |
-|---|---|---|
-| A tool result comes back | instructions addressed to your agent, carried in the returned text | **wired.** 209 rules on Claude Code's `PostToolUse`, being 205 from the corpus plus 4 starter rules; see [`docs/calibration.md`](docs/calibration.md) |
-| A tool call is about to run | the call does something you did not authorise | **wired.** 11 rules on `PreToolUse`. Of the corpus's 57 `IN` rules, 43 do not run and 3 are held back after firing on selection-stage tool *results*, which is not the surface they run on |
-| A skill or server is added | an install step piping a download into a shell, a plaintext secret, a declaration of no `tools` beside authority over all of them | **not reachable.** `cfg.py` and the worker's `cfg` mode implement it and the tests exercise it, but no harness path arrives there: there is no installer hook, and `read_config` refuses any surface but `IN` and `OUT` |
-
-Claude Code, Codex and Copilot each expose all three interception points. Only Claude Code has an
-adapter here, and that is a statement about this package rather than about those harnesses.
-
-Wired does not yet mean acting. A registered hook scans and writes matches to the local log from the
-first call, and every rule starts in a record-only lane, so a completed match changes nothing the
-model sees until you explicitly promote its source to a lane a measurement supports.
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f4f4f5', 'primaryBorderColor': '#3f3f46', 'primaryTextColor': '#18181b', 'lineColor': '#3f3f46', 'textColor': '#18181b', 'edgeLabelBackground': '#ffffff', 'fontSize': '13px'}}}%%
-flowchart LR
-    E["A wired tool event:<br/>PreToolUse or PostToolUse"] --> T["Traversal: eligible leaves of<br/>tool_input or tool_response"]
-    T --> W["One worker per event,<br/>each rule compiled once"]
-    W --> D{"Coverage complete?<br/>Every required check finished,<br/>no truncation, declined leaves or errors"}
-    D -->|"complete, nothing matched"| N["No log write"]
-    D -->|"complete, rule matched"| R["Match written to the local log"]
-    R --> M["Changes nothing the model sees, until you<br/>promote the source to a lane<br/>a measurement supports"]
-    D -->|"incomplete"| I["Logs incomplete coverage and available findings;<br/>warns you and the model,<br/>and never calls unscanned leaves clean"]
-```
-
-This is the path a wired tool event takes. A complete scan with no finding writes nothing. The bundle
-fired once in 1,743 held-out tool results. That joined-text measurement does not establish how often
-the deployed hook will match or write a log; [Calibrating and promoting a
-source](#calibrating-and-promoting-a-source) gives its sampling and selection limits. Completed
-findings are logged when the log is writable. An incomplete scan also records its coverage and warns
-you and the model.
-
-Benign firing and attack catch rate answer different questions, and a project like this can quietly
-report only the first. Measurements on selected traffic produced low observed firing rates and
-nominal binomial bounds, with their limits set out under [Calibrating and promoting a
-source](#calibrating-and-promoting-a-source). The attack measurement produced a low catch rate on its
-test pool, described under [Measured attack catch rate](#measured-attack-catch-rate). Read them
-together rather than either alone.
+| Property | What it means |
+|---|---|
+| **Rules come from six public corpora, each pinned by commit** | `sources.lock` carries the full hash, the archive digest, the licence path and the counting method for each. The shipped `bundle.json` is ATR-only: 216 records, 205 on `OUT` and 11 on `IN`. |
+| **A rule may not act until its benign firing rate is measured** | Every executable rule starts in the record-only lane. `lanes.py` admits `ADVISE` at 0.5% and `DENY` at 0.1%, each an exact binomial (Clopper-Pearson) upper limit, and a source moves lane only when you import evidence and promote it. |
+| **A finding writes an offset and a hash, never the matched text** | One JSON line in a local log, and the log never enters the model context. The tool text itself is untouched: in the record-only lane your model reads exactly what it would have read without this hook. |
+| **The shipped bundle carries no attack sample** | All 216 records carry empty `examples_positive` and `examples_negative`. [`SAMPLES.md`](SAMPLES.md) records what a fetch may and may not write to disk. |
+| **Source licences and known redistribution restrictions are recorded** | `Rule.shippable` excludes records marked `restricted` and records under excluded source paths. The per-record `redistribution` field stays unresolved by design, and this filter does not determine whether every underlying grant permits redistribution. |
 
 ## Install, and what a finding does
 
-Read [Measured attack catch rate](#measured-attack-catch-rate) first: the bundle that ships today
-catches 2.1173% of a held-out attack pool.
+**Pre-alpha, nothing published beyond a name reservation.** `0.0.1` on PyPI and npm holds the name and
+carries no rules, so a source checkout is the working path. Read [Measured attack catch
+rate](#measured-attack-catch-rate) first: the bundle that ships today catches 2.1173% of a held-out
+attack pool, one that is almost never this hook's surface. Every rule ships in the record-only lane,
+so a completed catch is a log line that withholds nothing and adds no model context. An incomplete
+scan is the exception: it can warn you and add model context. Some hook failures warn you alone,
+among them a payload too large to parse, a failure before the event is recognized, and an error
+encoding the response as JSON.
 
 The checkout sets `requires-python = ">=3.9"`, and the core carries no third-party dependency. That
 is why the registered hook runs with `-I -S`: no project import path, no user site, no site
@@ -132,8 +73,10 @@ Everything starts in `RECORD`. A completed `RECORD` finding is written to the lo
 nothing the model sees. Findings are JSON lines in `~/.claude/agent-defs/findings.jsonl`, carrying
 rule IDs, effective lanes, JSON paths, original character spans and text hashes. Raw tool text is not
 logged, and the log is local and never enters the model context. Two other paths still speak, and
-they do not speak to the same audience: a scan that could not finish adds a line to the model's
-context and a warning to yours, while a diagnostic log that could not be written warns you alone.
+they do not speak to the same audience: a scan that could not finish can add a warning to yours and a
+line to the model's context, while some failures reach you alone. A payload too large to parse, a
+failure before the event is recognized, an error encoding the response as JSON, and a diagnostic
+log that could not be written are each of that second kind.
 
 Some of the rule corpora this package normalizes ship attack samples beside their rules, and
 [`SAMPLES.md`](SAMPLES.md) is the record of what happens to that content. No sample ships in the
@@ -146,14 +89,89 @@ quarantine on 2026-09-05, when real-time protection pulled files out of a corpus
 worker wrote them. ATR's declared-input selection bounds which files are written, and
 [`SAMPLES.md`](SAMPLES.md) says plainly that it does not certify the contents of an allowed file.
 
+## Proof and limits
+
+Eight lines decide whether this is worth your time. Each is bounded in [Measured attack catch
+rate](#measured-attack-catch-rate) unless it links somewhere else.
+
+- **454 of a 21,442-sample attack pool, 2.1173%.** What the 209 `OUT` rules enabled today catch, held out by origin.
+- **The preregistration predicted 40% to 75%, and recorded that expectation as violated.**
+- **174 of those 209 rules catch nothing on that pool.** All four starter rules are among them, and they are the only rules this package authored.
+- **84 of the 21,442 samples are shaped like a tool result, 0.39%.** The pool is almost never this hook's surface. Seventy-nine of those 84 came from the upstream rule corpus itself, leaving five from anywhere else, of which the rules caught two.
+- **The bundle fired once in 1,743 held-out tool results, and on none of the 1,738 tool invocations from the same episodes.** Treated as independent representative trials, that is a nominal one-sided 95% bound of 0.272% on `OUT` and 0.172% on `IN`. The importer maps that to `ADVISE` and not `DENY`, and nothing has been promoted on it. [How a source is calibrated](#calibrating-and-promoting-a-source)
+- **Nothing here can be reproduced from this checkout alone.** The run report, the contract it was scored against, the pinned corpora and the attack pool live in a research record outside this repository.
+- **No harness path reaches the configuration channel, which is implemented and tested.** There is no installer hook, and `read_config` refuses any surface but `IN` and `OUT`. [What is wired, and what is not](#what-it-is-for)
+- **Pre-alpha.** `0.0.1` on PyPI and npm holds the name and carries no rules, as [Install](#install-and-what-a-finding-does) says above.
+
+> [!WARNING]
+> This measures detection and not prevention. Every enabled rule ships in the record-only lane, so a
+> completed catch is a log line: it withholds nothing and adds no model context. The interruption
+> rate from these detections is zero by construction rather than by measurement. An incomplete scan
+> is the one exception: it can warn you and add model context, and some hook failures warn you alone.
+
 ## What it will not do
 
 Let unmeasured rules act on completed matches. A security hook that interrupts normal use gets
 switched off within a day, and then nothing runs at all. Every executable rule starts in a record-only
 lane, and it leaves that lane only on a measured benign firing rate with an exact binomial bound
-behind it. That bound is not zero: `lanes.py` admits `ADVISE` at 0.5% and `DENY` at 0.1%, so what a
-promoted rule carries is a ceiling on how often it may interrupt you rather than a promise that it
-never will. The policy is in [`SCHEMA.md`](SCHEMA.md) and the arithmetic is in `agent_defs/lanes.py`.
+behind it. That bound is not zero: `lanes.py` admits `ADVISE` at 0.5% and `DENY` at 0.1%, so promotion
+records that the evidence you supplied cleared those thresholds. It is not a promise that the rule
+will never interrupt you, and the bound holds over the trials in that evidence rather than over your
+traffic. The policy is in [`SCHEMA.md`](SCHEMA.md) and the arithmetic is in `agent_defs/lanes.py`.
+
+## What it is for
+
+An agent reads tens of thousands of tokens you never see: web pages, issues, files, tool responses. If
+any of that carries instructions, the model may follow them, and you have no way to notice. That is
+the one threat here an individual cannot defend against alone, and it is what this package is aimed
+at.
+
+It acts at the moment the text arrives rather than producing a report you have to read. Three moments
+are reachable in principle; two are wired.
+
+| Moment | What is caught | State here |
+|---|---|---|
+| A tool result comes back | instructions addressed to your agent, carried in the returned text | **wired.** 209 rules on Claude Code's `PostToolUse`, being 205 from the corpus plus 4 starter rules; see [`docs/calibration.md`](docs/calibration.md) |
+| A tool call is about to run | the call does something you did not authorise | **wired.** 11 rules on `PreToolUse`. Of the corpus's 57 `IN` rules, 43 do not run and 3 are held back after firing on selection-stage tool *results*, which is not the surface they run on |
+| A skill or server is added | an install step piping a download into a shell, a plaintext secret, a declaration of no `tools` beside authority over all of them | **not reachable.** `cfg.py` and the worker's `cfg` mode implement it and the tests exercise it, but no harness path arrives there: there is no installer hook, and `read_config` refuses any surface but `IN` and `OUT` |
+
+Claude Code, Codex and Copilot each expose all three interception points. Only Claude Code has an
+adapter here, and that is a statement about this package rather than about those harnesses.
+
+Wired does not yet mean acting. A registered hook scans and writes matches to the local log from the
+first call, and every rule starts in a record-only lane, so a completed match changes nothing the
+model sees until you explicitly promote its source to a lane a measurement supports.
+
+<details>
+<summary><b>The path a wired tool event takes</b> (flowchart)</summary>
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f4f4f5', 'primaryBorderColor': '#3f3f46', 'primaryTextColor': '#18181b', 'lineColor': '#3f3f46', 'textColor': '#18181b', 'edgeLabelBackground': '#ffffff', 'fontSize': '13px'}}}%%
+flowchart LR
+    E["A wired tool event:<br/>PreToolUse or PostToolUse"] --> T["Traversal: eligible leaves of<br/>tool_input or tool_response"]
+    T --> W["One worker per event,<br/>each rule compiled once"]
+    W --> D{"Coverage complete?<br/>Every required check finished,<br/>no truncation, declined leaves or errors"}
+    D -->|"complete, nothing matched"| N["No log write"]
+    D -->|"complete, rule matched"| R["Match written to the local log"]
+    R --> M["Changes nothing the model sees, until you<br/>promote the source to a lane<br/>a measurement supports"]
+    D -->|"incomplete"| I["Logs incomplete coverage and available findings;<br/>warns you and the model,<br/>and never calls unscanned leaves clean"]
+```
+
+</details>
+
+A complete scan with no finding writes nothing. The bundle fired once in 1,743 held-out tool
+results. That joined-text measurement does not establish how often
+the deployed hook will match or write a log; [Calibrating and promoting a
+source](#calibrating-and-promoting-a-source) gives its sampling and selection limits. Completed
+findings are logged when the log is writable. An incomplete scan also records its coverage, and it can
+warn you and add model context; some hook failures warn you alone.
+
+Benign firing and attack catch rate answer different questions, and a project like this can quietly
+report only the first. Measurements on selected traffic produced low observed firing rates and
+nominal binomial bounds, with their limits set out under [Calibrating and promoting a
+source](#calibrating-and-promoting-a-source). The attack measurement produced a low catch rate on its
+test pool, described under [Measured attack catch rate](#measured-attack-catch-rate). Read them
+together rather than either alone.
 
 ## Measured attack catch rate
 
@@ -197,8 +215,8 @@ correction. At 84 and at 5, neither the direction nor the magnitude of that chan
 It measures detection and not prevention. Every enabled rule ships in the record-only lane, so a
 completed catch is a log line: it withholds nothing and adds no model context, and the interruption
 rate from these detections is zero by construction rather than by measurement. An incomplete scan is
-the exception and still speaks, to you and to the model both, as described under [Install, and what a
-finding does](#install-and-what-a-finding-does).
+the exception and still speaks: it can warn you and add model context. Examples of failures that warn
+you alone are given under [Install, and what a finding does](#install-and-what-a-finding-does).
 
 The scoring shape was the most generous one for the budget. Each sample arrived as one event of one
 leaf, the largest of them 12,240 bytes, and all 21,442 `OUT` trials completed with no truncation and no
@@ -307,8 +325,10 @@ read from, and the before-and-after numbers.
 
 Six public corpora, each pinned by commit. The shipped `bundle.json` is ATR-only: it carries 216 of
 ATR's 793 records, 205 on `OUT` and 11 on `IN`. Five of the six reserve their configuration names and
-are not loaded yet. Redistribution terms are recorded per source and per field, and a source whose
-terms are unresolved ships no bytes until they are.
+are not loaded yet. Redistribution terms are recorded per source and per field. The default rights
+filter, `Rule.shippable`, excludes records marked `restricted` and records under excluded source
+paths. Every loader leaves per-record `redistribution` unresolved; the filter does not settle every
+underlying rights question.
 
 <details>
 <summary><b>The six pinned sources</b>, as recorded in <code>sources.lock</code></summary>

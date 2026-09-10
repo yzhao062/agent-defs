@@ -33,6 +33,28 @@ scanner does. [Measured attack catch rate](#measured-attack-catch-rate) has the 
 > rate from these detections is zero by construction rather than by measurement. An incomplete scan
 > is the one exception: it warns you and the model both.
 
+## What ships, what it records, and what it catches
+
+![agent-defs hero: a four-lane admission ladder showing that the shipped bundle's measured benign firing rate, 0.272% U95 on OUT and 0.172% on IN, qualifies only for ADVISE while every enabled rule still ships in RECORD; the event path and the offset-and-hash fields a finding writes to the local log, never the matched text; and the measured catch rate of 454 of a 21,442-sample attack pool, 2.1173%](docs/hero.png)
+
+The top panel is the admission rule. Advice and denial require a measured benign firing rate that
+satisfies the lane's exact binomial upper limit. Every enabled rule
+ships in `RECORD`, the lane that needs no bound and writes only a local log line. That is why the
+black tag sits on `RECORD`. The teal tag one lane along marks where this measurement would admit the
+source, and nothing has promoted it there. Beneath the lanes, two percentages give the shipped
+bundle's own measurement. A closing line says why neither is established as a bound on what the
+deployed hook does.
+
+The middle panel is the event path, and the field list is exactly what a completed finding writes to
+the local log. Raw tool text is not among those fields. A band at the foot carries the attack
+measurement, which the figure asks you to read beside the panels above and never instead of them.
+
+Every number in the image is one the sections below already state. Lane gates and the two bounds sit
+under [Calibrating and promoting a source](#calibrating-and-promoting-a-source). Finding fields are
+under [Install, and what a finding does](#install-and-what-a-finding-does), and the catch rate under
+[Measured attack catch rate](#measured-attack-catch-rate). The figure carries none of the bounding
+paragraphs that sit beside those numbers in the text. Read it as an index into the sections below.
+
 ## What it is for
 
 An agent reads tens of thousands of tokens you never see: web pages, issues, files, tool responses. If
@@ -112,6 +134,17 @@ rule IDs, effective lanes, JSON paths, original character spans and text hashes.
 logged, and the log is local and never enters the model context. Two other paths still speak, and
 they do not speak to the same audience: a scan that could not finish adds a line to the model's
 context and a warning to yours, while a diagnostic log that could not be written warns you alone.
+
+Some of the rule corpora this package normalizes ship attack samples beside their rules, and
+[`SAMPLES.md`](SAMPLES.md) is the record of what happens to that content. No sample ships in the
+bundle: all 216 records carry an empty `examples_positive` and an empty `examples_negative`. A fetch
+of ATR, the one source that ships, writes only its declared inputs and its licence. Five prefixes
+named in `sources.NEVER_EXTRACT` are refused for every source, including ATR's two sample
+directories. The other five sources are governed by that deny-list alone, so sample content they
+keep outside those prefixes can reach disk. That file also documents the antivirus
+quarantine on 2026-09-05, when real-time protection pulled files out of a corpus checkout as a build
+worker wrote them. ATR's declared-input selection bounds which files are written, and
+[`SAMPLES.md`](SAMPLES.md) says plainly that it does not certify the contents of an allowed file.
 
 ## What it will not do
 
@@ -314,7 +347,10 @@ archive digest, the licence path and the counting method for each.
 | `src/agent_defs/bundle.json` | the pinned rules the hook loads, written by `scripts/build_bundle.py` |
 | `src/agent_defs/cli.py` | the `agent-defs` command: install, calibrate, report state |
 | `SCHEMA.md` | the loader contract |
+| [`SAMPLES.md`](SAMPLES.md) | what this package does with known-malicious sample content, and what an antivirus did to a checkout |
+| `unmeasured-cfg.json` | the ATR regex conditions that had no timing row, written by `scripts/extract_unmeasured.py` and named in `hazards.json` as the input to its CFG condition sweep |
 | [`docs/hazards.md`](docs/hazards.md) | why the screen refuses on measurement rather than on shape |
+| [`docs/integration-history.md`](docs/integration-history.md) | a dated record of how the parallel build and repair rounds were merged, and what each left open |
 
 </details>
 

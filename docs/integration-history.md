@@ -1,4 +1,11 @@
-# Integration State
+# Integration history: how the parallel build rounds were merged
+
+The unit labels are the only thing a new reader needs. A `b` prefix is one of the
+seven build units that wrote this package at once, each in its own clone off one
+base commit on 2026-09-04; `r1` through `r5` are the repair units that followed
+them, and `m1` is a later maintenance unit. What follows records what each dated
+round merged and what remained open at that time. See [the distribution
+gate](distribution.md) for the current release procedure.
 
 ## Five-way repair integration, 2026-09-04
 

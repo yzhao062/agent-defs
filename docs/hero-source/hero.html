@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: MIT -->
+<!--
+  agent-defs hero figure source.
+
+  Two panels, chosen because they are the two claims this package can make
+  that do not depend on its catch rate, and both are verifiable from the
+  repository:
+
+    1. The admission ladder. A rule may not act until its benign firing rate
+       has been measured, and the gate is an exact binomial upper limit.
+       Sources: src/agent_defs/model.py (Lane), src/agent_defs/lanes.py
+       (ADVISE_MAX_U95 = 0.005, DENY_MAX_U95 = 0.001), README
+       "Calibrating and promoting a source".
+    2. What reaches the user's disk. The event path, the fields of a finding
+       record, and the packaging fact.
+       Sources: src/agent_defs/hooks/_core.py lines 268-273 (the record
+       fields, in that order), pyproject.toml
+       [tool.setuptools.package-data] agent_defs = ["hazards.json",
+       "bundle.json"], and src/agent_defs/bundle.json (216 records, every
+       one with an empty examples_positive and examples_negative).
+
+  The footer strip carries the measured catch rate at full legibility. A
+  reader who takes the top half and installs on that basis is the failure
+  this figure exists to prevent, so the footer is a peer of the panels
+  rather than a caveat tucked under them.
+
+  Every numeral in this figure also appears in README.md.
+
+  No attack sample, corpus text or matched substring appears here, by
+  policy. Counts, rule IDs, lane names and field names only.
+
+  Capture (headless Chrome, 2x device scale; viewport height is the
+  measured height of .hero, so re-measure after editing):
+    "C:/Program Files/Google/Chrome/Application/chrome.exe" \
+      --headless --disable-gpu --hide-scrollbars \
+      --force-device-scale-factor=2 --window-size=1160,1559 \
+      --screenshot=docs/hero.png \
+      file:///.../docs/hero-source/hero.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>agent-defs hero</title>
+<style>
+  :root {
+    --paper: #f7f3ea;
+    --paper-deep: #ece5d5;
+    --ink: #191714;
+    --ink-mid: #4b463d;
+    --rule: #8d8672;
+    --hair: #c9c1ab;
+    --accent: #17545c;
+    --accent-soft: #e3edee;
+    --caveat: #8a4326;
+    --caveat-soft: #f5ebe3;
+    --card: #fffdf8;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --display: "Playfair Display", Georgia, "Times New Roman", serif;
+    --mono: "SF Mono", Consolas, "Roboto Mono", monospace;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font-family: var(--sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .hero {
+    width: 1160px;
+    padding: 22px 32px 22px 32px;
+    box-sizing: border-box;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 5px var(--ink-mid);
+  }
+
+  /* ---------- masthead ---------- */
+  .booktop { text-align: center; }
+  .mini-cap {
+    font-size: 12.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    margin-bottom: 6px;
+  }
+  .title {
+    font-family: var(--display);
+    font-size: 54px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.005em;
+    margin: 0 0 6px 0;
+  }
+  .tagline {
+    font-family: var(--display);
+    font-size: 20px;
+    font-style: italic;
+    color: var(--ink-mid);
+    margin: 0 0 11px 0;
+  }
+  .chiprow { display: flex; justify-content: center; gap: 8px; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 4px 11px;
+    background: var(--card);
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    color: var(--ink-mid);
+  }
+  .chip b { color: var(--ink); font-weight: 700; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 17px 22px 19px 22px;
+    margin-top: 14px;
+  }
+  .panel-kicker {
+    font-size: 12px;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+  .panel-kicker .num {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-right: 8px;
+  }
+  .panel-head {
+    font-family: var(--display);
+    font-size: 25px;
+    font-weight: 700;
+    line-height: 1.18;
+    margin: 0 0 6px 0;
+  }
+  .panel-dek {
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--ink-mid);
+    margin: 0 0 14px 0;
+  }
+
+  /* ---------- panel 1: the ladder ---------- */
+  .ladder {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    column-gap: 14px;
+  }
+  .step {
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 212px;
+  }
+  .riser { width: 100%; box-sizing: border-box; }
+  .step-1 .riser { height: 10px; background: var(--paper-deep); border: 1px solid var(--hair);   border-bottom: none; }
+  .step-2 .riser { height: 36px; background: var(--ink);        border: 1px solid var(--ink);    border-bottom: none; }
+  .step-3 .riser { height: 62px; background: var(--accent);     border: 1px solid var(--accent); border-bottom: none; }
+  .step-4 .riser { height: 88px; background: transparent;       border: 1px solid var(--hair);   border-bottom: none; }
+
+  .lane {
+    border: 1px solid var(--hair);
+    border-top: none;
+    padding: 11px 13px 12px 13px;
+    height: 124px;
+    box-sizing: border-box;
+    background: var(--paper);
+  }
+  .step-2 .lane { border-color: var(--ink);    background: #ffffff; }
+  .step-3 .lane { border-color: var(--accent); background: #ffffff; }
+  .lane-name {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: var(--mono);
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .step-1 .lane-name { color: var(--rule); font-size: 17.5px; }
+  .step-3 .lane-name { color: var(--accent); }
+  .step-4 .lane-name { color: var(--ink-mid); }
+  .lane-gate { font-size: 15px; line-height: 1.4; color: var(--ink-mid); }
+  .lane-gate .bound {
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 16px;
+    white-space: nowrap;
+  }
+  .lane-tag {
+    display: inline-block;
+    margin-top: 7px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 2px;
+  }
+  .tag-ships { background: var(--ink); color: #ffffff; }
+  .tag-quals { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+
+  .gapband {
+    grid-row: 2;
+    grid-column: 2 / 4;
+    margin-top: 9px;
+    text-align: center;
+  }
+  .gapband .bar {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--caveat);
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .gapband .bar .line { flex: 1; height: 1px; background: var(--caveat); }
+  .gapband .note {
+    font-size: 14.5px;
+    color: var(--ink-mid);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  /* ---------- panel 1: the measurement rail ---------- */
+  .rail {
+    grid-row: 3;
+    grid-column: 1 / 5;
+    margin-top: 12px;
+    border-top: 1px solid var(--hair);
+    padding-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.5fr;
+    column-gap: 22px;
+    align-items: start;
+  }
+  .readout .surface {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--ink-mid);
+    margin-bottom: 4px;
+  }
+  .readout .trials {
+    font-size: 15px;
+    line-height: 1.38;
+    color: var(--ink-mid);
+    margin-bottom: 7px;
+  }
+  .readout .u95 {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .readout .u95 .lab {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--ink-mid);
+    margin-left: 7px;
+  }
+  .verdict {
+    border-left: 1px solid var(--hair);
+    padding-left: 22px;
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .verdict b { font-family: var(--mono); }
+  .railnote {
+    grid-row: 4;
+    grid-column: 1 / 5;
+    margin-top: 11px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink-mid);
+  }
+  .railnote .mark { color: var(--caveat); font-weight: 700; margin-right: 7px; }
+
+  /* ---------- panel 2: the path ---------- */
+  .path {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stage {
+    flex: 1;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    padding: 10px 12px 11px 12px;
+    font-size: 14.5px;
+    line-height: 1.34;
+    color: var(--ink);
+  }
+  .stage .n {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .stage code { font-family: var(--mono); font-size: 13px; }
+  .arrow { align-self: center; font-size: 18px; color: var(--rule); line-height: 1; }
+
+  .recordbox {
+    border: 1px solid var(--hair);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    background: var(--paper);
+    padding: 13px 16px 14px 16px;
+  }
+  .recordbox .lead {
+    font-size: 15.5px;
+    color: var(--ink-mid);
+    margin-bottom: 9px;
+    line-height: 1.38;
+  }
+  .recordbox .lead code { font-family: var(--mono); font-size: 14.5px; color: var(--ink); }
+  .fields { display: flex; flex-wrap: wrap; gap: 7px; }
+  .field {
+    font-family: var(--mono);
+    font-size: 14.5px;
+    padding: 5px 10px;
+    background: #ffffff;
+    border: 1px solid var(--hair);
+    border-radius: 2px;
+    color: var(--ink);
+  }
+  .field.hashy { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .recordbox .foot {
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+    margin-top: 10px;
+  }
+  .recordbox .foot .never { font-weight: 700; }
+
+  .packaging {
+    margin-top: 13px;
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .packaging .hd {
+    font-size: 11.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-mid);
+    margin-right: 10px;
+  }
+  .packaging code { font-family: var(--mono); font-size: 14.5px; }
+  .packaging b { font-family: var(--mono); font-weight: 700; }
+
+  /* ---------- footer: the catch rate ---------- */
+  .catch {
+    margin-top: 14px;
+    background: var(--caveat-soft);
+    border: 1px solid var(--caveat);
+    border-radius: 4px;
+    padding: 15px 22px 16px 22px;
+  }
+  .catch .hd {
+    font-size: 12.5px;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--caveat);
+    margin-bottom: 9px;
+  }
+  .catchgrid {
+    display: grid;
+    grid-template-columns: 222px 222px 1fr;
+    column-gap: 22px;
+    align-items: start;
+  }
+  .catchnum {
+    font-family: var(--mono);
+    font-size: 25px;
+    font-weight: 700;
+    color: var(--caveat);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .catchsub { font-size: 15px; line-height: 1.4; color: var(--ink); }
+  .catchtext {
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+    border-left: 1px solid var(--caveat);
+    padding-left: 22px;
+  }
+  .catchtext b { font-family: var(--mono); font-weight: 700; }
+
+  /* ---------- install ---------- */
+  .install {
+    margin-top: 12px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .cmds {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px 14px;
+  }
+  .install code {
+    font-family: var(--mono);
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 4px 9px;
+    white-space: nowrap;
+  }
+  .install .why {
+    display: block;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-mid);
+    margin-top: 9px;
+  }
+  .install .why code { padding: 2px 6px; }
+</style>
+</head>
+<body>
+<div class="hero">
+
+  <div class="booktop">
+    <div class="mini-cap">public rule sets and risk corpora, normalized</div>
+    <h1 class="title">agent-defs</h1>
+    <div class="tagline">Definitions for agent security.</div>
+    <div class="chiprow">
+      <span class="chip">status <b>pre-alpha</b></span>
+      <span class="chip"><b>216</b> ATR records</span>
+      <span class="chip"><b>205</b> on OUT</span>
+      <span class="chip"><b>11</b> on IN</span>
+      <span class="chip">code licence <b>MIT</b></span>
+    </div>
+  </div>
+
+  <!-- =========================== PANEL 1 =========================== -->
+  <div class="panel">
+    <div class="panel-kicker"><span class="num">01</span>the admission ladder</div>
+    <h2 class="panel-head">A rule may not act until its benign firing rate has been measured.</h2>
+    <p class="panel-dek">
+      Four lanes separate non-executable rules, recording, advice and denial. ADVISE and DENY require an
+      exact binomial (Clopper&#8211;Pearson) upper limit on how often the rule fires on ordinary traffic.
+      Their gates are not zero, so a promoted rule carries a ceiling on how often it may interrupt you
+      rather than a promise that it never will.
+    </p>
+
+    <div class="ladder">
+
+      <div class="step step-1">
+        <div class="riser"></div>
+        <div class="lane">
+          <div class="lane-name">DO_NOT_SHIP</div>
+          <div class="lane-gate">Never executes. The rule is not mechanically runnable.</div>
+        </div>
+      </div>
+
+      <div class="step step-2">
+        <div class="riser"></div>
+        <div class="lane">
+          <div class="lane-name">RECORD</div>
+          <div class="lane-gate">No bound required. A local log line; the model sees nothing.</div>
+          <span class="lane-tag tag-ships">ships here today</span>
+        </div>
+      </div>
+
+      <div class="step step-3">
+        <div class="riser"></div>
+        <div class="lane">
+          <div class="lane-name">ADVISE</div>
+          <div class="lane-gate">Admits at <span class="bound">U95(benign) &#8804; 0.5%</span></div>
+          <span class="lane-tag tag-quals">atr qualifies here</span>
+        </div>
+      </div>
+
+      <div class="step step-4">
+        <div class="riser"></div>
+        <div class="lane">
+          <div class="lane-name">DENY</div>
+          <div class="lane-gate">Admits at <span class="bound">U95(benign) &#8804; 0.1%</span>. The measurement does not reach it.</div>
+        </div>
+      </div>
+
+      <div class="gapband">
+        <div class="bar"><span class="line"></span><span>QUALIFYING IS NOT PROMOTING</span><span class="line"></span></div>
+        <div class="note">A source changes lane only when you promote it, on evidence you imported and accepted.</div>
+      </div>
+
+      <div class="rail">
+        <div class="readout">
+          <div class="surface">OUT SURFACE</div>
+          <div class="trials">The shipped bundle fired once in 1,743 held-out tool results.</div>
+          <div class="u95">0.272%<span class="lab">U95</span></div>
+        </div>
+        <div class="readout">
+          <div class="surface">IN SURFACE</div>
+          <div class="trials">It fired on none of the 1,738 tool invocations from those episodes.</div>
+          <div class="u95">0.172%<span class="lab">U95</span></div>
+        </div>
+        <div class="verdict">
+          The worse of the two decides the lane, so <b>0.272%</b> does. The importer maps it to <b>ADVISE</b>
+          and not <b>DENY</b>. Nothing was promoted on it: every enabled rule ships in <b>RECORD</b>, so a
+          completed catch is a log line that withholds nothing and adds no model context.
+        </div>
+      </div>
+
+      <div class="railnote">
+        <span class="mark">LIMIT</span>Both are nominal bounds on selected traffic. That sampling, and a rule
+        removed from the bundle after the evaluation was read, are why neither is established as a bound on
+        what the deployed hook does.
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================== PANEL 2 =========================== -->
+  <div class="panel">
+    <div class="panel-kicker"><span class="num">02</span>what reaches your disk</div>
+    <h2 class="panel-head">The matched text is never written. An offset and a hash go in its place.</h2>
+
+    <div class="path">
+      <div class="stage"><span class="n">EVENT</span>A wired tool event on <code>PreToolUse</code> or <code>PostToolUse</code></div>
+      <div class="arrow">&#8594;</div>
+      <div class="stage"><span class="n">TRAVERSAL</span>Eligible string leaves of <code>tool_input</code> or <code>tool_response</code></div>
+      <div class="arrow">&#8594;</div>
+      <div class="stage"><span class="n">SCAN</span>One worker per event, each rule compiled once, run against every leaf</div>
+      <div class="arrow">&#8594;</div>
+      <div class="stage"><span class="n">VERDICT</span>Coverage complete, or it says so and never calls unscanned leaves clean</div>
+    </div>
+
+    <div class="recordbox">
+      <div class="lead">A completed finding is one JSON line in <code>~/.claude/agent-defs/findings.jsonl</code>, carrying these fields and no others:</div>
+      <div class="fields">
+        <span class="field">event</span>
+        <span class="field">surface</span>
+        <span class="field">rule_id</span>
+        <span class="field">lane</span>
+        <span class="field">admission</span>
+        <span class="field">path</span>
+        <span class="field hashy">start</span>
+        <span class="field hashy">end</span>
+        <span class="field hashy">text_sha256</span>
+        <span class="field">truncated</span>
+      </div>
+      <div class="foot">
+        Raw tool text is <span class="never">not</span> logged. A JSON path, a character span and a hash of
+        the leaf stand in for it. The log is local and never enters the model context.
+      </div>
+    </div>
+
+    <div class="packaging">
+      <span class="hd">what the wheel holds</span>
+      <code>bundle.json</code> and <code>hazards.json</code>, and no attack sample. All <b>216</b> records
+      carry an empty <code>examples_positive</code> and an empty <code>examples_negative</code>.
+    </div>
+  </div>
+
+  <!-- =========================== CATCH RATE =========================== -->
+  <div class="catch">
+    <div class="hd">the catch rate, as measured</div>
+    <div class="catchgrid">
+      <div>
+        <div class="catchnum">454 / 21,442</div>
+        <div class="catchsub"><b>2.1173%</b> of a held-out attack pool, held out by origin.</div>
+      </div>
+      <div>
+        <div class="catchnum">174 of 209</div>
+        <div class="catchsub">rules catch nothing on that pool, all four starter rules among them.</div>
+      </div>
+      <div class="catchtext">
+        The pool is almost never this hook's surface. Of the 21,442 samples, <b>84</b> are shaped like a tool
+        result, <b>0.39%</b>. The upstream rule corpus wrote <b>79</b> of those 84, leaving <b>5</b> from
+        anywhere else, and the rules caught <b>2</b> of the 5. Read this beside the panels above, never
+        instead of them: what is disciplined here is admission, which is a different question from what
+        gets caught.
+      </div>
+    </div>
+  </div>
+
+  <div class="install">
+    <div class="cmds">
+      <code>git clone https://github.com/yzhao062/agent-defs</code>
+      <code>python -m pip install -e .</code>
+      <code>agent-defs install --settings ~/.claude/settings.json</code>
+    </div>
+    <span class="why">A source checkout is the working path. The published <code>0.0.1</code> holds the name and carries no rules.</span>
+  </div>
+
+</div>
+</body>
+</html>

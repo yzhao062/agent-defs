@@ -39,7 +39,7 @@ def test_real_settings_additive_idempotent_byte_roundtrip(settings_copy):
     assert guards
     assert [g for g in installed["hooks"]["PreToolUse"] if "guard.py" in json.dumps(g)] == guards
     for event in ("PreToolUse", "PostToolUse"):
-        assert len(installed["hooks"][event]) == len(original["hooks"][event]) + 1
+        assert len(installed["hooks"][event]) == len(original["hooks"].get(event, [])) + 1
         assert sum(hook.owned(h) for g in installed["hooks"][event] for h in g["hooks"]) == 1
     once = settings.read_bytes()
     assert Path(result["backup"]).read_bytes() == before
@@ -64,6 +64,35 @@ def test_reference_guard_copy_still_requires_approval_with_escapes_off(settings_
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "ask"
     assert all(group in json.loads(settings.read_bytes())["hooks"]["PreToolUse"]
                for group in json.loads(before)["hooks"]["PreToolUse"])
+    apply(settings, config, uninstall=True)
+    assert settings.read_bytes() == before
+
+
+def test_install_creates_a_missing_posttooluse_container(tmp_path):
+    """A machine that never registered a PostToolUse hook has no such container.
+
+    That is the ordinary shape for the reader this package is aimed at, and the
+    real-settings roundtrip above cannot cover it: its fixture skips unless a real
+    settings.json is present, so which shape gets exercised depends on the host.
+    This pins the container-creation path to a tree the suite builds itself.
+    """
+    settings, config = tmp_path / "settings.json", tmp_path / "config.json"
+    guard = {"matcher": "*", "hooks": [{"type": "command", "command": "python guard.py"}]}
+    original = {"hooks": {"PreToolUse": [guard], "SessionStart": [guard]}}
+    before = json.dumps(original, indent=2).encode("utf-8")
+    settings.write_bytes(before)
+    assert "PostToolUse" not in original["hooks"]
+
+    apply(settings, config)
+    installed = json.loads(settings.read_bytes())
+
+    assert len(installed["hooks"]["PostToolUse"]) == 1
+    assert len(installed["hooks"]["PreToolUse"]) == 2
+    assert installed["hooks"]["PreToolUse"][0] == guard
+    assert installed["hooks"]["SessionStart"] == [guard]
+    for event in ("PreToolUse", "PostToolUse"):
+        assert sum(hook.owned(h) for g in installed["hooks"][event] for h in g["hooks"]) == 1
+
     apply(settings, config, uninstall=True)
     assert settings.read_bytes() == before
 

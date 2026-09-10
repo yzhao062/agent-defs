@@ -3,6 +3,13 @@
 PYTHONPATH=src python scripts/audit_distribution.py /path/to/corpora \
     --archives /path/to/archives
 
+A corpus directory may be a full checkout or a tree ``sources.fetch()`` wrote.
+Those two layouts differ in what reaches disk: the fetcher refuses to extract
+ATR's sample directory, and its allow-list also leaves the npm manifest behind.
+This gate reads whatever the fetcher withholds out of the pinned archive in
+memory, so both layouts are audited against the same evidence and no sample
+byte is written anywhere, including a temporary directory.
+
 No downloads, extraction, source execution, or payload output. Missing inputs,
 digest mismatches, lost records, attribution loss and exclusion leaks fail.
 """
@@ -14,12 +21,12 @@ from collections import Counter
 from dataclasses import asdict
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import tarfile
 
+from agent_defs import sources
 from agent_defs.loaders import agent_audit_kit, atr, ave, guardana, sigma
 from agent_defs.model import default_bundle
-from agent_defs.sources import load_lock
 
 
 def require(condition, message):
@@ -41,44 +48,138 @@ def in_scope(source, path):
     return path == {"agent_audit_kit": "rules.json", "guardana": "docs/generated/rules.json"}[source]
 
 
+def extractable(source, license_path, members):
+    """The in-scope members a fetch writes to disk, decided by the fetcher itself.
+
+    Restating that policy here would let the two drift apart, which is the fault
+    that once made the extractor and the cache verifier read one archive two
+    ways. This is a question about disk layout, not about records, so it stays
+    separate from the independent evidence selection the rest of the gate does.
+    """
+    files = {sources._portable_path(path): member for path, member in members.items()}
+    kept, _ = sources._kept(files, set(), name=source, license_path=license_path)
+    return {path for path in members if sources._portable_path(path) in kept}
+
+
 def verify_tree(source, root, archive_path, pin):
+    """Byte-compare the tree against its pin and account for every in-scope member.
+
+    A member the extraction policy admits must be on disk and identical. One the
+    policy refuses may be absent, and is still byte-compared when a full checkout
+    carries it anyway. An in-scope file on disk that the archive does not declare
+    still fails, as does a modified one.
+    """
     digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
     require(digest == pin["archive_sha256"], f"{source}: archive digest disagrees with sources.lock")
-    expected = set()
+    expected, present = {}, set()
     with tarfile.open(archive_path, "r:gz") as archive:
         for member in archive:
             path = member.name.partition("/")[2]
             if not member.isfile() or not in_scope(source, path):
                 continue
-            expected.add(path)
+            expected[path] = member
             file = root / path
-            require(file.is_file(), f"{source}: missing pinned input {path}")
+            if not file.is_file():
+                continue
+            present.add(path)
             require(hashlib.sha256(file.read_bytes()).digest()
                     == hashlib.sha256(archive.extractfile(member).read()).digest(),
                     f"{source}: modified pinned input {path}")
+    missing = sorted(extractable(source, pin["license_path"], expected) - present)
+    require(not missing, f"{source}: missing pinned input {missing[:3]} ({len(missing)} in total)")
     actual = {p.relative_to(root).as_posix() for p in root.rglob("*")
               if p.is_file() and in_scope(source, p.relative_to(root).as_posix())}
-    require(actual == expected, f"{source}: input membership differs: {sorted(actual ^ expected)}")
+    require(actual == present, f"{source}: input membership differs: {sorted(actual ^ present)}")
     require(expected, f"{source}: no verified inputs")
-    return {"archive_sha256": digest, "verified_files": len(expected)}
+    return {"archive_sha256": digest, "verified_files": len(present),
+            "withheld_from_disk": len(expected) - len(present)}
+
+
+def collect_yaml(records, path, data):
+    """Parse one file's documents into records; return the ids it added."""
+    import yaml
+
+    added = []
+    for raw in yaml.load_all(data, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader)):
+        require(isinstance(raw, dict) and isinstance(raw.get("id"), str),
+                f"{path}: not a native record")
+        require(raw["id"] not in records, f"{path}: duplicate native id {raw['id']}")
+        records[raw["id"]] = (path, raw)
+        added.append(raw["id"])
+    return added
 
 
 def yaml_records(root, prefix):
-    import yaml
-
     records = {}
     for path in sorted((root / prefix).rglob("*")):
         if path.is_file() and path.suffix in {".yaml", ".yml"}:
-            for raw in yaml.load_all(path.read_bytes(), Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader)):
-                require(isinstance(raw, dict) and isinstance(raw.get("id"), str),
-                        f"{path}: not a native record")
-                require(raw["id"] not in records, f"{path}: duplicate native id {raw['id']}")
-                records[raw["id"]] = (path.relative_to(root).as_posix(), raw)
+            collect_yaml(records, path.relative_to(root).as_posix(), path.read_bytes())
     return records
 
 
+def withheld_members(archive_path, prefix, extras):
+    """Read what a fetch keeps off disk out of the pinned archive, in memory.
+
+    Members under ``prefix`` are the excluded sample corpus. They are counted,
+    decoded and parsed in this process and are never written anywhere; the
+    caller gets paths, record ids and counts. ``extras`` names the small
+    metadata files the allow-list also leaves behind, read the same way.
+
+    Digest verification happens before this runs, so these bytes are the pinned
+    ones. Reading the census here rather than from disk also makes it identical
+    in both layouts instead of shrinking silently when a checkout is partial.
+    """
+    paths, records, drafts, read = [], {}, 0, {}
+    with tarfile.open(archive_path, "r:gz") as archive:
+        for member in archive:
+            path = member.name.partition("/")[2]
+            if not member.isfile():
+                continue
+            if path in extras:
+                read[path] = archive.extractfile(member).read()
+            if not path.startswith(prefix):
+                continue
+            paths.append(path)
+            if PurePosixPath(path).suffix in {".yaml", ".yml"}:
+                data = archive.extractfile(member).read()
+                for rid in collect_yaml(records, path, data):
+                    # The decode stays behind the same short circuit the on-disk
+                    # read had, so a file only has to be text when it is a draft.
+                    raw = records[rid][1]
+                    drafts += (raw.get("status") == "draft"
+                               and raw.get("detection", {}).get("conditions") == []
+                               and "TODO(human)" in data.decode("utf-8"))
+    absent = sorted(set(extras) - set(read))
+    require(not absent, f"pinned archive {archive_path.name} has no {absent}")
+    return {"paths": paths, "records": records, "drafts": drafts, "read": read}
+
+
+def verify_excluded_corpus(delta, prefix, on_disk, pinned):
+    """Tie the loader's excluded-path delta to the corpus in front of it.
+
+    The loader counts what it can see, so the delta is the pinned corpus in a
+    checkout and zero in a fetched cache. Those two layouts are the only ones
+    this gate accepts: a tree carrying part of an excluded directory is neither,
+    and its delta would understate a corpus that is present.
+    """
+    require(delta == {prefix: len(on_disk)},
+            f"ATR: excluded-path delta {delta} disagrees with the {len(on_disk)} "
+            "files under that prefix the loader could read")
+    require(len(on_disk) in (0, pinned),
+            f"ATR: {len(on_disk)} of the pin's {pinned} excluded files are on disk; a fetched "
+            "cache carries none of them and a full checkout carries all of them")
+
+
+def census(paths, prefix):
+    """Directory and extension counts over withheld members, from paths alone."""
+    return {"directories": dict(sorted(Counter(
+                path[len(prefix):].split("/")[0] for path in paths).items())),
+            "extensions": dict(sorted(Counter(
+                PurePosixPath(path).suffix for path in paths).items()))}
+
+
 def audit(corpora: Path, archives: Path, lock_path: Path | None = None):
-    pins = load_lock(lock_path)
+    pins = sources.load_lock(lock_path)
     expected_sources = {"atr", "netzilo", "agentshield", "agent_audit_kit", "ave", "guardana"}
     require(set(pins) == expected_sources, "Update the rights gate to cover every locked source")
     integrity = {name: verify_tree(name, corpora / name, archives / f"{name}.tar.gz", pin)
@@ -145,14 +246,12 @@ def audit(corpora: Path, archives: Path, lock_path: Path | None = None):
     require(not [r.id for r in bundle if excluded(r)], "RELEASE BLOCKED: excluded path in default bundle")
     require([r.id for r in bundle] == [r.id for r in rules if not r.restricted and not excluded(r)],
             "Default bundle silently omitted eligible records or changed their order")
-    root = corpora / "atr" / "data/test-corpora"
-    files = [p for p in root.rglob("*") if p.is_file()]
-    require(loaded.delta.excluded_paths == {"data/test-corpora/": len(files)},
-            "ATR: excluded-path delta disagrees with the verified corpus")
-    drafts = yaml_records(corpora / "atr", "data/test-corpora")
-    draft_count = sum(raw.get("status") == "draft" and raw.get("detection", {}).get("conditions") == []
-                      and "TODO(human)" in (corpora / "atr" / path).read_text(encoding="utf-8")
-                      for path, raw in drafts.values())
+    prefix = "data/test-corpora/"
+    withheld = withheld_members(archives / "atr.tar.gz", prefix, ("package.json",))
+    files, proposals = withheld["paths"], withheld["records"]
+    require(files, "ATR: the pin carries no excluded corpus; this audit must not pass vacuously")
+    on_disk = [p for p in (corpora / "atr" / prefix).rglob("*") if p.is_file()]
+    verify_excluded_corpus(loaded.delta.excluded_paths, prefix, on_disk, len(files))
     return {
         "status": "VERIFIED", "integrity": integrity,
         "sources": {name: {"loaded": len(group), "ships": sum(r.shippable for r in group),
@@ -169,11 +268,10 @@ def audit(corpora: Path, archives: Path, lock_path: Path | None = None):
         "atr_garak_payload_source_count": sum("garak" in value.casefold() for value in payload_sources.values()),
         "atr_payload_source_ids": sorted(payload_sources),
         "excluded_paths": loaded.delta.excluded_paths,
-        "test_corpora": {"files": len(files), "yaml_proposals": len(drafts),
-                         "draft_empty_conditions_todo": draft_count,
-                         "directories": dict(sorted(Counter(p.relative_to(root).parts[0] for p in files).items())),
-                         "extensions": dict(sorted(Counter(p.suffix for p in files).items()))},
-        "atr_npm_files_allowlist": json.loads((corpora / "atr" / "package.json").read_text())["files"],
+        "test_corpora": {"files": len(files), "yaml_proposals": len(proposals),
+                         "draft_empty_conditions_todo": withheld["drafts"],
+                         "files_on_disk": len(on_disk), **census(files, prefix)},
+        "atr_npm_files_allowlist": json.loads(withheld["read"]["package.json"])["files"],
     }
 
 

@@ -2,6 +2,11 @@
 
 AGENT_DEFS_CORPORA=/path/to/corpora AGENT_DEFS_ARCHIVES=/path/to/archives \
     PYTHONPATH=src python -m pytest tests/test_distribution_corpora.py -q
+
+AGENT_DEFS_FETCHED_CORPORA names the second supported layout: a directory whose
+six entries are the trees `sources.fetch()` wrote, where ATR's sample directory
+is absent by policy. Only the last test reads it. Every check that needs no
+corpus at all lives in `tests/test_distribution_fetched_cache.py`.
 """
 
 from dataclasses import replace
@@ -68,3 +73,29 @@ def test_release_gate_fails_if_loader_loses_evidence(inputs, monkeypatch, loss, 
     monkeypatch.setattr(gate.atr, "load", faulty_load)
     with pytest.raises(AssertionError, match=message):
         gate.audit(*inputs)
+
+
+@pytest.fixture(scope="module")
+def fetched_inputs():
+    if "AGENT_DEFS_FETCHED_CORPORA" not in os.environ or "AGENT_DEFS_ARCHIVES" not in os.environ:
+        pytest.skip("Set AGENT_DEFS_FETCHED_CORPORA and AGENT_DEFS_ARCHIVES for the fetched-cache gate")
+    corpora = Path(os.environ["AGENT_DEFS_FETCHED_CORPORA"])
+    archives = Path(os.environ["AGENT_DEFS_ARCHIVES"])
+    assert corpora.is_dir() and archives.is_dir(), "Release inputs are missing"
+    return corpora, archives
+
+
+def test_the_gate_runs_against_a_safely_fetched_cache(fetched_inputs):
+    """Same corpus, same numbers, with nothing under the excluded prefix on disk."""
+    corpora, _ = fetched_inputs
+    assert not (corpora / "atr/data/test-corpora").exists(), "A fetched cache must not carry samples"
+    report = gate.audit(*fetched_inputs)
+    assert report["excluded_paths"] == {"data/test-corpora/": 0}
+    assert report["test_corpora"]["files_on_disk"] == 0
+    assert report["test_corpora"]["files"] == 1101
+    assert report["test_corpora"]["draft_empty_conditions_todo"] == 1013
+    assert report["integrity"]["atr"]["withheld_from_disk"] == 1102
+    assert report["loaded"] == 2481
+    assert report["restricted"] == 50
+    assert report["ships"] == 2431
+    assert not (corpora / "atr/data").exists(), "The gate wrote an excluded path to disk"

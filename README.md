@@ -2,6 +2,13 @@
 
 <div align="center">
 
+<!-- logo-family -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/logo-dark.svg">
+  <img src="docs/assets/brand/logo.svg" alt="agent-defs" width="350">
+</picture>
+
+
 # agent-defs
 
 **Your agent reads text you never see. This reads it too.**

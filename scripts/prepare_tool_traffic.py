@@ -167,13 +167,13 @@ def main():
     if args.local_root:
         paths = list(args.local_root.rglob("*.jsonl"))
         eligible = [p for p in paths if not any(s in p.relative_to(args.local_root).parts[0]
-                                              for s in ("agent-startup-thesis", "agent-defs", "agent-config"))]
+                                              for s in ("agent-startup-thesis", "research-impact", "agent-defs", "agent-config"))]
         eligible.sort(key=lambda path: digest(("r1-build2-v1/" + path.relative_to(args.local_root).as_posix()).encode()))
         results, inventory = parse_files(eligible[:args.local_files], args.local_root)
         results.sort(key=lambda row: digest(("r1-build2-units-v1/" + row["id"]).encode()))
         inventory.update(discovered_files=len(paths), eligible_files=len(eligible),
                          selection="lowest SHA256 of r1-build2-v1/relative-path, then lowest SHA256 of r1-build2-units-v1/unit-id",
-                         excluded_projects=["agent-startup-thesis", "agent-defs", "agent-config"],
+                         excluded_projects=["agent-startup-thesis", "research-impact", "agent-defs", "agent-config"],
                          requested_files=args.local_files, requested_results=args.local_results)
         save(args.out, "local-claude", None, results[:args.local_results], inventory)
 

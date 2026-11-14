@@ -11,6 +11,7 @@ replace, without saying so.
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -150,14 +151,14 @@ def test_the_shipped_table_is_what_its_inputs_produce(builder, monkeypatch, tmp_
     """The builder, its manifest and its merge file must still describe what ships.
 
     A table nobody can regenerate is a table nobody can check. This runs only
-    where the pinned corpus and the round-three report are both present, which is
+    where the pinned corpus and the round-three report (its path in the
+    AGENT_DEFS_EFFICACY_REPORT environment variable) are both present, which is
     the machine that would regenerate it.
     """
     root = Path(__file__).resolve().parents[1]
     corpus = Path("C:/atrx/Agent-Threat-Rule-agent-threat-rules-faf743f")
-    report = (root.parent / "agent-startup-thesis" / "research" / "efficacy-2026-09-05"
-              / "evidence" / "report_data.json")
-    if not (corpus.exists() and report.exists()):
+    report = Path(os.environ.get("AGENT_DEFS_EFFICACY_REPORT", ""))
+    if not (corpus.exists() and report.is_file()):
         pytest.skip("the pinned corpus and the round-three report are not on this machine")
     out = tmp_path / "hazards.json"
     run(builder, monkeypatch, "--report-data", report, "--atr", corpus,
